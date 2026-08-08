@@ -1,0 +1,21 @@
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+end_of_line = crlf
+charset = utf-8
+
+[*.{cs,csx}]
+charset = utf-8
+
+[*.{xaml,xml,csproj,props,targets,slnx}]
+charset = utf-8
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = off
+

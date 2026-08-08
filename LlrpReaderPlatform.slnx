@@ -1,0 +1,37 @@
+<Solution>
+  <File Path="AGENTS.md" />
+  <File Path=".editorconfig" />
+  <File Path="Directory.Build.props" />
+  <File Path="Directory.Packages.props" />
+  <File Path="global.json" />
+  <File Path="README.md" />
+  <Folder Name="/docs/">
+    <File Path="docs/README.md" />
+    <File Path="docs/llrp-framework-vision.md" />
+  </Folder>
+  <Folder Name="/docs/architecture/">
+    <File Path="docs/architecture/overview.md" />
+    <File Path="docs/architecture/reader-runtime.md" />
+    <File Path="docs/architecture/extensions-and-settings.md" />
+  </Folder>
+  <Folder Name="/docs/compatibility/">
+    <File Path="docs/compatibility/device-matrix.md" />
+  </Folder>
+  <Folder Name="/docs/development/">
+    <File Path="docs/development/roadmap.md" />
+    <File Path="docs/development/testing-strategy.md" />
+  </Folder>
+  <Folder Name="/docs/decisions/">
+    <File Path="docs/decisions/README.md" />
+    <File Path="docs/decisions/ADR-0001-new-repository-and-frozen-baseline.md" />
+    <File Path="docs/decisions/ADR-0002-ui-independent-contracts.md" />
+    <File Path="docs/decisions/ADR-0003-reader-session-ownership.md" />
+  </Folder>
+  <Folder Name="/docs/templates/">
+    <File Path="docs/templates/ADR-template.md" />
+    <File Path="docs/templates/device-validation-template.md" />
+  </Folder>
+  <Folder Name="/docs/legacy/">
+    <File Path="docs/legacy/README.md" />
+  </Folder>
+</Solution>

@@ -1,0 +1,22 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Build output
+bin/
+obj/
+
+# Test and coverage output
+TestResults/
+coverage/
+
+# Rider / ReSharper
+.idea/
+_ReSharper*/
+
+# Local application data
+*.db
+*.db-shm
+*.db-wal
+logs/
