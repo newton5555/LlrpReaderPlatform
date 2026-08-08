@@ -3,7 +3,7 @@
 ## 仓库定位
 
 - 本仓库是新的 LLRP 应用平台，当前阶段只维护规划、架构、兼容性和开发规范，不创建业务实现项目。
-- `C:\Users\yankai\source\repos\LlrpReaderStudio` 是冻结的旧仓库，仅用于理解现有能力和迁移边界，不作为新仓库的运行时依赖。
+- `../LlrpReaderStudio` 是冻结的旧仓库，仅用于理解现有能力和迁移边界，不作为新仓库的运行时依赖。
 - 旧基线已经覆盖标准 LLRP 1.0.1 设备和 Impinj R420；新平台必须在此基础上继续扩展更多标准设备和厂商设备。
 
 ## 解决方案与项目边界
@@ -74,4 +74,3 @@ UI consumer -> Services -> Contracts
 dotnet build LlrpReaderPlatform.slnx
 dotnet test LlrpReaderPlatform.slnx --no-build
 ```
-

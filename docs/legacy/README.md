@@ -2,19 +2,19 @@
 
 ## 仓库地址
 
-旧仓库位于：
+以下路径基于两个仓库位于同一父目录的本地布局：
 
 ```text
-C:\Users\yankai\source\repos\LlrpReaderStudio
+../../LlrpReaderStudio
 ```
 
 解决方案：
 
 ```text
-C:\Users\yankai\source\repos\LlrpReaderStudio\LlrpReaderStudio.slnx
+../../LlrpReaderStudio/LlrpReaderStudio.slnx
 ```
 
-该仓库已经冻结，不作为 `LlrpReaderPlatform` 的 ProjectReference、源码依赖或运行时依赖。需要核对旧实现时，直接打开上述仓库。
+该仓库已经冻结，不作为 `LlrpReaderPlatform` 的 ProjectReference、源码依赖或运行时依赖。需要核对旧实现时，按上述相对路径打开旧仓库。
 
 ## 当前项目结构
 
