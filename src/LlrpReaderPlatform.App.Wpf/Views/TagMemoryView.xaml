@@ -1,0 +1,114 @@
+<UserControl x:Class="LlrpReaderPlatform.App.Wpf.Views.TagMemoryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <Style x:Key="TagAccessActionStyle" TargetType="Button">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                    <Setter Property="IsEnabled" Value="False" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsTagAccessAvailable}" Value="False">
+                    <Setter Property="IsEnabled" Value="False" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="44" MaxWidth="900" HorizontalAlignment="Left">
+            <TextBlock Text="Tag Memory" FontSize="28" FontWeight="Bold" />
+            <TextBlock Text="Target one exact EPC or TID. Reads and writes use the active LLRP reader."
+                       TextWrapping="Wrap" FontSize="14" LineHeight="22" Margin="0,12,0,24" />
+            <TextBlock TextWrapping="Wrap" Margin="0,0,0,16" FontSize="14">
+                <Run Text="Operating reader: " FontWeight="SemiBold" />
+                <Run Text="{Binding ReaderName}" />
+            </TextBlock>
+            <TextBlock Text="当前 Reader 未声明标准 Tag Access 能力，读写操作不可用。"
+                       TextWrapping="Wrap" Margin="0,0,0,16"
+                       Foreground="{DynamicResource MahApps.Brushes.Gray3}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsTagAccessAvailable}" Value="False">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
+            <Border BorderThickness="1" Padding="24">
+                <StackPanel>
+                    <TextBlock Text="TAG ACCESS" FontWeight="Bold" FontSize="14" Margin="0,0,0,14" />
+                    <ProgressBar Height="4" Margin="0,0,0,14"
+                                 IsIndeterminate="True"
+                                 Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                    <UniformGrid Columns="2" Margin="0,0,0,20">
+                        <StackPanel Margin="0,0,8,0">
+                            <TextBlock Text="Target type" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <ComboBox ItemsSource="{Binding SelectionBanks}" SelectedItem="{Binding SelectionBank}"
+                                      Padding="8" />
+                        </StackPanel>
+                        <StackPanel Margin="8,0,0,0">
+                            <TextBlock Text="Match (hex)" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <TextBox Text="{Binding Epc, UpdateSourceTrigger=PropertyChanged}"
+                                     Padding="10" FontFamily="Consolas, Courier New" FontSize="15" />
+                        </StackPanel>
+                    </UniformGrid>
+
+                    <UniformGrid Columns="4" Margin="0,0,0,20">
+                        <StackPanel Margin="0,0,8,0">
+                            <TextBlock Text="Memory bank" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <ComboBox ItemsSource="{Binding MemoryBanks}" SelectedItem="{Binding MemoryBank}"
+                                      Padding="8" />
+                        </StackPanel>
+                        <StackPanel Margin="4,0,4,0">
+                            <TextBlock Text="Word pointer" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <TextBox Text="{Binding WordPointer, UpdateSourceTrigger=PropertyChanged}"
+                                     Padding="8" mah:TextBoxHelper.Watermark="Offset" />
+                        </StackPanel>
+                        <StackPanel Margin="4,0,4,0">
+                            <TextBlock Text="Word count" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <TextBox Text="{Binding WordCount, UpdateSourceTrigger=PropertyChanged}"
+                                     Padding="8" mah:TextBoxHelper.Watermark="Length" />
+                        </StackPanel>
+                        <StackPanel Margin="8,0,0,0">
+                            <TextBlock Text="Access password" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <TextBox Text="{Binding AccessPassword, UpdateSourceTrigger=PropertyChanged}"
+                                     Padding="8" mah:TextBoxHelper.Watermark="00000000"
+                                     FontFamily="Consolas, Courier New" />
+                        </StackPanel>
+                    </UniformGrid>
+
+                    <TextBlock Text="Data (hex words)" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <TextBox Text="{Binding DataHex, UpdateSourceTrigger=PropertyChanged}" Height="140"
+                             AcceptsReturn="True" TextWrapping="Wrap"
+                             mah:TextBoxHelper.Watermark="Data read from or written to the tag..."
+                             Padding="12" Margin="0,0,0,24"
+                             FontFamily="Consolas, Courier New" FontSize="14" />
+
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="READ MEMORY" Command="{Binding ReadCommand}"
+                                CommandParameter="{Binding ReaderId}"
+                                Style="{StaticResource TagAccessActionStyle}"
+                                MinWidth="140" Padding="16,10" FontWeight="SemiBold" />
+                        <Button Content="WRITE MEMORY" Command="{Binding WriteCommand}"
+                                CommandParameter="{Binding ReaderId}"
+                                Style="{StaticResource TagAccessActionStyle}"
+                                Margin="16,0,0,0" MinWidth="140" Padding="16,10" FontWeight="SemiBold" />
+                    </StackPanel>
+
+                    <Border BorderThickness="1" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                            CornerRadius="4" Padding="12" Margin="0,20,0,0"
+                            Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
+                        <TextBlock Text="{Binding Result, Mode=OneWay}" TextWrapping="Wrap"
+                                   FontFamily="Consolas, Courier New" FontSize="14" />
+                    </Border>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

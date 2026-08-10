@@ -39,6 +39,19 @@ AddImpinjExtension()
 
 Services 不扫描程序集，也不硬编码具体厂商模块。
 
+设置贡献由扩展模块通过 Services 的 `ISettingsExtensionContributor` 暴露；宿主只注册模块，
+标准编译器先生成标准布局，再按运行时 `ReaderFeatureCatalog` 判断该模块在当前型号上
+是否真正贡献布局。Apply 时仍在同一 Reader Gate 和同一短连接租约内，把 Draft 编译回
+SDK 扩展字典。当前 `Extensions.Impinj` 已提供
+FastID、Phase/Doppler、Search Mode、Low Duty Cycle 和 Fixed Frequency 的这一条路径。
+同时贡献 GPI debounce；标准设置层负责 GPI Start/Stop、报告字段、天线/RF、Gen2 Filter
+等通用语义。Inventory 启动时可由 UI 选择报告字段，Services 在同一长连接租约内编译并覆盖
+报告位，避免为每次报告刷新重新连接 Reader。
+
+Impinj 模块对协议 Builder 的匹配按厂商身份执行；R420 的 L4 能力则额外要求已实测的
+ModelId `2001002`。因此未知 Impinj 型号仍可走标准/协议扩展连接路径，但不会自动声明
+R420 专属设置能力。
+
 ## 设置模型
 
 ```text

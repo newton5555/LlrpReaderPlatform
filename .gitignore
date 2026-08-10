@@ -20,3 +20,4 @@ _ReSharper*/
 *.db-shm
 *.db-wal
 logs/
+.reasonix/

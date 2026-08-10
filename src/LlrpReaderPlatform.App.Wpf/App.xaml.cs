@@ -1,0 +1,130 @@
+using System.IO;
+using System.Windows;
+using LlrpReaderPlatform.App.Wpf.ViewModels;
+using LlrpReaderPlatform.Extensions.Impinj;
+using LlrpReaderPlatform.Infrastructure;
+using LlrpReaderPlatform.Services;
+using LlrpReaderPlatform.Services.Sdk;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Serilog;
+using Serilog.Events;
+
+namespace LlrpReaderPlatform.App.Wpf;
+
+public partial class App : Application
+{
+    private ServiceProvider? services;
+    private ILoggerFactory? sdkLoggerFactory;
+
+    private const string LogOutputTemplate =
+        "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}";
+
+    private const long LogFileSizeLimitBytes = 50L * 1024 * 1024;
+
+    private static LogEventLevel DefaultLogLevel =>
+#if DEBUG
+        LogEventLevel.Debug;
+#else
+        LogEventLevel.Information;
+#endif
+
+    public IServiceProvider Services => services
+        ?? throw new InvalidOperationException("Application services have not been initialized.");
+
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        base.OnStartup(e);
+
+        ServiceCollection collection = new();
+        ConfigureServices(collection);
+        services = collection.BuildServiceProvider();
+
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        window.Show();
+    }
+
+    private void ConfigureServices(IServiceCollection services)
+    {
+        string logDirectory = Path.Combine(
+            string.IsNullOrWhiteSpace(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData))
+                ? AppContext.BaseDirectory
+                : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "LlrpReaderPlatform",
+            "logs");
+        Directory.CreateDirectory(logDirectory);
+
+        services.AddLogging(builder =>
+        {
+            builder.SetMinimumLevel(LogLevel.Debug);
+            builder.AddDebug();
+            builder.AddSerilog(CreateRollingLogger(logDirectory, "platform-.log", excludeSdkCategories: true), dispose: true);
+        });
+
+        sdkLoggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder.SetMinimumLevel(LogLevel.Debug);
+            builder.AddDebug();
+            builder.AddSerilog(CreateRollingLogger(logDirectory, "sdk-.log", excludeSdkCategories: false), dispose: true);
+        });
+
+        // 组合根：显式注册共享服务层、基础设施与已启用的厂商扩展。
+        services.AddLlrpReaderPlatform();
+        services.AddLlrpInfrastructure();
+        services.AddImpinjExtension();
+
+        // SDK / LLRP wire logs use a dedicated rolling file. The platform logger above
+        // keeps service and UI diagnostics separate from protocol traffic.
+        services.AddSingleton<IReaderSessionFactory>(_ =>
+            new LlrpReaderSessionFactory(sdkLoggerFactory
+                ?? throw new InvalidOperationException("SDK logger factory is not initialized.")));
+
+        services.AddSingleton<MainViewModel>();
+        services.AddSingleton<MainWindow>();
+    }
+
+    private static Serilog.ILogger CreateRollingLogger(
+        string logDirectory,
+        string fileName,
+        bool excludeSdkCategories) =>
+        new LoggerConfiguration()
+            .MinimumLevel.Is(DefaultLogLevel)
+            .Filter.ByExcluding(logEvent => excludeSdkCategories && IsSdkLogEvent(logEvent))
+            .WriteTo.Async(configuration => configuration.File(
+                Path.Combine(logDirectory, fileName),
+                outputTemplate: LogOutputTemplate,
+                fileSizeLimitBytes: LogFileSizeLimitBytes,
+                rollOnFileSizeLimit: true,
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 14))
+            .CreateLogger();
+
+    private static bool IsSdkLogEvent(LogEvent logEvent)
+    {
+        if (!logEvent.Properties.TryGetValue("SourceContext", out LogEventPropertyValue? sourceContext))
+        {
+            return false;
+        }
+
+        string category = sourceContext.ToString().Trim('"');
+        return category.StartsWith("LlrpSdk", StringComparison.Ordinal)
+            || category.StartsWith("LlrpNet", StringComparison.Ordinal);
+    }
+
+    protected override async void OnExit(ExitEventArgs e)
+    {
+        try
+        {
+            if (services is not null)
+            {
+                await services.DisposeAsync();
+            }
+
+            sdkLoggerFactory?.Dispose();
+        }
+        finally
+        {
+            base.OnExit(e);
+        }
+    }
+}

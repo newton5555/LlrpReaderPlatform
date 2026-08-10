@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>LlrpReaderPlatform.TestKit</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LlrpReaderPlatform.Contracts\Contracts.csproj" />
+    <ProjectReference Include="..\..\src\LlrpReaderPlatform.Services\Services.csproj" />
+  </ItemGroup>
+
+</Project>

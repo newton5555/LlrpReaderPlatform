@@ -19,8 +19,8 @@ UI Consumer
 实际依赖以项目引用为准：
 
 - `Contracts`：UI 无关 DTO、状态、设置编辑模型和服务接口；不引用 SDK 或 WPF；
-- `Services`：Reader 生命周期、连接租约、能力聚合、设置服务、盘存和 Tag Access；引用 `Contracts` 与 `LlrpSdk`；
-- `Infrastructure`：SQLite、Preset、Profile、发现和日志实现；实现 Services 定义的接口；
+- `Services`：Reader 生命周期、连接租约、能力聚合、设置服务、盘存和 Tag Access；引用 `Contracts` 与 `LlrpSdk`；标准设置编译器通过 `ISettingsExtensionContributor` 接收已注册扩展的语义贡献；
+- `Infrastructure`：SQLite、Preset、Profile、发现和日志实现；实现 Contracts/Services 定义的接口；
 - `Extensions.*`：厂商模块，引用 Services 与对应 SDK 扩展包；
 - `App.*`：UI 组合根和展示层，注册 Services、Infrastructure 和扩展模块。
 
@@ -75,3 +75,20 @@ WPF 可以拥有自己的 View、ViewModel、DataTemplate、Dispatcher、导航�
 3. 一个 Reader 由一个 ReaderHandle 持有一个活动 TCP Session。
 4. 连接、设置、盘存和断开由 Services 串行协调，UI 不直接操作 Session。
 5. 能力等级来自实际能力和测试结果，不由厂商名称推断。
+6. 服务结果保留面向用户的文本，同时用 Contracts 的 `PlatformErrorCode` 表达 `ReaderBusy`、`DeviceFailed`、`Unsupported`、`StaleCapability` 和 `InvalidSettings` 等稳定语义，其他 UI 不需要解析本地化文本。
+
+## 最终交付的实现顺序
+
+WPF 只是最终消费者，完整功能必须按以下顺序建设：
+
+```text
+Contracts
+  → SDK Adapter
+  → ReaderManager / Settings / Inventory Services
+  → EF Core SQLite / Discovery / Logging
+  → Extensions.Impinj and future vendor modules
+  → WPF ViewModels and Views
+  → real-device qualification
+```
+
+Inventory 是一次完整的长连接租约：Start 建立唯一 Session，运行期间持续接收 TagReport，Stop 停止 Inventory/ROSpec 后断开同一 Session。Settings、Tag Access、GPO 是短连接操作，Inventory 运行期间不得抢占连接。

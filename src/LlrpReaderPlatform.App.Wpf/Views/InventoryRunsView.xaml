@@ -1,0 +1,44 @@
+<UserControl x:Class="LlrpReaderPlatform.App.Wpf.Views.InventoryRunsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <Style x:Key="InventoryRunsActionStyle" TargetType="Button">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                    <Setter Property="IsEnabled" Value="False" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    <Grid Margin="36">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="Inventory Runs" FontSize="28" FontWeight="Bold" />
+            <TextBlock Text="查看当前 Reader 的寻卡生命周期、统计和可选 JSONL 日志文件。"
+                       TextWrapping="Wrap" Margin="0,6,0,16" />
+            <ProgressBar Height="4" Margin="0,0,0,10"
+                         IsIndeterminate="True"
+                         Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            <StackPanel Orientation="Horizontal">
+                <Button Content="REFRESH" Command="{Binding LoadCommand}"
+                        CommandParameter="{Binding ReaderId}" Style="{StaticResource InventoryRunsActionStyle}" Padding="14,8" />
+                <TextBlock Text="{Binding Status}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="18,0,0,0" />
+            </StackPanel>
+        </StackPanel>
+        <DataGrid Grid.Row="1" ItemsSource="{Binding Runs}" AutoGenerateColumns="False" CanUserAddRows="False"
+                  IsReadOnly="True" Margin="0,18,0,0">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Started (UTC)" Binding="{Binding StartedAtUtc}" Width="1.4*" />
+                <DataGridTextColumn Header="Ended (UTC)" Binding="{Binding EndedAtUtc}" Width="1.4*" />
+                <DataGridTextColumn Header="Stop reason" Binding="{Binding StopReason}" Width="*" />
+                <DataGridTextColumn Header="Reads" Binding="{Binding TotalReadCount}" Width="90" />
+                <DataGridTextColumn Header="Unique" Binding="{Binding UniqueTagCount}" Width="90" />
+                <DataGridTextColumn Header="Log" Binding="{Binding LogFilePath}" Width="2*" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>

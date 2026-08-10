@@ -19,15 +19,21 @@
 ### 3. 兼容性
 
 - [设备支持等级与矩阵](compatibility/device-matrix.md)
+- [Impinj R420 真机验收记录（2026-08-10）](compatibility/impinj-r420-2026-08-10.md)
 
 ### 4. 开发与验证
 
 - [开发路线图](development/roadmap.md)
 - [测试策略](development/testing-strategy.md)
+- [交接文档（Handoff）](development/handoff.md)
+- [旧 WPF 功能迁移矩阵](development/legacy-feature-matrix.md)
+- [真机验收运行手册](development/hardware-validation-runbook.md)
+- [WPF 用户操作与故障排查](development/wpf-user-and-troubleshooting.md)
 
 ### 5. 决策记录
 
 - [ADR 索引](decisions/README.md)
+- 当前 Inventory 生命周期事件的权威来源见 [ADR-0005](decisions/ADR-0005-inventory-lifecycle-events.md)。
 
 ### 6. 冻结项目参考
 

@@ -5,3 +5,5 @@ ADR 用于记录会影响多个项目或未来 UI 消费者的架构决定。已
 - [ADR-0001：新仓库与冻结基线](ADR-0001-new-repository-and-frozen-baseline.md)
 - [ADR-0002：UI 无关 Contracts](ADR-0002-ui-independent-contracts.md)
 - [ADR-0003：Reader Session 所有权](ADR-0003-reader-session-ownership.md)
+- [ADR-0004：使用 EF Core SQLite 作为本地持久化实现](ADR-0004-ef-sqlite-persistence.md)
+- [ADR-0005：由平台统一发布 Inventory 生命周期事件](ADR-0005-inventory-lifecycle-events.md)

@@ -5,13 +5,13 @@
 旧仓库位于：
 
 ```text
-C:\Users\yankai\source\repos\LlrpReaderStudio
+F:\Projects\LLRP\LlrpReaderStudio
 ```
 
 解决方案：
 
 ```text
-C:\Users\yankai\source\repos\LlrpReaderStudio\LlrpReaderStudio.slnx
+F:\Projects\LLRP\LlrpReaderStudio\LlrpReaderStudio.slnx
 ```
 
 该仓库已经冻结，不作为 `LlrpReaderPlatform` 的 ProjectReference、源码依赖或运行时依赖。需要核对旧实现时，直接打开上述仓库。

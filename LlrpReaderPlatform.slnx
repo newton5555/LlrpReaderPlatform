@@ -1,10 +1,12 @@
 <Solution>
-  <File Path="AGENTS.md" />
-  <File Path=".editorconfig" />
-  <File Path="Directory.Build.props" />
-  <File Path="Directory.Packages.props" />
-  <File Path="global.json" />
-  <File Path="README.md" />
+  <Folder Name="/Solution Items/">
+    <File Path="AGENTS.md" />
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+  </Folder>
   <Folder Name="/docs/">
     <File Path="docs/README.md" />
     <File Path="docs/llrp-framework-vision.md" />
@@ -16,16 +18,23 @@
   </Folder>
   <Folder Name="/docs/compatibility/">
     <File Path="docs/compatibility/device-matrix.md" />
+    <File Path="docs/compatibility/impinj-r420-2026-08-10.md" />
   </Folder>
   <Folder Name="/docs/development/">
     <File Path="docs/development/roadmap.md" />
     <File Path="docs/development/testing-strategy.md" />
+    <File Path="docs/development/handoff.md" />
+    <File Path="docs/development/legacy-feature-matrix.md" />
+    <File Path="docs/development/hardware-validation-runbook.md" />
+    <File Path="docs/development/wpf-user-and-troubleshooting.md" />
   </Folder>
   <Folder Name="/docs/decisions/">
     <File Path="docs/decisions/README.md" />
     <File Path="docs/decisions/ADR-0001-new-repository-and-frozen-baseline.md" />
     <File Path="docs/decisions/ADR-0002-ui-independent-contracts.md" />
     <File Path="docs/decisions/ADR-0003-reader-session-ownership.md" />
+    <File Path="docs/decisions/ADR-0004-ef-sqlite-persistence.md" />
+    <File Path="docs/decisions/ADR-0005-inventory-lifecycle-events.md" />
   </Folder>
   <Folder Name="/docs/templates/">
     <File Path="docs/templates/ADR-template.md" />
@@ -33,5 +42,25 @@
   </Folder>
   <Folder Name="/docs/legacy/">
     <File Path="docs/legacy/README.md" />
+  </Folder>
+
+  <!-- Source projects -->
+  <Folder Name="/src/">
+    <Project Path="src/LlrpReaderPlatform.Contracts/Contracts.csproj" />
+    <Project Path="src/LlrpReaderPlatform.Services/Services.csproj" />
+    <Project Path="src/LlrpReaderPlatform.Infrastructure/Infrastructure.csproj" />
+    <Project Path="src/LlrpReaderPlatform.Extensions.Impinj/Extensions.Impinj.csproj" />
+    <Project Path="src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj" />
+  </Folder>
+
+  <!-- Test projects -->
+  <Folder Name="/tests/">
+    <Project Path="tests/LlrpReaderPlatform.Contracts.Tests/Contracts.Tests.csproj" />
+    <Project Path="tests/LlrpReaderPlatform.TestKit/TestKit.csproj" />
+    <Project Path="tests/LlrpReaderPlatform.Services.Tests/Services.Tests.csproj" />
+    <Project Path="tests/LlrpReaderPlatform.Extensions.Impinj.Tests/Extensions.Impinj.Tests.csproj" />
+    <Project Path="tests/LlrpReaderPlatform.Infrastructure.Tests/Infrastructure.Tests.csproj" />
+    <Project Path="tests/LlrpReaderPlatform.App.Wpf.Tests/App.Wpf.Tests.csproj" />
+    <Project Path="tests/LlrpReaderPlatform.Architecture.Tests/Architecture.Tests.csproj" />
   </Folder>
 </Solution>
