@@ -1,9 +1,11 @@
 using System.IO;
 using LlrpReaderPlatform.App.Wpf.ViewModels;
 using LlrpReaderPlatform.Contracts.Discovery;
+using LlrpReaderPlatform.Contracts.Lifecycle;
 using LlrpReaderPlatform.Contracts.Persistence;
 using LlrpReaderPlatform.Contracts.Readers;
 using LlrpReaderPlatform.Contracts.Settings;
+using LlrpReaderPlatform.Contracts.Tagging;
 using LlrpReaderPlatform.Services.Lifecycle;
 using LlrpReaderPlatform.Services.Persistence;
 using LlrpReaderPlatform.TestKit;
@@ -61,10 +63,9 @@ public sealed class ViewModelDisposalTests
         var settings = new BlockingSettingsService();
         var tagLists = new BlockingTagListStore();
         await using var manager = new ReaderManager(new FakeSessionFactory(), new FakeProfileStore());
-        var vm = new MainViewModel(
+        var vm = CreateMainViewModel(
             manager,
             settings,
-            manager,
             new EmptyDiscovery(),
             new InMemoryAppSettingsStore(),
             tagLists,
@@ -89,10 +90,9 @@ public sealed class ViewModelDisposalTests
         var settings = new BlockingSettingsService();
         var tagLists = new BlockingTagListStore();
         await using var manager = new ReaderManager(new FakeSessionFactory(), new FakeProfileStore());
-        using var vm = new MainViewModel(
+        using var vm = CreateMainViewModel(
             manager,
             settings,
-            manager,
             new EmptyDiscovery(),
             new InMemoryAppSettingsStore(),
             tagLists,
@@ -126,10 +126,9 @@ public sealed class ViewModelDisposalTests
         factory.Queue.Enqueue(new FakeSession()); // Probe during registration.
         await using var manager = new ReaderManager(factory, new FakeProfileStore());
         await manager.AddAsync(profile, enableAfterAdding: false);
-        using var vm = new MainViewModel(
+        using var vm = CreateMainViewModel(
             manager,
             settings,
-            manager,
             new EmptyDiscovery(),
             new InMemoryAppSettingsStore(),
             new InMemoryTagListStore(),
@@ -170,6 +169,30 @@ public sealed class ViewModelDisposalTests
             Profile = new ReaderProfile { Id = id, Name = name, Host = "192.0.2.1" },
             State = ReaderState.Disconnected,
         });
+
+    private static MainViewModel CreateMainViewModel(
+        IReaderManager readerManager,
+        IReaderSettingsService settings,
+        IReaderDiscoveryService discovery,
+        IAppSettingsStore appSettings,
+        ITagListStore tagLists,
+        IInventoryRunStore inventoryRuns)
+    {
+        IInventoryService inventory = (IInventoryService)readerManager;
+        var diagnostics = new DiagnosticsViewModel(inventory);
+        return new MainViewModel(
+            readerManager,
+            discovery,
+            new ReaderSettingsViewModel(settings, diagnostics, readerManager),
+            new InventoryViewModel(inventory, tagLists, readerManager),
+            new TagMemoryViewModel(inventory),
+            diagnostics,
+            new AboutViewModel(),
+            new AppSettingsViewModel(appSettings),
+            new TagListsViewModel(tagLists),
+            new InventoryRunsViewModel(inventoryRuns, inventory),
+            new AddDataSourceViewModel(readerManager, discovery));
+    }
 
     private sealed class EmptyDiscovery : IReaderDiscoveryService
     {

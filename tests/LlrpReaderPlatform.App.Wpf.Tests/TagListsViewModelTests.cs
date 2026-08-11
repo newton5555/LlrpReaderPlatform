@@ -50,6 +50,22 @@ public sealed class TagListsViewModelTests
     }
 
     [Fact]
+    public async Task Save_and_delete_publish_change_notifications()
+    {
+        var vm = new TagListsViewModel(new InMemoryTagListStore());
+        int changes = 0;
+        vm.Changed += (_, _) => changes++;
+
+        vm.NewCommand.Execute(null);
+        vm.ListName = "Doors";
+        await vm.SaveCommand.ExecuteAsync(null);
+
+        await vm.DeleteCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, changes);
+    }
+
+    [Fact]
     public async Task Save_rejects_invalid_or_duplicate_grid_edits()
     {
         var store = new InMemoryTagListStore();

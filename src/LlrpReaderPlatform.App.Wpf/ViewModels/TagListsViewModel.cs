@@ -27,6 +27,9 @@ public partial class TagListsViewModel : ObservableObject, IPageOperationOwner, 
     public ObservableCollection<TagListEditorItem> Lists { get; } = [];
     public ObservableCollection<TagListEntryEditorItem> Entries { get; } = [];
 
+    /// <summary>Tag List 成功保存或删除后通知其它 WPF 页面刷新自己的投影。</summary>
+    public event EventHandler? Changed;
+
     [ObservableProperty]
     private TagListEditorItem? selectedList;
 
@@ -253,6 +256,7 @@ public partial class TagListsViewModel : ObservableObject, IPageOperationOwner, 
 
             SelectedList = Lists.FirstOrDefault(x => x.Id == listId);
             Status = $"Tag List “{definition.Name}” 已保存。";
+            Changed?.Invoke(this, EventArgs.Empty);
         }
         catch (OperationCanceledException) when (operationCts.IsCancellationRequested)
         {
@@ -305,6 +309,7 @@ public partial class TagListsViewModel : ObservableObject, IPageOperationOwner, 
             }
 
             Status = "Tag List 已删除。";
+            Changed?.Invoke(this, EventArgs.Empty);
         }
         catch (OperationCanceledException) when (operationCts.IsCancellationRequested)
         {

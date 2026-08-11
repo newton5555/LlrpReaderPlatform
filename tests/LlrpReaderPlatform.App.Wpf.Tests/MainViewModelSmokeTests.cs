@@ -1,3 +1,4 @@
+using LlrpReaderPlatform.App.Wpf;
 using LlrpReaderPlatform.App.Wpf.ViewModels;
 using LlrpReaderPlatform.Contracts.Discovery;
 using LlrpReaderPlatform.Contracts.Lifecycle;
@@ -48,7 +49,7 @@ public sealed class MainViewModelSmokeTests
         IAppSettingsStore? appSettingsStore = null,
         ITagListStore? tagListStore = null,
         IInventoryRunStore? inventoryRunStore = null) =>
-        new(
+        CreateViewModelCore(
             readerManager,
             settings,
             inventory,
@@ -56,6 +57,30 @@ public sealed class MainViewModelSmokeTests
             appSettingsStore ?? new InMemoryAppSettingsStore(),
             tagListStore ?? new InMemoryTagListStore(),
             inventoryRunStore ?? new InMemoryInventoryRunStore());
+
+    private static MainViewModel CreateViewModelCore(
+        IReaderManager readerManager,
+        IReaderSettingsService settings,
+        IInventoryService inventory,
+        IReaderDiscoveryService discovery,
+        IAppSettingsStore appSettingsStore,
+        ITagListStore tagListStore,
+        IInventoryRunStore inventoryRunStore)
+    {
+        var diagnostics = new DiagnosticsViewModel(inventory);
+        return new MainViewModel(
+            readerManager,
+            discovery,
+            new ReaderSettingsViewModel(settings, diagnostics, readerManager),
+            new InventoryViewModel(inventory, tagListStore, readerManager),
+            new TagMemoryViewModel(inventory),
+            diagnostics,
+            new AboutViewModel(),
+            new AppSettingsViewModel(appSettingsStore),
+            new TagListsViewModel(tagListStore),
+            new InventoryRunsViewModel(inventoryRunStore, inventory),
+            new AddDataSourceViewModel(readerManager, discovery));
+    }
 
     [Fact]
     public async Task AddCommand_registers_reader_and_refreshes_list()
@@ -476,7 +501,7 @@ public sealed class MainViewModelSmokeTests
     public async Task MainViewModel_is_di_resolvable()
     {
         ServiceCollection services = BuildServices();
-        services.AddSingleton<MainViewModel>();
+        services.AddLlrpReaderPlatformWpf();
 
         await using ServiceProvider provider = services.BuildServiceProvider();
         MainViewModel vm = provider.GetRequiredService<MainViewModel>();

@@ -79,8 +79,7 @@ public partial class App : Application
             new LlrpReaderSessionFactory(sdkLoggerFactory
                 ?? throw new InvalidOperationException("SDK logger factory is not initialized.")));
 
-        services.AddSingleton<MainViewModel>();
-        services.AddSingleton<MainWindow>();
+        services.AddLlrpReaderPlatformWpf();
     }
 
     private static Serilog.ILogger CreateRollingLogger(

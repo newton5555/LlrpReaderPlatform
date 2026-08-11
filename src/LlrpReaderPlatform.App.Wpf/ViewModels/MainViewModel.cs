@@ -40,28 +40,34 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public MainViewModel(
         IReaderManager readerManager,
-        IReaderSettingsService settings,
-        IInventoryService inventory,
         IReaderDiscoveryService discovery,
-        IAppSettingsStore appSettingsStore,
-        ITagListStore tagListStore,
-        IInventoryRunStore inventoryRunStore)
+        ReaderSettingsViewModel settings,
+        InventoryViewModel inventory,
+        TagMemoryViewModel tagMemory,
+        DiagnosticsViewModel diagnostics,
+        AboutViewModel about,
+        AppSettingsViewModel appSettings,
+        TagListsViewModel tagLists,
+        InventoryRunsViewModel inventoryRuns,
+        AddDataSourceViewModel addDataSource)
     {
         this.readerManager = readerManager;
         this.discovery = discovery;
         dispatcher = System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
         lifetimeToken = discoveryCts.Token;
         readerManager.StateChanged += OnReaderStateChanged;
-        Inventory = new InventoryViewModel(inventory, tagListStore, readerManager);
-        TagMemory = new TagMemoryViewModel(inventory);
-        Diagnostics = new DiagnosticsViewModel(inventory);
-        Settings = new ReaderSettingsViewModel(settings, Diagnostics, readerManager);
+        Inventory = inventory;
+        TagMemory = tagMemory;
+        Diagnostics = diagnostics;
+        Settings = settings;
         Settings.CancelRequested += OnSettingsCancelRequested;
-        AppSettings = new AppSettingsViewModel(appSettingsStore);
-        TagLists = new TagListsViewModel(tagListStore);
-        InventoryRuns = new InventoryRunsViewModel(inventoryRunStore, inventory);
+        AppSettings = appSettings;
+        TagLists = tagLists;
+        TagLists.Changed += OnTagListsChanged;
+        InventoryRuns = inventoryRuns;
 
-        AddDataSource = new AddDataSourceViewModel(readerManager, discovery);
+        About = about;
+        AddDataSource = addDataSource;
         AddDataSource.DataSourceAdded += OnDataSourceAdded;
         AddDataSource.CancelRequested += OnAddDataSourceCancelled;
         CurrentPage = Inventory;
@@ -71,8 +77,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public InventoryViewModel Inventory { get; }
     public TagMemoryViewModel TagMemory { get; }
     public DiagnosticsViewModel Diagnostics { get; }
-    public AboutViewModel About { get; } = new();
-    public AppSettingsViewModel AppSettings { get; } = null!;
+    public AboutViewModel About { get; }
+    public AppSettingsViewModel AppSettings { get; }
     public TagListsViewModel TagLists { get; }
     public InventoryRunsViewModel InventoryRuns { get; }
 
@@ -443,6 +449,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
         CurrentPage = Inventory;
     }
 
+    private void OnTagListsChanged(object? sender, EventArgs args)
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        // Tag List persistence is independent from the Reader lifecycle. Refresh
+        // only the existing WPF projection; never stop/restart an active Inventory.
+        _ = Inventory.RefreshTagLabelsAsync(lifetimeToken);
+    }
+
     private void OnSettingsCancelRequested(object? sender, EventArgs args)
     {
         Settings.CancelPendingOperations();
@@ -686,6 +704,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         AddDataSource.DataSourceAdded -= OnDataSourceAdded;
         AddDataSource.CancelRequested -= OnAddDataSourceCancelled;
         Settings.CancelRequested -= OnSettingsCancelRequested;
+        TagLists.Changed -= OnTagListsChanged;
         AddDataSource.Dispose();
         Settings.Dispose();
         Inventory.Dispose();

@@ -26,8 +26,7 @@ public sealed class AppServiceRegistrationTests
         services.AddLlrpReaderPlatform();
         services.AddLlrpInfrastructure();
         services.AddImpinjExtension();
-        services.AddSingleton<MainViewModel>();
-        services.AddSingleton<MainWindow>();
+        services.AddLlrpReaderPlatformWpf();
 
         await using ServiceProvider provider = services.BuildServiceProvider();
         MainViewModel vm = provider.GetRequiredService<MainViewModel>();
@@ -59,7 +58,7 @@ public sealed class AppServiceRegistrationTests
             services.AddLlrpReaderPlatform();
             services.AddLlrpInfrastructure(databasePath);
             services.AddImpinjExtension();
-            services.AddSingleton<MainViewModel>();
+            services.AddLlrpReaderPlatformWpf();
 
             provider = services.BuildServiceProvider();
             IReaderProfileStore store = provider.GetRequiredService<IReaderProfileStore>();

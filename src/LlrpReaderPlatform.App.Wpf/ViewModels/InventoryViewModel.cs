@@ -132,6 +132,31 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<TagRowViewModel> Tags { get; } = [];
 
+    /// <summary>
+    /// 重新读取 Tag List 映射并刷新当前表格中的标签名称。
+    /// Tag List 是应用级数据，保存后不应要求用户停止并重新开始一次 Inventory
+    /// 才能看到新的显示名称；该操作只更新 UI 投影，不触碰 Reader Session。
+    /// </summary>
+    public async Task RefreshTagLabelsAsync(CancellationToken ct = default)
+    {
+        if (disposed || tagListStore is null)
+        {
+            return;
+        }
+
+        await LoadTagLabelsAsync(ct).ConfigureAwait(true);
+        if (disposed || ct.IsCancellationRequested)
+        {
+            return;
+        }
+
+        string[] epcs = Tags.Select(static row => row.Epc).ToArray();
+        foreach (string epc in epcs)
+        {
+            RefreshMergedRow(epc);
+        }
+    }
+
     partial void OnDurationSecondsTextChanged(string value) => UpdateDurationModeText(value);
 
     /// <summary>同步左侧当前 Reader；运行中的全局盘存仍以 activeReaderIds 为准。</summary>
@@ -775,16 +800,18 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         TagRate = $"{reportedTagCount / seconds:0.0} tags/s";
     }
 
-    private async Task LoadTagLabelsAsync()
+    private async Task LoadTagLabelsAsync(CancellationToken externalToken = default)
     {
         if (tagListStore is null)
         {
             return;
         }
 
+        CancellationToken ct = externalToken.CanBeCanceled ? externalToken : lifetimeToken;
+
         try
         {
-            IReadOnlyList<TagListDefinition> lists = await tagListStore.GetAllAsync(lifetimeToken);
+            IReadOnlyList<TagListDefinition> lists = await tagListStore.GetAllAsync(ct);
             tagLabels = lists.Where(static list => list.IsEnabled)
                 .SelectMany(static list => list.Entries.Select(entry => new
                 {
@@ -794,7 +821,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
                 .GroupBy(static x => x.EpcHex, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(static group => group.Key, static group => group.First().Label, StringComparer.OrdinalIgnoreCase);
         }
-        catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             // 页面销毁时取消 Tag List 读取。
         }

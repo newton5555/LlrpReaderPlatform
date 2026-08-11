@@ -33,7 +33,7 @@
 
 Tag Memory 页面保留平台层的 `TagMemoryBank` 枚举和通用四 Bank 读写契约，WPF 显示文本已对齐旧项目的 `EPC`、`TID`、`User`、`Reserved`；不会把旧项目类型带入共享层。
 
-当前自动化基线：`dotnet build` 0 警告 0 错误；`dotnet test --no-build` 307 项全绿（Contracts 5、Services 159、Infrastructure 7、Impinj 13、Architecture 7、App.Wpf 116）。Connection Faulted、ReaderException 事件投影、统一 Inventory `LifecycleChanged`、Faulted Reader 重新连接、故障 Session 回收/干净 Session 重建、匹配 GPI Stop 触发器、Inventory 收尾与重新 Start、Reader 明确不支持 Tag Access/无 GPIO 端口/部分 GPI/GPO 端口时的服务/UI 降级、无 GPI/GPO 能力的状态查询 Unsupported 语义、未知 GPIO 数量从成功状态查询回填运行时快照、短连接断开失败后的只读设置降级、能力解析上限回绕、Inventory 输入边界校验、WPF 页面退出取消在途操作、设置能力过期后的编辑门禁、设备列表刷新期间保持设置页选中 Reader、添加页 Host/Port 校验、发现端点归一化和 IPv6 展示、Probe/发现/提交互斥和发现条目输入门禁、应用设置默认 TagLog 目录和生产组合根解析 SQLite Store、TagLog 关闭开关和 Start 时跳过文件创建、Start 返回与早到生命周期停止事件的状态保护、Settings Query 在 ReaderBusy 时保留稳定错误码已有 Services/WPF 自动化覆盖。
+当前自动化基线：`dotnet build` 0 警告 0 错误；`dotnet test --no-build` 309 项全绿（Contracts 5、Services 159、Infrastructure 7、Impinj 13、Architecture 7、App.Wpf 118）。Connection Faulted、ReaderException 事件投影、统一 Inventory `LifecycleChanged`、Faulted Reader 重新连接、故障 Session 回收/干净 Session 重建、匹配 GPI Stop 触发器、Inventory 收尾与重新 Start、Reader 明确不支持 Tag Access/无 GPIO 端口/部分 GPI/GPO 端口时的服务/UI 降级、无 GPI/GPO 能力的状态查询 Unsupported 语义、未知 GPIO 数量从成功状态查询回填运行时快照、短连接断开失败后的只读设置降级、能力解析上限回绕、Inventory 输入边界校验、WPF 页面退出取消在途操作、设置能力过期后的编辑门禁、设备列表刷新期间保持设置页选中 Reader、添加页 Host/Port 校验、发现端点归一化和 IPv6 展示、Probe/发现/提交互斥和发现条目输入门禁、应用设置默认 TagLog 目录和生产组合根解析 SQLite Store、TagLog 关闭开关和 Start 时跳过文件创建、Start 返回与早到生命周期停止事件的状态保护、Settings Query 在 ReaderBusy 时保留稳定错误码、Tag List 保存/删除后即时刷新 Inventory 行名称已有 Services/WPF 自动化覆盖。
 
 标准 GPIO 能力解析同时覆盖 LLRP 1.0.1 与 1.1 的 `GeneralDeviceCapabilities` 参数；V1.1 端口数量和能力目录映射已有自动化回归，尚未将此代码证据提升为真实 1.1 设备验收结论。
 

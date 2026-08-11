@@ -1,9 +1,11 @@
 using System.IO;
 using LlrpReaderPlatform.App.Wpf.ViewModels;
 using LlrpReaderPlatform.Contracts.Lifecycle;
+using LlrpReaderPlatform.Contracts.Persistence;
 using LlrpReaderPlatform.Contracts.Readers;
 using LlrpReaderPlatform.Contracts.Tagging;
 using LlrpReaderPlatform.Services.Lifecycle;
+using LlrpReaderPlatform.Services.Persistence;
 using LlrpReaderPlatform.TestKit;
 using Sdk = LlrpSdk;
 using Xunit;
@@ -64,6 +66,43 @@ public sealed class InventoryViewModelTests
 
         Assert.Empty(vm.Tags);
         Assert.Equal(0, vm.UniqueTagCount);
+    }
+
+    [Fact]
+    public async Task Refreshing_tag_lists_reprojects_existing_inventory_rows_without_restart()
+    {
+        Guid readerId = Guid.NewGuid();
+        var service = new BurstInventoryService();
+        service.Seed(readerId, "3001");
+        var store = new InMemoryTagListStore();
+        using var vm = new InventoryViewModel(service, store);
+
+        vm.SetReaderContext(CreateReader(readerId, "Reader A"));
+
+        TagRowViewModel row = Assert.Single(vm.Tags);
+        Assert.Empty(row.TagListName);
+
+        await store.SaveAsync(new TagListDefinition
+        {
+            Id = Guid.NewGuid(),
+            Name = "Doors",
+            Entries =
+            [
+                new TagListEntry
+                {
+                    Id = Guid.NewGuid(),
+                    TagListId = Guid.NewGuid(),
+                    EpcHex = "3001",
+                    DisplayName = "Door 1",
+                },
+            ],
+        });
+
+        await vm.RefreshTagLabelsAsync();
+
+        Assert.Equal("Doors: Door 1", Assert.Single(vm.Tags).TagListName);
+        Assert.Equal(0, service.StartCount);
+        Assert.Equal(0, service.StopCount);
     }
 
     private static ReaderItemViewModel CreateReader(Guid id, string name) => new(new ReaderRuntimeSnapshot
@@ -620,6 +659,8 @@ public sealed class InventoryViewModelTests
         private readonly Dictionary<Guid, List<TagObservation>> tags = [];
 
         public bool StopBeforeStartReturns { get; init; }
+        public int StartCount { get; private set; }
+        public int StopCount { get; private set; }
 
         public long DroppedTagReportCount => 0;
 
@@ -637,6 +678,7 @@ public sealed class InventoryViewModelTests
             InventorySpec spec,
             CancellationToken ct = default)
         {
+            StartCount++;
             this.readerId = readerId;
             _ = tags.TryGetValue(readerId, out _);
             LifecycleChanged?.Invoke(this, new InventoryLifecycleChangedEventArgs(
@@ -655,6 +697,7 @@ public sealed class InventoryViewModelTests
 
         public Task StopInventoryAsync(Guid readerId, CancellationToken ct = default)
         {
+            StopCount++;
             LifecycleChanged?.Invoke(this, new InventoryLifecycleChangedEventArgs(
                 readerId,
                 InventoryLifecycleState.Stopped,
