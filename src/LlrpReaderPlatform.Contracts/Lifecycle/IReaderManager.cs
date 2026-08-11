@@ -1,3 +1,4 @@
+using LlrpReaderPlatform.Contracts.Errors;
 using LlrpReaderPlatform.Contracts.Readers;
 
 namespace LlrpReaderPlatform.Contracts.Lifecycle;
@@ -15,6 +16,7 @@ public interface IReaderManager
     Task<ReaderProbeResult> ProbeAsync(ReaderProfile profile, CancellationToken ct = default);
 
     Task RemoveAsync(Guid readerId, CancellationToken ct = default);
+    /// <summary>更新持久化启用意图；停用时同时停止盘存并释放当前连接租约。</summary>
     Task SetEnabledAsync(Guid readerId, bool enabled, CancellationToken ct = default);
 
     /// <summary>激活（短连接：连接→读身份/能力/配置→写缓存→断开），不保持 Session。</summary>
@@ -46,6 +48,15 @@ public sealed record ReaderAddResult(ReaderAddStatus Status, string? Error = nul
 {
     public bool Succeeded => Status == ReaderAddStatus.Added;
 
+    /// <summary>添加失败的稳定语义；UI 不需要解析 Error 文本。</summary>
+    public PlatformErrorCode ErrorCode { get; init; } = Status switch
+    {
+        ReaderAddStatus.Added => PlatformErrorCode.None,
+        ReaderAddStatus.PersistFailed => PlatformErrorCode.PersistenceFailed,
+        ReaderAddStatus.RegisterFailed => PlatformErrorCode.RegistrationFailed,
+        _ => PlatformErrorCode.DeviceFailed,
+    };
+
     /// <summary>标准 Probe 得到的设备型号，供添加页显示诊断结果。</summary>
     public string? Model { get; init; }
 
@@ -74,6 +85,22 @@ public sealed record ReaderProbeResult(
     LlrpProtocolVersion? NegotiatedProtocolVersion = null)
 {
     public bool Succeeded => Error is null;
+
+    /// <summary>探测失败的稳定语义；UI 不需要解析 Error 文本。</summary>
+    public PlatformErrorCode ErrorCode { get; init; } = Error is null
+        ? PlatformErrorCode.None
+        : PlatformErrorCode.DeviceFailed;
+
+    /// <summary>
+    /// 标准 Probe 得到身份后匹配到的扩展模块稳定 Id；Probe 本身不会加载或配置这些模块。
+    /// </summary>
+    public IReadOnlyList<string> MatchedExtensionIds { get; init; } = [];
 }
 
-public sealed record ReaderActivationResult(bool Succeeded, string? Error = null);
+public sealed record ReaderActivationResult(bool Succeeded, string? Error = null)
+{
+    /// <summary>激活失败的稳定语义；ReaderBusy 与设备错误可由消费者分别处理。</summary>
+    public PlatformErrorCode ErrorCode { get; init; } = Succeeded
+        ? PlatformErrorCode.None
+        : PlatformErrorCode.DeviceFailed;
+}

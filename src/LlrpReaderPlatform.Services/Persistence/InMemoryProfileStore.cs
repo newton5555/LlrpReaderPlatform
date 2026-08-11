@@ -26,7 +26,7 @@ public sealed class InMemoryProfileStore : IReaderProfileStore
     public Task SaveAsync(ReaderProfile profile, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(profile);
-        store[profile.Id] = profile;
+        store[profile.Id] = profile with { Host = ReaderEndpoint.NormalizeHost(profile.Host) };
         return Task.CompletedTask;
     }
 

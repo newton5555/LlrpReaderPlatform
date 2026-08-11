@@ -1,3 +1,4 @@
+using System.IO;
 using LlrpReaderPlatform.App.Wpf.ViewModels;
 using LlrpReaderPlatform.Contracts.Readers;
 using LlrpReaderPlatform.Contracts.Settings;
@@ -75,6 +76,43 @@ public sealed class TagMemoryViewModelTests
     }
 
     [Fact]
+    public async Task Read_rejects_invalid_word_pointer_before_service_call()
+    {
+        var h = new Harness();
+        FakeSession session = new();
+        h.Register(new FakeSession(), session);
+        var vm = new TagMemoryViewModel(h.Manager)
+        {
+            Epc = "3001",
+            WordPointer = "not-a-number",
+        };
+
+        await vm.ReadCommand.ExecuteAsync(h.Profile.Id);
+
+        Assert.Equal("Word pointer 必须是 0 到 65535 的整数。", vm.Result);
+        Assert.Equal(0, session.ReadTagMemoryCount);
+    }
+
+    [Fact]
+    public async Task Write_uses_data_length_instead_of_word_count()
+    {
+        var h = new Harness();
+        FakeSession session = new();
+        h.Register(new FakeSession(), session);
+        var vm = new TagMemoryViewModel(h.Manager)
+        {
+            Epc = "3001",
+            DataHex = "0001",
+            WordCount = "0",
+        };
+
+        await vm.WriteCommand.ExecuteAsync(h.Profile.Id);
+
+        Assert.Equal("写入成功。", vm.Result);
+        Assert.Equal(1, session.WriteTagMemoryCount);
+    }
+
+    [Fact]
     public async Task Read_without_reader_prompts_before_service_call()
     {
         var h = new Harness();
@@ -83,6 +121,7 @@ public sealed class TagMemoryViewModelTests
         await vm.ReadCommand.ExecuteAsync(null);
 
         Assert.Equal("请先从左侧选择 Reader。", vm.Result);
+        Assert.False(vm.IsReaderSelected);
     }
 
     [Fact]
@@ -111,6 +150,7 @@ public sealed class TagMemoryViewModelTests
         await vm.ReadCommand.ExecuteAsync(h.Profile.Id);
 
         Assert.Contains("tag not found", vm.Result);
+        Assert.Contains("设备错误", vm.Result);
     }
 
     [Fact]
@@ -166,5 +206,179 @@ public sealed class TagMemoryViewModelTests
         await first;
         Assert.False(vm.IsBusy);
         Assert.Equal(1, session.ReadTagMemoryCount);
+    }
+
+    [Fact]
+    public async Task Read_result_is_discarded_when_reader_context_changes()
+    {
+        var h = new Harness();
+        var started = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        FakeSession session = new()
+        {
+            TagAccessResult = new TagAccessResult(Succeeded: true, DataHex: "0AB0"),
+        };
+        session.BeforeReadTagMemoryAsync = async () =>
+        {
+            started.TrySetResult(true);
+            await release.Task;
+        };
+        h.Register(new FakeSession(), session);
+        var vm = new TagMemoryViewModel(h.Manager) { Epc = "3001" };
+        vm.SetReaderContext(new ReaderItemViewModel(new ReaderRuntimeSnapshot
+        {
+            ReaderId = h.Profile.Id,
+            Profile = h.Profile,
+            State = ReaderState.Disconnected,
+        }));
+
+        Task read = vm.ReadCommand.ExecuteAsync(h.Profile.Id);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        vm.SetReaderContext(new ReaderItemViewModel(new ReaderRuntimeSnapshot
+        {
+            ReaderId = Guid.NewGuid(),
+            Profile = new ReaderProfile { Id = Guid.NewGuid(), Name = "Other", Host = "192.0.2.2" },
+            State = ReaderState.Disconnected,
+        }));
+        release.TrySetResult(true);
+        await read.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Null(vm.Result);
+        Assert.Empty(vm.DataHex);
+    }
+
+    [Fact]
+    public async Task Read_result_is_discarded_when_same_reader_capability_changes()
+    {
+        var h = new Harness();
+        var started = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        FakeSession session = new()
+        {
+            TagAccessResult = new TagAccessResult(Succeeded: true, DataHex: "0AB0"),
+        };
+        session.BeforeReadTagMemoryAsync = async () =>
+        {
+            started.TrySetResult(true);
+            await release.Task;
+        };
+        h.Register(new FakeSession(), session);
+        var vm = new TagMemoryViewModel(h.Manager) { Epc = "3001" };
+        vm.SetReaderContext(new ReaderItemViewModel(new ReaderRuntimeSnapshot
+        {
+            ReaderId = h.Profile.Id,
+            Profile = h.Profile,
+            State = ReaderState.Connected,
+            CapabilityRevision = 1,
+            IsStale = false,
+        }));
+
+        Task read = vm.ReadCommand.ExecuteAsync(h.Profile.Id);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        vm.SetReaderContext(new ReaderItemViewModel(new ReaderRuntimeSnapshot
+        {
+            ReaderId = h.Profile.Id,
+            Profile = h.Profile,
+            State = ReaderState.Connected,
+            CapabilityRevision = 2,
+            IsStale = false,
+        }));
+        release.TrySetResult(true);
+        await read.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Null(vm.Result);
+        Assert.Empty(vm.DataHex);
+    }
+
+    [Fact]
+    public async Task Disposed_page_swallows_a_late_read_failure()
+    {
+        var service = new LateFailureInventoryService();
+        using var vm = new TagMemoryViewModel(service)
+        {
+            Epc = "3001",
+        };
+        Guid readerId = Guid.NewGuid();
+
+        Task read = vm.ReadCommand.ExecuteAsync(readerId);
+        await service.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        vm.Dispose();
+        service.Release.TrySetResult(true);
+
+        await read.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+
+    private sealed class LateFailureInventoryService : IInventoryService
+    {
+        public TaskCompletionSource<bool> Started { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource<bool> Release { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public long DroppedTagReportCount => 0;
+
+        public event EventHandler<TagObservedEventArgs>? TagObserved
+        {
+            add { }
+            remove { }
+        }
+
+        public event EventHandler<InventoryLifecycleChangedEventArgs>? LifecycleChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public event EventHandler<GpiObservedEventArgs>? GpiChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public async Task<TagAccessResult> ReadTagMemoryAsync(
+            Guid readerId,
+            TagReadRequest request,
+            CancellationToken ct = default)
+        {
+            Started.TrySetResult(true);
+            await Release.Task;
+            throw new IOException("late tag access failure");
+        }
+
+        public Task<StartInventoryResult> StartInventoryAsync(
+            Guid readerId,
+            InventorySpec spec,
+            CancellationToken ct = default) => throw new NotSupportedException();
+
+        public Task StopInventoryAsync(Guid readerId, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public IReadOnlyList<TagObservation> GetTags(Guid readerId) => [];
+
+        public void ClearTags(Guid readerId) { }
+
+        public Task<IReadOnlyList<GpiPortStatus>> GetGpiStatusAsync(
+            Guid readerId,
+            CancellationToken ct = default) => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<GpoPortStatus>> GetGpoStatusAsync(
+            Guid readerId,
+            CancellationToken ct = default) => throw new NotSupportedException();
+
+        public Task<GpioStatusSnapshot> GetGpioStatusAsync(
+            Guid readerId,
+            CancellationToken ct = default) => throw new NotSupportedException();
+
+        public Task<TagAccessResult> WriteTagMemoryAsync(
+            Guid readerId,
+            TagWriteRequest request,
+            CancellationToken ct = default) => throw new NotSupportedException();
+
+        public Task SetGpoAsync(
+            Guid readerId,
+            GpioCommand command,
+            CancellationToken ct = default) => throw new NotSupportedException();
     }
 }

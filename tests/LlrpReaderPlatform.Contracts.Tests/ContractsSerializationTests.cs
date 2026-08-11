@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LlrpReaderPlatform.Contracts.Discovery;
 using LlrpReaderPlatform.Contracts.Readers;
 using LlrpReaderPlatform.Contracts.Settings;
 using LlrpReaderPlatform.Contracts.Tagging;
@@ -31,6 +32,31 @@ public sealed class ContractsSerializationTests
 
         Assert.NotNull(restored);
         Assert.Equal(original, restored);
+        original.Validate();
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            (original with { LlrpVersion = (LlrpProtocolVersionOption)99 }).Validate());
+        Assert.Equal("fe80::10", ReaderEndpoint.NormalizeHost(" [FE80::10] "));
+        Assert.Equal("[fe80::10]:5084", ReaderEndpoint.Format("[FE80::10]", 5084));
+        Assert.Throws<ArgumentException>(() =>
+            (original with { Host = "[]" }).Validate());
+    }
+
+    [Fact]
+    public void Discovered_readers_normalize_hosts_ports_and_duplicate_endpoints()
+    {
+        IReadOnlyList<DiscoveredReader> normalized = DiscoveredReaderNormalization.Normalize(
+        [
+            new DiscoveredReader(" reader-v6 ", "reader-v6.local", "[FE80::10]", 5084, new Dictionary<string, string>()),
+            new DiscoveredReader("alias", "alias.local", "fe80::10", 5084, new Dictionary<string, string>()),
+            new DiscoveredReader(string.Empty, string.Empty, "10.0.0.2", 0, new Dictionary<string, string>()),
+            new DiscoveredReader("invalid", string.Empty, string.Empty, 5084, new Dictionary<string, string>()),
+        ]);
+
+        Assert.Equal(2, normalized.Count);
+        Assert.Equal("reader-v6", normalized[0].DisplayName);
+        Assert.Equal("fe80::10", normalized[0].IpAddress);
+        Assert.Equal("10.0.0.2", normalized[1].Host);
+        Assert.Equal(5084, normalized[1].Port);
     }
 
     [Fact]

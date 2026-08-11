@@ -1,3 +1,4 @@
+using System.Globalization;
 using LlrpReaderPlatform.Contracts.Readers;
 using LlrpReaderPlatform.Contracts.Settings;
 using LlrpReaderPlatform.Services.Extensions;
@@ -133,7 +134,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
 
             if (entry.Key == SettingsKeys.AntennaIds)
             {
-                compiled.AntennaIds = ParseAntennaIds(value.ToString());
+                compiled.AntennaIds = ParseAntennaIds(FormatInvariant(value));
                 continue;
             }
 
@@ -147,28 +148,28 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             switch (entry.Key)
             {
                 case SettingsKeys.Antenna:
-                    compiled.AntennaId = Convert.ToUInt16(value);
+                    compiled.AntennaId = Convert.ToUInt16(value, CultureInfo.InvariantCulture);
                     break;
                 case SettingsKeys.Session:
-                    compiled.Session = Convert.ToInt32(value);
+                    compiled.Session = Convert.ToInt32(value, CultureInfo.InvariantCulture);
                     break;
                 case SettingsKeys.TxPowerDbm:
-                    compiled.TxPowerDbm = Convert.ToDecimal(value);
+                    compiled.TxPowerDbm = Convert.ToDecimal(value, CultureInfo.InvariantCulture);
                     break;
                 case SettingsKeys.RxSensitivityDb:
-                    compiled.RxSensitivityDb = Convert.ToInt32(value);
+                    compiled.RxSensitivityDb = Convert.ToInt32(value, CultureInfo.InvariantCulture);
                     break;
                 case SettingsKeys.TagPopulation:
-                    compiled.TagPopulation = Convert.ToInt32(value);
+                    compiled.TagPopulation = Convert.ToInt32(value, CultureInfo.InvariantCulture);
                     break;
                 case SettingsKeys.ReportEvery:
-                    compiled.ReportEvery = Convert.ToInt32(value);
+                    compiled.ReportEvery = Convert.ToInt32(value, CultureInfo.InvariantCulture);
                     break;
                 case SettingsKeys.RfMode:
-                    compiled.RfMode = Convert.ToInt32(value);
+                    compiled.RfMode = Convert.ToInt32(value, CultureInfo.InvariantCulture);
                     break;
                 case SettingsKeys.Tari:
-                    compiled.Tari = Convert.ToInt32(value);
+                    compiled.Tari = Convert.ToInt32(value, CultureInfo.InvariantCulture);
                     break;
             }
         }
@@ -280,10 +281,8 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             DefaultValue = (int)inventory.ReportEveryNTags,
         });
 
-        IReadOnlyList<SettingsOption> rfModes = runtime.Capabilities?.RfModes is { Count: > 0 } modes
-            ? modes.Select(m => new SettingsOption((int)m.ModeIdentifier, $"{m.ModeIdentifier}: {m.ForwardLinkModulation}"))
-                .ToArray()
-            : [];
+        int currentRfMode = (int)inventory.ModeIndex;
+        IReadOnlyList<SettingsOption> rfModes = BuildRfModeOptions(runtime.Capabilities, currentRfMode);
         entries.Add(new SettingsEntry
         {
             Key = SettingsKeys.RfMode,
@@ -292,8 +291,8 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             ValueType = typeof(int),
             Options = rfModes,
             Range = rfModes.Count > 0 ? null : new SettingsRange(0, ushort.MaxValue),
-            CurrentValue = (int)inventory.ModeIndex,
-            DefaultValue = (int)inventory.ModeIndex,
+            CurrentValue = currentRfMode,
+            DefaultValue = currentRfMode,
         });
 
         SettingsRange tariRange = ResolveTariRange(runtime.Capabilities, inventory.ModeIndex, inventory.Tari);
@@ -375,7 +374,11 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         }
 
         AddFilterEntries(entries, inventory, runtime.Capabilities?.CanDoTagInventoryStateAwareSingulation == true);
-        AddTriggerEntries(entries, inventory, snapshot.FeatureCatalog.SupportsOrUnknown(ReaderFeatures.StandardGpi));
+        AddTriggerEntries(
+            entries,
+            inventory,
+            snapshot.FeatureCatalog.SupportsOrUnknown(ReaderFeatures.StandardGpi),
+            snapshot.GpiCount);
         AddReportEntries(entries, inventory.Report);
         foreach (ISettingsExtensionContributor extension in extensions.Where(e => e.IsApplicable(snapshot)))
         {
@@ -467,7 +470,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         }
 
         bool individual = draft.Values.TryGetValue(SettingsKeys.IndividualAntennaSettings, out object? individualValue)
-            && Convert.ToBoolean(individualValue);
+            && Convert.ToBoolean(individualValue, CultureInfo.InvariantCulture);
         bool gpiSupported = reader.FeatureCatalog.SupportsOrUnknown(ReaderFeatures.StandardGpi);
         inventory = inventory with
         {
@@ -556,6 +559,33 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         new(6, "No operation / Assert A"),
         new(7, "No operation / Negate selected"),
     ];
+
+    private static IReadOnlyList<SettingsOption> BuildRfModeOptions(
+        ReaderCapabilities? capabilities,
+        int currentMode)
+    {
+        if (capabilities?.RfModes is not { Count: > 0 } modes)
+        {
+            return [];
+        }
+
+        var options = modes
+            .Select(static mode => new SettingsOption(
+                (int)mode.ModeIdentifier,
+                $"{mode.ModeIdentifier}: {mode.ForwardLinkModulation}"))
+            .ToList();
+
+        // Some readers report a valid active mode that is absent from the RF mode
+        // capability table. Keep that value selectable so an unrelated setting
+        // change can round-trip without the service rejecting the reader's own
+        // current configuration.
+        if (!options.Any(option => Equals(option.Value, currentMode)))
+        {
+            options.Add(new SettingsOption(currentMode, $"{currentMode}: current reader mode"));
+        }
+
+        return options;
+    }
 
     private static void AddFilterEntries(
         List<SettingsEntry> entries,
@@ -698,8 +728,16 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
     private static void AddTriggerEntries(
         List<SettingsEntry> entries,
         InventorySettings inventory,
-        bool gpiSupported)
+        bool gpiSupported,
+        ushort? gpiCount)
     {
+        string? readOnlyReason = !gpiSupported
+            ? "Reader 不支持 GPI。"
+            : gpiCount == 0
+                ? "Reader 没有 GPI 端口。"
+                : null;
+        int maximumPort = gpiCount is > 0 ? gpiCount.Value : ushort.MaxValue;
+
         entries.Add(new SettingsEntry
         {
             Key = SettingsKeys.StartGpiEnabled,
@@ -708,7 +746,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             ValueType = typeof(bool),
             CurrentValue = inventory.StartTrigger.Type == InventoryStartTriggerType.Gpi,
             DefaultValue = false,
-            ReadOnlyReason = gpiSupported ? null : "Reader 不支持 GPI。",
+            ReadOnlyReason = readOnlyReason,
         });
         entries.Add(new SettingsEntry
         {
@@ -716,10 +754,10 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             Title = "Start GPI port",
             EditorKind = EditorKind.Integer,
             ValueType = typeof(int),
-            Range = new SettingsRange(1, ushort.MaxValue),
-            CurrentValue = Math.Max(1, (int)inventory.StartTrigger.GpiPortNumber),
+            Range = new SettingsRange(1, maximumPort),
+            CurrentValue = Math.Clamp((int)inventory.StartTrigger.GpiPortNumber, 1, maximumPort),
             DefaultValue = 1,
-            ReadOnlyReason = gpiSupported ? null : "Reader 不支持 GPI。",
+            ReadOnlyReason = readOnlyReason,
         });
         entries.Add(new SettingsEntry
         {
@@ -729,7 +767,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             ValueType = typeof(bool),
             CurrentValue = inventory.StartTrigger.GpiState,
             DefaultValue = false,
-            ReadOnlyReason = gpiSupported ? null : "Reader 不支持 GPI。",
+            ReadOnlyReason = readOnlyReason,
         });
         entries.Add(new SettingsEntry
         {
@@ -739,7 +777,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             ValueType = typeof(bool),
             CurrentValue = inventory.StopTrigger.Type == InventoryStopTriggerType.GpiWithTimeout,
             DefaultValue = false,
-            ReadOnlyReason = gpiSupported ? null : "Reader 不支持 GPI。",
+            ReadOnlyReason = readOnlyReason,
         });
         entries.Add(new SettingsEntry
         {
@@ -747,10 +785,10 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             Title = "Stop GPI port",
             EditorKind = EditorKind.Integer,
             ValueType = typeof(int),
-            Range = new SettingsRange(1, ushort.MaxValue),
-            CurrentValue = Math.Max(1, (int)inventory.StopTrigger.GpiPortNumber),
+            Range = new SettingsRange(1, maximumPort),
+            CurrentValue = Math.Clamp((int)inventory.StopTrigger.GpiPortNumber, 1, maximumPort),
             DefaultValue = 1,
-            ReadOnlyReason = gpiSupported ? null : "Reader 不支持 GPI。",
+            ReadOnlyReason = readOnlyReason,
         });
         entries.Add(new SettingsEntry
         {
@@ -760,7 +798,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             ValueType = typeof(bool),
             CurrentValue = inventory.StopTrigger.GpiState,
             DefaultValue = false,
-            ReadOnlyReason = gpiSupported ? null : "Reader 不支持 GPI。",
+            ReadOnlyReason = readOnlyReason,
         });
         entries.Add(new SettingsEntry
         {
@@ -771,7 +809,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             Range = new SettingsRange(0, uint.MaxValue),
             CurrentValue = inventory.StopTrigger.TimeoutMilliseconds,
             DefaultValue = 1000,
-            ReadOnlyReason = gpiSupported ? null : "Reader 不支持 GPI。",
+            ReadOnlyReason = readOnlyReason,
         });
     }
 
@@ -869,16 +907,12 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
     {
         if (draft.Values.TryGetValue(SettingsKeys.AntennaIds, out object? value))
         {
-            IReadOnlyList<ushort> parsed = ParseAntennaIds(value?.ToString());
-            if (parsed.Count > 0)
-            {
-                return parsed;
-            }
+            return ParseAntennaIds(value is null ? null : FormatInvariant(value));
         }
 
         if (draft.Values.TryGetValue(SettingsKeys.Antenna, out value) && value is not null)
         {
-            return [Convert.ToUInt16(value)];
+            return [Convert.ToUInt16(value, CultureInfo.InvariantCulture)];
         }
 
         return baseline.AntennaIds.Count > 0 ? baseline.AntennaIds : [0];
@@ -888,7 +922,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
     {
         if (string.IsNullOrWhiteSpace(text))
         {
-            return [];
+            throw new InvalidOperationException("Antennas must not be empty; use ALL to select every antenna.");
         }
 
         return text.Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries)
@@ -922,23 +956,60 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             ushort memoryBank = checked((ushort)GetInt(draft, SettingsKeys.FilterMemoryBank(index), 1));
             ushort offset = checked((ushort)GetInt(draft, SettingsKeys.FilterOffset(index), 32));
             ushort bitLength = checked((ushort)GetInt(draft, SettingsKeys.FilterBitLength(index), mask.Length * 8));
+
+            if (!Enum.IsDefined((LlrpSdk.TagMemoryBank)memoryBank))
+            {
+                throw new FormatException($"Filter {index} 的 Memory Bank 无效。");
+            }
+
+            if (bitLength == 0 || bitLength > mask.Length * 8)
+            {
+                throw new FormatException($"Filter {index} 的位长度必须大于 0 且不能超过掩码长度。");
+            }
+
+            InventorySelectAction matchAction = (InventorySelectAction)GetInt(
+                draft,
+                SettingsKeys.FilterMatchAction(index),
+                1);
+            InventorySelectAction nonMatchAction = (InventorySelectAction)GetInt(
+                draft,
+                SettingsKeys.FilterNonMatchAction(index),
+                2);
+            if (!Enum.IsDefined(matchAction) || !Enum.IsDefined(nonMatchAction))
+            {
+                throw new FormatException($"Filter {index} 的匹配动作无效。");
+            }
+
             InventorySelectFilter filter = new()
             {
                 MemoryBank = memoryBank,
                 BitPointer = offset,
                 Mask = mask,
                 BitLength = bitLength,
-                MatchAction = (InventorySelectAction)GetInt(draft, SettingsKeys.FilterMatchAction(index), 1),
-                NonMatchAction = (InventorySelectAction)GetInt(draft, SettingsKeys.FilterNonMatchAction(index), 2),
+                MatchAction = matchAction,
+                NonMatchAction = nonMatchAction,
             };
             if (stateAwareEnabled)
             {
+                InventoryFilterTarget target = (InventoryFilterTarget)GetInt(
+                    draft,
+                    SettingsKeys.FilterStateTarget(index),
+                    1);
+                InventoryFilterAction action = (InventoryFilterAction)GetInt(
+                    draft,
+                    SettingsKeys.FilterStateAction(index),
+                    0);
+                if (!Enum.IsDefined(target) || !Enum.IsDefined(action))
+                {
+                    throw new FormatException($"Filter {index} 的 state-aware 动作无效。");
+                }
+
                 filter = filter with
                 {
                     StateAwareAction = new InventoryStateAwareFilterAction
                     {
-                        Target = (InventoryFilterTarget)GetInt(draft, SettingsKeys.FilterStateTarget(index), 1),
-                        Action = (InventoryFilterAction)GetInt(draft, SettingsKeys.FilterStateAction(index), 0),
+                        Target = target,
+                        Action = action,
                     },
                 };
             }
@@ -997,7 +1068,14 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             : baseline with { Type = InventoryStopTriggerType.None };
 
     private static string GetString(SettingsDraft draft, string key, string fallback = "") =>
-        draft.Values.TryGetValue(key, out object? value) && value is not null ? value.ToString() ?? fallback : fallback;
+        draft.Values.TryGetValue(key, out object? value) && value is not null ? FormatInvariant(value) : fallback;
+
+    private static string FormatInvariant(object? value) => value switch
+    {
+        null => string.Empty,
+        IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture) ?? string.Empty,
+        _ => value.ToString() ?? string.Empty,
+    };
 
     private static string NormalizeHex(string value)
     {
@@ -1010,13 +1088,19 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
     }
 
     private static int GetInt(SettingsDraft draft, string key, int fallback = 0) =>
-        draft.Values.TryGetValue(key, out object? value) && value is not null ? Convert.ToInt32(value) : fallback;
+        draft.Values.TryGetValue(key, out object? value) && value is not null
+            ? Convert.ToInt32(value, CultureInfo.InvariantCulture)
+            : fallback;
 
     private static decimal? GetDecimal(SettingsDraft draft, string key) =>
-        draft.Values.TryGetValue(key, out object? value) && value is not null ? Convert.ToDecimal(value) : null;
+        draft.Values.TryGetValue(key, out object? value) && value is not null
+            ? Convert.ToDecimal(value, CultureInfo.InvariantCulture)
+            : null;
 
     private static bool GetBool(SettingsDraft draft, string key, bool fallback = false) =>
-        draft.Values.TryGetValue(key, out object? value) && value is not null ? Convert.ToBoolean(value) : fallback;
+        draft.Values.TryGetValue(key, out object? value) && value is not null
+            ? Convert.ToBoolean(value, CultureInfo.InvariantCulture)
+            : fallback;
 
     private static InventoryAntennaConfiguration? ResolveAntennaConfiguration(InventorySettings inventory, ushort antenna)
     {
@@ -1074,7 +1158,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             ? powers
                 .Select(power => new SettingsOption(
                     (decimal)power.TransmitPowerDbm,
-                    $"Index {power.Index}: {power.TransmitPowerDbm:0.###} dBm"))
+                    $"Index {power.Index}: {power.TransmitPowerDbm.ToString("0.###", CultureInfo.InvariantCulture)} dBm"))
                 .ToArray()
             : [];
 
@@ -1111,7 +1195,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             ? sensitivities
                 .Select(sensitivity => new SettingsOption(
                     sensitivity.ReceiveSensitivityDb,
-                    $"Index {sensitivity.Index}: {sensitivity.ReceiveSensitivityDb} dBm"))
+                    $"Index {sensitivity.Index}: {sensitivity.ReceiveSensitivityDb.ToString(CultureInfo.InvariantCulture)} dBm"))
                 .ToArray()
             : [];
 

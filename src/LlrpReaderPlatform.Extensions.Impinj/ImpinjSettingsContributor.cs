@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using LlrpNet.Protocol.Impinj.Enumerations.V1_0_1;
 using LlrpReaderPlatform.Contracts.Readers;
 using LlrpReaderPlatform.Contracts.Settings;
@@ -29,7 +30,9 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
     public string Id => "impinj-settings";
 
     public bool IsApplicable(ReaderRuntimeSnapshot reader) =>
-        reader.FeatureCatalog.Supports(ReaderFeatures.ImpinjFastId);
+        reader.FeatureCatalog.SupportedFeatures.Any(static feature =>
+            feature.IsVendor
+            && string.Equals(feature.Vendor, "impinj", StringComparison.Ordinal));
 
     public void ContributeLayout(
         IList<SettingsEntry> entries,
@@ -67,11 +70,11 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
 
         if (Supports(reader, ReaderFeatures.ImpinjGpiDebounce))
         {
-            for (ushort port = 1; port <= 4; port++)
+            for (int port = 1; port <= ResolveGpiPortCount(reader); port++)
             {
                 entries.Add(new SettingsEntry
                 {
-                    Key = GpiDebounce(port),
+                    Key = GpiDebounce(checked((ushort)port)),
                     Title = $"Impinj GPI {port} debounce (ms)",
                     EditorKind = EditorKind.Integer,
                     ValueType = typeof(int),
@@ -255,12 +258,16 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
             configurationValue is ImpinjReaderConfiguration configuration
                 ? configuration
                 : new ImpinjReaderConfiguration();
-        var debounce = existingConfiguration.GpiDebounce.ToDictionary(x => x.GpiPortNumber);
-        for (ushort port = 1; port <= 4; port++)
+        int gpiPortCount = ResolveGpiPortCount(reader);
+        var debounce = existingConfiguration.GpiDebounce
+            .Where(item => item.GpiPortNumber > 0 && item.GpiPortNumber <= gpiPortCount)
+            .ToDictionary(x => x.GpiPortNumber);
+        for (int port = 1; port <= gpiPortCount; port++)
         {
-            if (draft.Values.TryGetValue(GpiDebounce(port), out object? value) && value is not null)
+            ushort portNumber = checked((ushort)port);
+            if (draft.Values.TryGetValue(GpiDebounce(portNumber), out object? value) && value is not null)
             {
-                debounce[port] = new ImpinjGpiDebounceSetting(port, checked((uint)GetIntValue(value)));
+                debounce[portNumber] = new ImpinjGpiDebounceSetting(portNumber, checked((uint)GetIntValue(value)));
             }
         }
 
@@ -311,6 +318,9 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
                 .Select(value => new SettingsOption((int)value, value.ToString())))
             .ToArray();
 
+    private static int ResolveGpiPortCount(ReaderRuntimeSnapshot reader) =>
+        reader.GpiCount is { } count ? count : 4;
+
     private static bool Supports(ReaderRuntimeSnapshot reader, Feature feature) =>
         reader.FeatureCatalog.Supports(feature);
 
@@ -322,18 +332,26 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
         return frequencies
             .Select((frequency, index) => new SettingsOption(
                 index + 1,
-                $"{index + 1} - {frequency / 1000.0:0.###} MHz"))
+                $"{index + 1} - {(frequency / 1000.0).ToString("0.###", CultureInfo.InvariantCulture)} MHz"))
             .ToArray();
     }
 
     private static int GetInt(SettingsDraft draft, string key, int fallback) =>
-        draft.Values.TryGetValue(key, out object? value) && value is not null ? Convert.ToInt32(value) : fallback;
+        draft.Values.TryGetValue(key, out object? value) && value is not null
+            ? Convert.ToInt32(value, CultureInfo.InvariantCulture)
+            : fallback;
 
-    private static int GetIntValue(object value) => Convert.ToInt32(value);
+    private static int GetIntValue(object value) => Convert.ToInt32(value, CultureInfo.InvariantCulture);
 
     private static bool GetBool(SettingsDraft draft, string key, bool fallback = false) =>
-        draft.Values.TryGetValue(key, out object? value) && value is not null ? Convert.ToBoolean(value) : fallback;
+        draft.Values.TryGetValue(key, out object? value) && value is not null
+            ? Convert.ToBoolean(value, CultureInfo.InvariantCulture)
+            : fallback;
 
     private static string GetString(SettingsDraft draft, string key) =>
-        draft.Values.TryGetValue(key, out object? value) && value is not null ? value.ToString() ?? string.Empty : string.Empty;
+        draft.Values.TryGetValue(key, out object? value) && value is not null
+            ? value is IFormattable formattable
+                ? formattable.ToString(null, CultureInfo.InvariantCulture) ?? string.Empty
+                : value.ToString() ?? string.Empty
+            : string.Empty;
 }

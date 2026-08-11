@@ -111,20 +111,37 @@ public partial class App : Application
             || category.StartsWith("LlrpNet", StringComparison.Ordinal);
     }
 
-    protected override async void OnExit(ExitEventArgs e)
+    protected override void OnExit(ExitEventArgs e)
     {
         try
         {
             if (services is not null)
             {
-                await services.DisposeAsync();
+                try
+                {
+                    // WPF 的 OnExit 没有异步覆盖点；同步等待 ValueTask，确保 Reader
+                    // Stop/排空/断开和 DI 异步释放在进程退出前完成。
+                    services.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                }
+                catch (Exception ex)
+                {
+                    // 退出阶段不能因为某个可释放服务异常而跳过其余日志工厂和
+                    // WPF 基类清理；ReaderManager 自身会继续逐个释放 Reader。
+                    System.Diagnostics.Debug.WriteLine(
+                        $"LlrpReaderPlatform service disposal failed: {ex}");
+                }
             }
-
-            sdkLoggerFactory?.Dispose();
         }
         finally
         {
-            base.OnExit(e);
+            try
+            {
+                sdkLoggerFactory?.Dispose();
+            }
+            finally
+            {
+                base.OnExit(e);
+            }
         }
     }
 }

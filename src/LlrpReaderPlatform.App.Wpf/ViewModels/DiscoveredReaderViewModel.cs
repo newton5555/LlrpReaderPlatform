@@ -16,6 +16,6 @@ public sealed record DiscoveredReaderViewModel
     public string IpAddress => Reader.IpAddress;
     public int Port => Reader.Port;
     public string DisplayEndpoint => string.Equals(Host, IpAddress, StringComparison.OrdinalIgnoreCase)
-        ? $"{IpAddress}:{Port}"
-        : $"{Host} ({IpAddress}:{Port})";
+        ? ReaderEndpointFormatter.Format(IpAddress, Port)
+        : $"{Host} ({ReaderEndpointFormatter.Format(IpAddress, Port)})";
 }

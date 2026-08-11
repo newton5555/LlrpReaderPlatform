@@ -7,8 +7,8 @@ public sealed class SqliteInventoryRunStore(IDbContextFactory<PlatformDbContext>
 {
     public async Task<IReadOnlyList<InventoryRunRecord>> GetForReaderAsync(Guid readerId, CancellationToken ct = default)
     {
+        await PlatformDbSchema.EnsureMigratedAsync(contextFactory, ct).ConfigureAwait(false);
         await using PlatformDbContext db = await contextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        await db.Database.MigrateAsync(ct).ConfigureAwait(false);
         InventoryRunRecord[] runs = await db.InventoryRuns.AsNoTracking().Where(x => x.ReaderId == readerId)
             .Select(x => new InventoryRunRecord
             {
@@ -27,8 +27,8 @@ public sealed class SqliteInventoryRunStore(IDbContextFactory<PlatformDbContext>
     public async Task SaveAsync(InventoryRunRecord run, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(run);
+        await PlatformDbSchema.EnsureMigratedAsync(contextFactory, ct).ConfigureAwait(false);
         await using PlatformDbContext db = await contextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        await db.Database.MigrateAsync(ct).ConfigureAwait(false);
         InventoryRunEntity? entity = await db.InventoryRuns.SingleOrDefaultAsync(x => x.Id == run.Id, ct).ConfigureAwait(false);
         if (entity is null)
         {

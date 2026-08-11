@@ -21,6 +21,7 @@
 - CapabilityRevision 和过期 Draft；
 - 标准设备降级路径；
 - SDK Settings Query/Apply、Inventory Settings、TagReport 映射；
+- GPI/GPO 端口数量驱动的设置布局范围与零端口只读降级；
 - 高并发 TagReport 的有界队列和丢弃统计。
 
 ### Infrastructure.Tests
@@ -45,7 +46,7 @@
 - EditorKind 到 DataTemplate 的映射；
 - 状态事件切换到 Dispatcher；
 - 无能力或 ReaderBusy 时的 UI 状态；
-- Settings、Tag Access 和 Inventory 结果的 `PlatformErrorCode` 与用户可读错误文本同时正确投影；
+- Reader 添加/激活、Settings、Tag Access 和 Inventory 结果的 `PlatformErrorCode` 与用户可读错误文本同时正确投影；
 - Settings Query/Apply 状态和离线缓存只读状态；
 - Inventory TagObserved 批量消费、Start/Stop 状态和统计；
 - Inventory `LifecycleChanged` 对手动 Stop、GPI Stop、设备断连和多 Reader 隔离的统一状态投影；
@@ -59,6 +60,7 @@
 - 断线、Reader 重启、设置拒绝、扩展拒绝和取消清理；
 - Query/Apply 真实设备配置并重新 Query 验证；
 - Inventory 长连接从 Start 持续到 Stop，不按报告重新连接；
+- Inventory 无效时长、重复天线和全部天线/指定天线混用在连接前返回 `InvalidSettings`；
 - 高频 TagReport 下 SDK 消息泵、Services 和 WPF 均不阻塞。
 
 `FakeSession` 用于服务层确定性测试；不能替代 SDK 适配器和真实设备验收。

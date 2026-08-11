@@ -7,6 +7,8 @@ using LlrpReaderPlatform.Services.Lifecycle;
 using LlrpReaderPlatform.Services.Persistence;
 using LlrpReaderPlatform.Services.Settings;
 using LlrpReaderPlatform.TestKit;
+using SdkReaderSettings = LlrpSdk.ReaderSettings;
+using SdkReaderSettingsSnapshot = LlrpSdk.ReaderSettingsSnapshot;
 using Xunit;
 
 namespace LlrpReaderPlatform.Services.Tests.Settings;
@@ -58,6 +60,13 @@ public sealed class SettingsServiceTests
 
         Assert.True(model.Layout.HasEditableSettings);
         Assert.True(model.Snapshot.CapabilityRevision > 0);
+
+        await h.Manager.DeactivateAsync(h.Profile.Id);
+
+        SettingsEditorModel recovered = await h.Settings.QueryAsync(h.Profile.Id);
+
+        Assert.True(recovered.Layout.HasEditableSettings);
+        Assert.True(recovered.Snapshot.CapabilityRevision > 0);
     }
 
     [Fact]
@@ -72,6 +81,39 @@ public sealed class SettingsServiceTests
 
         await Assert.ThrowsAsync<OperationCanceledException>(
             () => h.Settings.QueryAsync(h.Profile.Id, cancellation.Token));
+
+        var fallbackHarness = new Harness();
+        await fallbackHarness.Manager.AddAsync(fallbackHarness.Profile, enableAfterAdding: false);
+        await fallbackHarness.Manager.ActivateAsync(fallbackHarness.Profile.Id);
+        fallbackHarness.RegisterSession.SettingsQueryThrows = new IOException("offline");
+        using var fallbackCancellation = new CancellationTokenSource();
+        var cancellingPresetStore = new CancellingSettingsPresetStore(fallbackCancellation);
+        var fallbackSettings = new SettingsService(
+            fallbackHarness.Manager,
+            fallbackHarness.Compiler,
+            fallbackHarness.Manager,
+            cancellingPresetStore);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => fallbackSettings.QueryAsync(fallbackHarness.Profile.Id, fallbackCancellation.Token));
+    }
+
+    [Fact]
+    public async Task QueryAsync_marks_model_readonly_when_short_operation_disconnect_fails()
+    {
+        var h = new Harness();
+        await h.Manager.AddAsync(h.Profile, enableAfterAdding: false);
+        await h.Manager.ActivateAsync(h.Profile.Id);
+        h.RegisterSession.DisconnectThrows = new IOException("disconnect failed");
+
+        SettingsEditorModel model = await h.Settings.QueryAsync(h.Profile.Id);
+
+        Assert.False(model.Layout.HasEditableSettings);
+        Assert.All(model.Layout.Entries, static entry => Assert.True(entry.IsReadOnly));
+        Assert.Contains(
+            model.Layout.Entries,
+            static entry => entry.ReadOnlyReason?.Contains("重新连接", StringComparison.Ordinal) == true);
+        Assert.True(h.Manager.GetSnapshot(h.Profile.Id).IsStale);
     }
 
     [Fact]
@@ -143,6 +185,7 @@ public sealed class SettingsServiceTests
     public async Task Validate_rejects_out_of_range_value()
     {
         var h = new Harness();
+        h.RegisterSession.SetCapabilities(maxNumberOfAntennas: 1);
         await h.Manager.AddAsync(h.Profile, enableAfterAdding: false);
         await h.Manager.ActivateAsync(h.Profile.Id);
         SettingsEditorModel model = await h.Settings.QueryAsync(h.Profile.Id);
@@ -160,6 +203,16 @@ public sealed class SettingsServiceTests
         draft.Values["tx-power-dbm"] = 99m; // 超出 0..30
         SettingsValidationResult result = h.Settings.Validate(draft);
         Assert.False(result.IsValid);
+
+        draft.Values["tx-power-dbm"] = "not-a-number";
+        result = h.Settings.Validate(draft);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Issues, issue => issue.Key == "tx-power-dbm");
+
+        draft.Values[SettingsKeys.AntennaIds] = string.Empty;
+        result = h.Settings.Validate(draft);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Issues, issue => issue.Key == SettingsKeys.AntennaIds);
 
         // Query 后 Validate 必须使用完整的实时布局，不能只校验最初的三项核心设置。
         draft.Values[SettingsKeys.ReportRssi] = "not-a-boolean";
@@ -187,6 +240,29 @@ public sealed class SettingsServiceTests
     }
 
     [Fact]
+    public async Task ApplyAsync_rechecks_capability_after_preflight_query()
+    {
+        Guid readerId = Guid.NewGuid();
+        var manager = new CapabilityChangingReaderManager(readerId);
+        var runtime = new CapabilityChangingSettingsRuntime();
+        var service = new SettingsService(
+            manager,
+            new EmptySdkSettingsCompiler(),
+            runtime);
+        var draft = new SettingsDraft
+        {
+            ReaderId = readerId,
+            CapabilityRevision = 1,
+        };
+
+        SettingsApplyResult result = await service.ApplyAsync(readerId, draft);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(PlatformErrorCode.StaleCapability, result.ErrorCode);
+        Assert.Equal(0, runtime.ApplyCount);
+    }
+
+    [Fact]
     public async Task ApplyAsync_succeeds_with_valid_draft()
     {
         var h = new Harness();
@@ -207,6 +283,20 @@ public sealed class SettingsServiceTests
         SettingsApplyResult result = await h.Settings.ApplyAsync(h.Profile.Id, draft);
         Assert.True(result.Succeeded, result.Error);
 
+        var failingPresetStore = new ThrowingSettingsPresetStore();
+        var settingsWithFailingPreset = new SettingsService(
+            h.Manager,
+            h.Compiler,
+            h.Manager,
+            failingPresetStore);
+        await settingsWithFailingPreset.QueryAsync(h.Profile.Id);
+        int saveCountBeforeApply = failingPresetStore.SaveCount;
+        SettingsApplyResult deviceSuccessWithCacheFailure = await settingsWithFailingPreset.ApplyAsync(
+            h.Profile.Id,
+            draft);
+        Assert.True(deviceSuccessWithCacheFailure.Succeeded, deviceSuccessWithCacheFailure.Error);
+        Assert.Equal(saveCountBeforeApply + 1, failingPresetStore.SaveCount);
+
         // Filter mask 的格式错误应转换为 ApplyResult，而不是把编译异常抛到 UI。
         draft.Values[SettingsKeys.FilterEnabled(1)] = true;
         draft.Values[SettingsKeys.FilterMask(1)] = "GG";
@@ -214,6 +304,171 @@ public sealed class SettingsServiceTests
         Assert.False(invalid.Succeeded);
         Assert.Contains("设置编译失败", invalid.Error);
         Assert.Equal(PlatformErrorCode.InvalidSettings, invalid.ErrorCode);
+    }
+
+    private sealed class ThrowingSettingsPresetStore : IReaderSettingsPresetStore
+    {
+        public int SaveCount { get; private set; }
+
+        public Task<ReaderSettingsPreset?> GetAsync(Guid readerId, CancellationToken ct = default) =>
+            Task.FromResult<ReaderSettingsPreset?>(null);
+
+        public Task SaveAsync(ReaderSettingsPreset preset, CancellationToken ct = default)
+        {
+            SaveCount++;
+            throw new IOException("local preset unavailable");
+        }
+
+        public Task DeleteAsync(Guid readerId, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class CapabilityChangingReaderManager : IReaderManager
+    {
+        private readonly ReaderRuntimeSnapshot snapshot;
+        private int snapshotCalls;
+
+        public CapabilityChangingReaderManager(Guid readerId)
+        {
+            snapshot = new ReaderRuntimeSnapshot
+            {
+                ReaderId = readerId,
+                Profile = new ReaderProfile
+                {
+                    Id = readerId,
+                    Host = "192.0.2.50",
+                },
+                State = ReaderState.Disconnected,
+                IsStale = false,
+                CapabilityRevision = 1,
+            };
+        }
+
+        public IReadOnlyList<ReaderRuntimeSnapshot> Readers => [snapshot];
+
+        public event EventHandler<ReaderStateChangedEventArgs>? StateChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public ReaderRuntimeSnapshot GetSnapshot(Guid readerId)
+        {
+            Assert.Equal(snapshot.ReaderId, readerId);
+            int call = Interlocked.Increment(ref snapshotCalls);
+            return call >= 3
+                ? snapshot with { CapabilityRevision = 2 }
+                : snapshot;
+        }
+
+        public Task InitializeAsync(CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task<ReaderAddResult> AddAsync(
+            ReaderProfile profile,
+            bool enableAfterAdding,
+            CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<ReaderProbeResult> ProbeAsync(
+            ReaderProfile profile,
+            CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task RemoveAsync(Guid readerId, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task SetEnabledAsync(Guid readerId, bool enabled, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<ReaderActivationResult> ActivateAsync(Guid readerId, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task DeactivateAsync(Guid readerId, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class CapabilityChangingSettingsRuntime : IReaderSettingsRuntime
+    {
+        private static readonly ReaderSettingsRuntimeSnapshot RuntimeSnapshot =
+            new(new SdkReaderSettingsSnapshot(new SdkReaderSettings(), ManagedRoSpec: null), null);
+
+        public int ApplyCount { get; private set; }
+
+        public Task<ReaderSettingsRuntimeSnapshot> QueryAsync(
+            Guid readerId,
+            CancellationToken ct = default) =>
+            Task.FromResult(RuntimeSnapshot);
+
+        public Task<ReaderSettingsRuntimeSnapshot> GetDefaultsAsync(
+            Guid readerId,
+            CancellationToken ct = default) =>
+            Task.FromResult(RuntimeSnapshot);
+
+        public Task ApplyAsync(
+            Guid readerId,
+            Func<ReaderSettingsRuntimeSnapshot, SdkReaderSettings> compile,
+            CancellationToken ct = default)
+        {
+            ApplyCount++;
+            _ = compile(RuntimeSnapshot);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class EmptySdkSettingsCompiler : ISettingsCompiler, ISdkSettingsCompiler
+    {
+        public EffectiveSettingsLayout BuildLayout(ReaderRuntimeSnapshot snapshot) =>
+            CreateLayout(snapshot);
+
+        public SettingsSnapshot BuildSnapshot(ReaderRuntimeSnapshot snapshot) =>
+            new()
+            {
+                ReaderId = snapshot.ReaderId,
+                CapabilityRevision = snapshot.CapabilityRevision,
+                Values = new Dictionary<string, object?>(),
+            };
+
+        public CompiledSettings Compile(SettingsDraft draft, EffectiveSettingsLayout layout) =>
+            new();
+
+        public EffectiveSettingsLayout BuildLayout(
+            ReaderRuntimeSnapshot snapshot,
+            ReaderSettingsRuntimeSnapshot runtime) =>
+            CreateLayout(snapshot);
+
+        public SettingsSnapshot BuildSnapshot(
+            ReaderRuntimeSnapshot snapshot,
+            ReaderSettingsRuntimeSnapshot runtime) =>
+            BuildSnapshot(snapshot);
+
+        public SdkReaderSettings CompileSdk(
+            SettingsDraft draft,
+            EffectiveSettingsLayout layout,
+            ReaderSettingsRuntimeSnapshot runtime,
+            ReaderRuntimeSnapshot reader) =>
+            new();
+
+        private static EffectiveSettingsLayout CreateLayout(ReaderRuntimeSnapshot snapshot) =>
+            new()
+            {
+                ReaderId = snapshot.ReaderId,
+                CapabilityRevision = snapshot.CapabilityRevision,
+                Entries = [],
+            };
+    }
+
+    private sealed class CancellingSettingsPresetStore(CancellationTokenSource cancellation)
+        : IReaderSettingsPresetStore
+    {
+        public Task<ReaderSettingsPreset?> GetAsync(Guid readerId, CancellationToken ct = default)
+        {
+            cancellation.Cancel();
+            ct.ThrowIfCancellationRequested();
+            return Task.FromResult<ReaderSettingsPreset?>(null);
+        }
+
+        public Task SaveAsync(ReaderSettingsPreset preset, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task DeleteAsync(Guid readerId, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     [Fact]
@@ -338,7 +593,7 @@ public sealed class SettingsServiceTests
         {
             ReaderId = h.Profile.Id,
             SchemaVersion = 1,
-            SettingsJson = "{\"session\":2,\"tx-power-dbm\":24.5}",
+            SettingsJson = "{\"values\":{\"session\":2,\"tx-power-dbm\":24.5}}",
         });
         var settings = new SettingsService(h.Manager, h.Compiler, h.Manager, presets);
 
@@ -360,7 +615,7 @@ public sealed class SettingsServiceTests
         {
             ReaderId = h.Profile.Id,
             SchemaVersion = 1,
-            SettingsJson = "{\"session\":3,\"tx-power-dbm\":21.5}",
+            SettingsJson = "{\"values\":{\"session\":3,\"tx-power-dbm\":21.5}}",
         });
         var settings = new SettingsService(h.Manager, h.Compiler, h.Manager, presets);
 
@@ -369,5 +624,24 @@ public sealed class SettingsServiceTests
         Assert.False(model.Layout.HasEditableSettings);
         Assert.Equal(3, model.Snapshot.Values[SettingsKeys.Session]);
         Assert.Equal(21.5m, model.Snapshot.Values[SettingsKeys.TxPowerDbm]);
+    }
+
+    [Fact]
+    public async Task QueryAsync_does_not_treat_flat_legacy_json_as_a_new_platform_preset()
+    {
+        var h = new Harness();
+        await h.Manager.AddAsync(h.Profile, enableAfterAdding: false);
+        await h.Manager.ActivateAsync(h.Profile.Id);
+        h.RegisterSession.SettingsQueryThrows = new IOException("offline");
+        var presets = new InMemorySettingsPresetStore();
+        await presets.SaveAsync(new ReaderSettingsPreset
+        {
+            ReaderId = h.Profile.Id,
+            SchemaVersion = 1,
+            SettingsJson = "{\"session\":2,\"tx-power-dbm\":24.5}",
+        });
+        var settings = new SettingsService(h.Manager, h.Compiler, h.Manager, presets);
+
+        await Assert.ThrowsAsync<IOException>(() => settings.QueryAsync(h.Profile.Id));
     }
 }

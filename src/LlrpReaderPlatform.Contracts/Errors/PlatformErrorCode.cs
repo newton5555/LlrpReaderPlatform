@@ -13,4 +13,7 @@ public enum PlatformErrorCode
     StaleCapability = 4,
     InvalidSettings = 5,
     NotFound = 6,
+    PersistenceFailed = 7,
+    AlreadyExists = 8,
+    RegistrationFailed = 9,
 }

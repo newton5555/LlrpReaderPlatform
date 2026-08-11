@@ -9,28 +9,20 @@ public sealed class SqliteReaderProfileStore(IDbContextFactory<PlatformDbContext
 {
     public async Task<IReadOnlyList<ReaderProfile>> GetAllAsync(CancellationToken ct = default)
     {
+        await PlatformDbSchema.EnsureMigratedAsync(contextFactory, ct).ConfigureAwait(false);
         await using PlatformDbContext db = await contextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        await db.Database.MigrateAsync(ct).ConfigureAwait(false);
-        return await db.ReaderProfiles
+        ReaderProfileEntity[] entities = await db.ReaderProfiles
             .AsNoTracking()
             .OrderBy(x => x.Name)
-            .Select(x => new ReaderProfile
-            {
-                Id = x.Id,
-                Name = x.Name,
-                Host = x.Host,
-                Port = x.Port,
-                LlrpVersion = x.LlrpVersion,
-                IsEnabled = x.IsEnabled,
-            })
             .ToArrayAsync(ct)
             .ConfigureAwait(false);
+        return entities.Select(ToProfile).ToArray();
     }
 
     public async Task<ReaderProfile?> GetAsync(Guid readerId, CancellationToken ct = default)
     {
+        await PlatformDbSchema.EnsureMigratedAsync(contextFactory, ct).ConfigureAwait(false);
         await using PlatformDbContext db = await contextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        await db.Database.MigrateAsync(ct).ConfigureAwait(false);
         ReaderProfileEntity? entity = await db.ReaderProfiles.AsNoTracking()
             .SingleOrDefaultAsync(x => x.Id == readerId, ct)
             .ConfigureAwait(false);
@@ -42,8 +34,8 @@ public sealed class SqliteReaderProfileStore(IDbContextFactory<PlatformDbContext
         ArgumentNullException.ThrowIfNull(profile);
         profile.Validate();
 
+        await PlatformDbSchema.EnsureMigratedAsync(contextFactory, ct).ConfigureAwait(false);
         await using PlatformDbContext db = await contextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        await db.Database.MigrateAsync(ct).ConfigureAwait(false);
         ReaderProfileEntity? entity = await db.ReaderProfiles
             .SingleOrDefaultAsync(x => x.Id == profile.Id, ct)
             .ConfigureAwait(false);
@@ -54,7 +46,7 @@ public sealed class SqliteReaderProfileStore(IDbContextFactory<PlatformDbContext
         }
 
         entity.Name = profile.Name;
-        entity.Host = profile.Host;
+        entity.Host = ReaderEndpoint.NormalizeHost(profile.Host);
         entity.Port = profile.Port;
         entity.LlrpVersion = profile.LlrpVersion;
         entity.IsEnabled = profile.IsEnabled;
@@ -63,8 +55,8 @@ public sealed class SqliteReaderProfileStore(IDbContextFactory<PlatformDbContext
 
     public async Task DeleteAsync(Guid readerId, CancellationToken ct = default)
     {
+        await PlatformDbSchema.EnsureMigratedAsync(contextFactory, ct).ConfigureAwait(false);
         await using PlatformDbContext db = await contextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        await db.Database.MigrateAsync(ct).ConfigureAwait(false);
         await db.ReaderProfiles.Where(x => x.Id == readerId).ExecuteDeleteAsync(ct).ConfigureAwait(false);
     }
 
@@ -72,7 +64,7 @@ public sealed class SqliteReaderProfileStore(IDbContextFactory<PlatformDbContext
     {
         Id = entity.Id,
         Name = entity.Name,
-        Host = entity.Host,
+        Host = ReaderEndpoint.NormalizeHost(entity.Host),
         Port = entity.Port,
         LlrpVersion = entity.LlrpVersion,
         IsEnabled = entity.IsEnabled,

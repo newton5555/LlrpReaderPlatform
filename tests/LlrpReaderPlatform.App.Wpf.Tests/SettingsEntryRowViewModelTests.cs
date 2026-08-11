@@ -47,16 +47,18 @@ public sealed class SettingsEntryRowViewModelTests
             Title = "Tx Power",
             EditorKind = EditorKind.Decimal,
             ValueType = typeof(decimal),
-            CurrentValue = 20m,
+            CurrentValue = 20.5m,
             Options =
             [
                 new SettingsOption(10m, "Index 0: 10 dBm"),
-                new SettingsOption(20m, "Index 1: 20 dBm"),
+                new SettingsOption(20.5m),
             ],
         });
 
         Assert.Equal(1, row.SelectedChoiceIndex);
         Assert.Equal("Index 0: 10 dBm", row.ChoiceDisplays[0]);
+        Assert.Equal("20.5", row.ChoiceDisplays[1]);
+        Assert.Equal("20.5", row.ValueText);
 
         row.SelectedChoiceIndex = 0;
 

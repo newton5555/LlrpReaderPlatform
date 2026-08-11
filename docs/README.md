@@ -19,7 +19,7 @@
 ### 3. 兼容性
 
 - [设备支持等级与矩阵](compatibility/device-matrix.md)
-- [Impinj R420 真机验收记录（2026-08-10）](compatibility/impinj-r420-2026-08-10.md)
+- [Impinj R420 真机验收记录（更新至 2026-08-11）](compatibility/impinj-r420-2026-08-10.md)
 
 ### 4. 开发与验证
 

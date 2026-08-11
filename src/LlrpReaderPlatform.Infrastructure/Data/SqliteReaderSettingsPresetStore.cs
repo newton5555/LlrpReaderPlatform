@@ -8,8 +8,8 @@ public sealed class SqliteReaderSettingsPresetStore(IDbContextFactory<PlatformDb
 {
     public async Task<ReaderSettingsPreset?> GetAsync(Guid readerId, CancellationToken ct = default)
     {
+        await PlatformDbSchema.EnsureMigratedAsync(contextFactory, ct).ConfigureAwait(false);
         await using PlatformDbContext db = await contextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        await db.Database.MigrateAsync(ct).ConfigureAwait(false);
         ReaderSettingsPresetEntity? entity = await db.ReaderSettingsPresets.AsNoTracking()
             .SingleOrDefaultAsync(x => x.ReaderId == readerId, ct)
             .ConfigureAwait(false);
@@ -19,8 +19,8 @@ public sealed class SqliteReaderSettingsPresetStore(IDbContextFactory<PlatformDb
     public async Task SaveAsync(ReaderSettingsPreset preset, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(preset);
+        await PlatformDbSchema.EnsureMigratedAsync(contextFactory, ct).ConfigureAwait(false);
         await using PlatformDbContext db = await contextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        await db.Database.MigrateAsync(ct).ConfigureAwait(false);
         ReaderSettingsPresetEntity? entity = await db.ReaderSettingsPresets
             .SingleOrDefaultAsync(x => x.ReaderId == preset.ReaderId, ct)
             .ConfigureAwait(false);
@@ -38,8 +38,8 @@ public sealed class SqliteReaderSettingsPresetStore(IDbContextFactory<PlatformDb
 
     public async Task DeleteAsync(Guid readerId, CancellationToken ct = default)
     {
+        await PlatformDbSchema.EnsureMigratedAsync(contextFactory, ct).ConfigureAwait(false);
         await using PlatformDbContext db = await contextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        await db.Database.MigrateAsync(ct).ConfigureAwait(false);
         await db.ReaderSettingsPresets.Where(x => x.ReaderId == readerId).ExecuteDeleteAsync(ct).ConfigureAwait(false);
     }
 

@@ -27,6 +27,16 @@ public sealed class ReaderAntennaFactoryTests
     }
 
     [Fact]
+    public void FromMaxAntennas_handles_ushort_max_without_wrapping()
+    {
+        IReadOnlyList<ReaderAntennaInfo> antennas =
+            ReaderAntennaFactory.FromMaxAntennas(ushort.MaxValue);
+
+        Assert.Equal(ushort.MaxValue, antennas.Count);
+        Assert.Equal(ushort.MaxValue, antennas[^1].AntennaId);
+    }
+
+    [Fact]
     public async Task ActivateAsync_without_capabilities_leaves_antennas_empty()
     {
         var sessionFactory = new FakeSessionFactory();

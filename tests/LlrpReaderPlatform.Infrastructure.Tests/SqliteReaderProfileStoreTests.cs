@@ -28,7 +28,7 @@ public sealed class SqliteReaderProfileStoreTests
             {
                 Id = id,
                 Name = "R420",
-                Host = "192.0.2.10",
+                Host = "[FE80::10]",
                 Port = 5084,
                 LlrpVersion = LlrpProtocolVersionOption.Force101,
                 IsEnabled = true,
@@ -36,9 +36,10 @@ public sealed class SqliteReaderProfileStoreTests
 
             await store.SaveAsync(profile);
             ReaderProfile? loaded = await store.GetAsync(id);
-            Assert.Equal(profile, loaded);
+            ReaderProfile normalized = profile with { Host = "fe80::10" };
+            Assert.Equal(normalized, loaded);
 
-            ReaderProfile updated = profile with { Name = "Updated", IsEnabled = false };
+            ReaderProfile updated = normalized with { Name = "Updated", IsEnabled = false };
             await store.SaveAsync(updated);
             Assert.Equal(updated, await store.GetAsync(id));
             Assert.Single(await store.GetAllAsync());
@@ -67,6 +68,39 @@ public sealed class SqliteReaderProfileStoreTests
     }
 
     [Fact]
+    public async Task Settings_preset_store_round_trips_versioned_inventory_semantics()
+    {
+        using var connection = new SqliteConnection($"Data Source=file:llrp-platform-preset-{Guid.NewGuid():N};Mode=Memory;Cache=Shared");
+        connection.Open();
+        var options = new DbContextOptionsBuilder<PlatformDbContext>().UseSqlite(connection).Options;
+        var store = new SqliteReaderSettingsPresetStore(new TestContextFactory(options));
+        Guid readerId = Guid.NewGuid();
+        DateTimeOffset firstUpdatedAt = DateTimeOffset.Parse("2026-08-10T08:00:00+00:00");
+        var preset = new ReaderSettingsPreset
+        {
+            ReaderId = readerId,
+            SchemaVersion = 1,
+            SettingsJson = "{\"values\":{\"session\":2,\"report-every\":3}}",
+            UpdatedAtUtc = firstUpdatedAt,
+        };
+
+        await store.SaveAsync(preset);
+        Assert.Equal(preset, await store.GetAsync(readerId));
+
+        var updated = preset with
+        {
+            SchemaVersion = 2,
+            SettingsJson = "{\"values\":{\"session\":3,\"report-every\":5}}",
+            UpdatedAtUtc = firstUpdatedAt.AddMinutes(1),
+        };
+        await store.SaveAsync(updated);
+        Assert.Equal(updated, await store.GetAsync(readerId));
+
+        await store.DeleteAsync(readerId);
+        Assert.Null(await store.GetAsync(readerId));
+    }
+
+    [Fact]
     public async Task Tag_list_and_inventory_run_stores_round_trip()
     {
         using var connection = new SqliteConnection($"Data Source=file:llrp-platform-taglist-{Guid.NewGuid():N};Mode=Memory;Cache=Shared");
@@ -77,6 +111,12 @@ public sealed class SqliteReaderProfileStoreTests
         var runStore = new SqliteInventoryRunStore(factory);
         Guid listId = Guid.NewGuid();
         Guid readerId = Guid.NewGuid();
+
+        // Two stores can be touched by startup/page initialization at the same time;
+        // both first accesses must share one schema migration gate.
+        await Task.WhenAll(
+            tagStore.GetAllAsync(),
+            runStore.GetForReaderAsync(readerId));
 
         await tagStore.SaveAsync(new TagListDefinition
         {
@@ -143,6 +183,39 @@ public sealed class SqliteReaderProfileStoreTests
 
             string content = await File.ReadAllTextAsync(path!);
             Assert.Contains("3008", content);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Json_lines_tag_log_skips_run_when_disabled()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"llrp-tag-log-disabled-{Guid.NewGuid():N}");
+        try
+        {
+            var settings = new FakeAppSettingsStore
+            {
+                ["tag-logging-enabled"] = "False",
+                ["tag-log-directory"] = root,
+            };
+            var writer = new JsonLinesInventoryTagLog(settings);
+            var run = new InventoryRunRecord
+            {
+                Id = Guid.NewGuid(),
+                ReaderId = Guid.NewGuid(),
+                StartedAtUtc = DateTimeOffset.UtcNow,
+            };
+
+            string? path = await writer.StartAsync(run);
+
+            Assert.Null(path);
+            Assert.False(Directory.Exists(root));
         }
         finally
         {

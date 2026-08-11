@@ -299,13 +299,23 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="Continuous Mode - Runs Forever"
-                           FontSize="12" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Inventory.DurationModeText}"
+                               FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Inventory.Status}"
+                               FontSize="12"
+                               Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center"
+                               Margin="18,0,12,0" />
+                </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Unique Tags: " FontSize="12" />
                     <TextBlock Text="{Binding Inventory.UniqueTagCount}" FontSize="12" FontWeight="Bold" />
                     <TextBlock Text="  |  Read Rate: " FontSize="12" Margin="16,0,0,0" />
                     <TextBlock Text="{Binding Inventory.TagRate}" FontSize="12" FontWeight="Bold" />
+                    <TextBlock Text="  |  Dropped: " FontSize="12" Margin="16,0,0,0" />
+                    <TextBlock Text="{Binding Inventory.DroppedTagReportCount}" FontSize="12" FontWeight="Bold" />
                     <TextBlock Text="  |  Selected: " FontSize="12" Margin="16,0,0,0" />
                     <TextBlock Text="{Binding SelectedReader.Name}" FontSize="12" FontWeight="Bold" />
                 </StackPanel>

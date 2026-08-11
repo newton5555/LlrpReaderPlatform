@@ -62,6 +62,9 @@ public sealed record GpiPortStatus
     public required ushort PortNumber { get; init; }
     public bool Configured { get; init; }
     public bool State { get; init; }
+
+    /// <summary>事件来源的 Reader 时间戳；短连接查询得到的状态可能没有事件时间戳。</summary>
+    public DateTimeOffset? Timestamp { get; init; }
 }
 
 /// <summary>Reader GPO 当前状态的 UI 无关投影。</summary>

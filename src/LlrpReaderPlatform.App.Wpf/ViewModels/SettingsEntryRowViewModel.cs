@@ -1,6 +1,7 @@
+using System.Collections.ObjectModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using LlrpReaderPlatform.Contracts.Settings;
-using System.Collections.ObjectModel;
 
 namespace LlrpReaderPlatform.App.Wpf.ViewModels;
 
@@ -16,10 +17,10 @@ public partial class SettingsEntryRowViewModel : ObservableObject
     public SettingsEntryRowViewModel(SettingsEntry entry)
     {
         Entry = entry;
-        ValueText = entry.CurrentValue?.ToString() ?? string.Empty;
+        ValueText = FormatValue(entry.CurrentValue);
         choiceValues = entry.Options.Select(static o => o.Value).ToArray();
         ChoiceDisplays = entry.Options
-            .Select(o => o.Display ?? o.Value?.ToString() ?? string.Empty)
+            .Select(o => o.Display ?? FormatValue(o.Value))
             .ToArray();
 
         if (entry.Options.Count > 0 && entry.CurrentValue is not null)
@@ -39,7 +40,7 @@ public partial class SettingsEntryRowViewModel : ObservableObject
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (SettingsOption option in entry.Options)
             {
-                string value = option.Value?.ToString() ?? string.Empty;
+                string value = FormatValue(option.Value);
                 var item = new SettingsCollectionItemViewModel(
                     value,
                     option.Display ?? value,
@@ -82,7 +83,7 @@ public partial class SettingsEntryRowViewModel : ObservableObject
 
     partial void OnSelectedChoiceIndexChanged(int value) => SyncChoice();
 
-    partial void OnBooleanValueChanged(bool value) => ValueText = value.ToString();
+    partial void OnBooleanValueChanged(bool value) => ValueText = FormatValue(value);
 
     /// <summary>Choice 选中项对应的原始值。</summary>
     public object? SelectedChoiceValue => SelectedChoiceIndex >= 0 && SelectedChoiceIndex < choiceValues.Count
@@ -106,9 +107,16 @@ public partial class SettingsEntryRowViewModel : ObservableObject
     {
         if (SelectedChoiceIndex >= 0 && SelectedChoiceIndex < choiceValues.Count)
         {
-            ValueText = choiceValues[SelectedChoiceIndex]?.ToString() ?? string.Empty;
+            ValueText = FormatValue(choiceValues[SelectedChoiceIndex]);
         }
     }
+
+    private static string FormatValue(object? value) => value switch
+    {
+        null => string.Empty,
+        IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture) ?? string.Empty,
+        _ => value.ToString() ?? string.Empty,
+    };
 
     private void OnCollectionItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
     {

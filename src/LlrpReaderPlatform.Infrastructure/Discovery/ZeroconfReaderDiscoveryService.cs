@@ -86,6 +86,6 @@ public sealed class ZeroconfReaderDiscoveryService : IReaderDiscoveryService
             throw;
         }
 
-        return discovered.AsReadOnly();
+        return DiscoveredReaderNormalization.Normalize(discovered);
     }
 }

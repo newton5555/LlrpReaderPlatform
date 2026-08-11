@@ -33,6 +33,14 @@ public sealed class SdkTagAccessMapperTests
     }
 
     [Fact]
+    public void BuildSelection_rejects_target_that_overflows_llrp_bit_length()
+    {
+        string target = new string('A', (ushort.MaxValue / 8 + 1) * 2);
+
+        Assert.Throws<FormatException>(() => SdkTagAccessMapper.BuildSelection(target, Tagging.TagMemoryBank.Tid));
+    }
+
+    [Fact]
     public void MapOperationResult_success_maps_read_data()
     {
         var op = new LlrpSdk.TagAccessOperationResult(

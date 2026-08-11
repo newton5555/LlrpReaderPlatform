@@ -56,6 +56,7 @@ Contracts <── Services ──> LlrpSdk
 - Infrastructure 不把 SQLite、Zeroconf 或日志实现暴露给 Contracts；
 - `Extensions.Impinj` 不得被 Services 反向引用；
 - Services 内的 `Persistence/` 只放接口和边界模型，SQLite Entity、EF 配置和迁移放在 Infrastructure；
+- Infrastructure 的各 SQLite Store 通过同一 `DbContextFactory` 维度的迁移闸门串行初始化 schema，查询和写入仍各自使用独立 `DbContext`；
 - SDK 类型到 Contracts DTO 的转换集中在 Services/SDK Adapter 内部。
 
 ## UI 消费者边界
@@ -66,7 +67,7 @@ WPF 可以拥有自己的 View、ViewModel、DataTemplate、Dispatcher、导航�
 
 未来 Avalonia、WinUI、MAUI 或其他 .NET UI 消费者复用 Contracts DTO、`IReaderManager`、`IReaderSettingsService` 等服务接口，以及 Services 和已注册的 Infrastructure/Extension 实现。它们不需要复刻 Reader 生命周期、能力判断、设置编译或厂商分支。
 
-每个 UI 应用拥有自己的组合根，但使用相同的 `AddLlrpReaderPlatform()`、`AddLlrpInfrastructure()` 和扩展注册方法。UI 应用只决定使用哪些模块和具体 UI 技术，不改变共享层的设备语义。
+每个 UI 应用拥有自己的组合根，但使用相同的 `AddLlrpReaderPlatform()`、`AddLlrpInfrastructure()` 和扩展注册方法。持久化契约（包括应用设置、Tag List 和 Inventory Run）通过组合根注入，ViewModel 不自行创建 Store。UI 应用只决定使用哪些模块和具体 UI 技术，不改变共享层的设备语义。
 
 ## 核心原则
 
@@ -74,8 +75,9 @@ WPF 可以拥有自己的 View、ViewModel、DataTemplate、Dispatcher、导航�
 2. Contracts 不暴露 SDK 类型、WPF 类型或厂商类型。
 3. 一个 Reader 由一个 ReaderHandle 持有一个活动 TCP Session。
 4. 连接、设置、盘存和断开由 Services 串行协调，UI 不直接操作 Session。
-5. 能力等级来自实际能力和测试结果，不由厂商名称推断。
-6. 服务结果保留面向用户的文本，同时用 Contracts 的 `PlatformErrorCode` 表达 `ReaderBusy`、`DeviceFailed`、`Unsupported`、`StaleCapability` 和 `InvalidSettings` 等稳定语义，其他 UI 不需要解析本地化文本。
+5. 故障或断开不可靠的 Session 不参与后续操作；Services 会在恢复时回收旧 Session 并创建干净 Session。
+6. 能力等级来自实际能力和测试结果，不由厂商名称推断。
+7. 服务结果保留面向用户的文本，同时用 Contracts 的 `PlatformErrorCode` 表达 Reader 探测/激活/添加、`ReaderBusy`、`DeviceFailed`、`Unsupported`、`StaleCapability`、`InvalidSettings`、`PersistenceFailed`、`AlreadyExists` 和 `RegistrationFailed` 等稳定语义，其他 UI 不需要解析本地化文本。
 
 ## 最终交付的实现顺序
 

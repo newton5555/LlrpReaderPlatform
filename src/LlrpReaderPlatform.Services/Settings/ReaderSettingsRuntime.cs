@@ -1,4 +1,5 @@
 using LlrpSdk;
+using LlrpReaderPlatform.Contracts.Errors;
 
 namespace LlrpReaderPlatform.Services.Settings;
 
@@ -28,4 +29,5 @@ public sealed record ReaderSettingsRuntimeSnapshot(
     ReaderCapabilities? Capabilities);
 
 /// <summary>短设置操作与长 Inventory 租约冲突时使用的明确异常。</summary>
-public sealed class ReaderBusyException(string message) : InvalidOperationException(message);
+public sealed class ReaderBusyException(string message)
+    : PlatformOperationException(PlatformErrorCode.ReaderBusy, message);

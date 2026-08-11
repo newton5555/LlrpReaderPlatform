@@ -13,6 +13,67 @@ namespace LlrpReaderPlatform.App.Wpf.Tests;
 public sealed class InventoryViewModelTests
 {
     [Fact]
+    public void Inventory_column_selection_includes_epc_visibility_without_changing_identity_model()
+    {
+        using var vm = new InventoryViewModel(new BurstInventoryService());
+
+        Assert.True(vm.ShowEpcColumn);
+        Assert.False(vm.ShowTidColumn);
+        Assert.False(vm.ShowPcBitsColumn);
+        vm.ShowEpcColumn = false;
+
+        Assert.False(vm.ShowEpcColumn);
+    }
+
+    [Fact]
+    public void Inventory_duration_mode_text_tracks_continuous_timed_and_invalid_input()
+    {
+        using var vm = new InventoryViewModel(new BurstInventoryService());
+
+        Assert.Equal("Continuous Mode - Runs Forever", vm.DurationModeText);
+
+        vm.DurationSecondsText = "5";
+        Assert.Equal("Duration Mode - 5 seconds", vm.DurationModeText);
+
+        vm.DurationSecondsText = "not-a-duration";
+        Assert.Equal("Invalid Duration", vm.DurationModeText);
+
+        vm.DurationSecondsText = "0";
+        Assert.Equal("Continuous Mode - Runs Forever", vm.DurationModeText);
+    }
+
+    [Fact]
+    public void Changing_reader_context_reloads_only_the_selected_readers_tags()
+    {
+        Guid firstReaderId = Guid.NewGuid();
+        Guid secondReaderId = Guid.NewGuid();
+        var service = new BurstInventoryService();
+        service.Seed(firstReaderId, "3001");
+        service.Seed(secondReaderId, "3002");
+        using var vm = new InventoryViewModel(service);
+
+        vm.SetReaderContext(CreateReader(firstReaderId, "Reader A"));
+
+        Assert.Equal("3001", Assert.Single(vm.Tags).Epc);
+
+        vm.SetReaderContext(CreateReader(secondReaderId, "Reader B"));
+
+        Assert.Equal("3002", Assert.Single(vm.Tags).Epc);
+
+        vm.SetReaderContext(null);
+
+        Assert.Empty(vm.Tags);
+        Assert.Equal(0, vm.UniqueTagCount);
+    }
+
+    private static ReaderItemViewModel CreateReader(Guid id, string name) => new(new ReaderRuntimeSnapshot
+    {
+        ReaderId = id,
+        Profile = new ReaderProfile { Id = id, Name = name, Host = "192.0.2.1" },
+        State = ReaderState.Disconnected,
+    });
+
+    [Fact]
     public async Task TagReport_is_aggregated_by_services_and_projected_to_wpf_rows()
     {
         var factory = new FakeSessionFactory();
@@ -101,10 +162,16 @@ public sealed class InventoryViewModelTests
         Assert.False(vm.IsInventoryRunning);
         Assert.Contains("连接异常", vm.Status);
 
+        var recoveryProbe = new FakeSession();
+        var replacement = new FakeSession();
+        factory.Queue.Enqueue(recoveryProbe); // Recovery probe
+        factory.Queue.Enqueue(replacement);   // Clean runtime session
         await vm.StartCommand.ExecuteAsync(profile.Id);
 
         Assert.True(vm.IsInventoryRunning);
-        Assert.True(session.InventoryRunning);
+        Assert.True(recoveryProbe.ConnectCount > 0);
+        Assert.True(replacement.InventoryRunning);
+        Assert.False(session.IsConnected);
         await vm.StopCommand.ExecuteAsync(profile.Id);
     }
 
@@ -159,6 +226,19 @@ public sealed class InventoryViewModelTests
         Assert.False(vm.IsInventoryRunning);
         Assert.Contains("GPI 触发", vm.Status);
         Assert.False(session.IsConnected);
+    }
+
+    [Fact]
+    public async Task Lifecycle_stop_published_before_start_returns_is_not_overwritten()
+    {
+        Guid readerId = Guid.NewGuid();
+        var service = new BurstInventoryService { StopBeforeStartReturns = true };
+        using var vm = new InventoryViewModel(service);
+
+        await vm.StartCommand.ExecuteAsync(readerId);
+
+        Assert.False(vm.IsInventoryRunning);
+        Assert.Contains("GPI 触发", vm.Status);
     }
 
     [Fact]
@@ -223,6 +303,53 @@ public sealed class InventoryViewModelTests
         Assert.Contains("所有 Reader", vm.Status);
         Assert.False(firstSession.IsConnected);
         Assert.False(secondSession.IsConnected);
+    }
+
+    [Fact]
+    public async Task Global_inventory_reports_the_reader_name_when_one_start_fails()
+    {
+        var factory = new FakeSessionFactory();
+        await using var manager = new ReaderManager(factory, new FakeProfileStore());
+        var failedProfile = new ReaderProfile
+        {
+            Id = Guid.NewGuid(),
+            Host = "192.0.2.52",
+            Name = "Reader without antenna",
+            IsEnabled = true,
+        };
+        var healthyProfile = new ReaderProfile
+        {
+            Id = Guid.NewGuid(),
+            Host = "192.0.2.53",
+            Name = "Reader healthy",
+            IsEnabled = true,
+        };
+
+        factory.Queue.Enqueue(new FakeSession());
+        var failedSession = new FakeSession
+        {
+            StartInventoryThrows = new IOException("no antenna")
+        };
+        factory.Queue.Enqueue(failedSession);
+        await manager.AddAsync(failedProfile, enableAfterAdding: false);
+
+        factory.Queue.Enqueue(new FakeSession());
+        var healthySession = new FakeSession();
+        factory.Queue.Enqueue(healthySession);
+        await manager.AddAsync(healthyProfile, enableAfterAdding: false);
+        await manager.SetEnabledAsync(failedProfile.Id, enabled: true);
+        await manager.SetEnabledAsync(healthyProfile.Id, enabled: true);
+
+        using var vm = new InventoryViewModel(manager, readerManager: manager);
+        await vm.StartAllCommand.ExecuteAsync(null);
+
+        Assert.True(vm.IsInventoryRunning);
+        Assert.Contains("Reader without antenna", vm.Status);
+        Assert.Contains("no antenna", vm.Status);
+        Assert.True(healthySession.InventoryRunning);
+
+        await vm.StopAllCommand.ExecuteAsync(null);
+        Assert.False(vm.IsInventoryRunning);
     }
 
     [Fact]
@@ -292,11 +419,20 @@ public sealed class InventoryViewModelTests
     {
         var service = new ThrowingInventoryService { ThrowOnStart = true };
         using var vm = new InventoryViewModel(service);
+        vm.DurationSecondsText = "3";
 
         await vm.StartCommand.ExecuteAsync(Guid.NewGuid());
 
         Assert.False(vm.IsInventoryRunning);
+        Assert.Equal(3, service.LastSpec?.DurationSeconds);
         Assert.Contains("启动失败", vm.Status);
+        Assert.Contains("设备错误", vm.Status);
+
+        vm.DurationSecondsText = "not-a-duration";
+        await vm.StartCommand.ExecuteAsync(Guid.NewGuid());
+
+        Assert.Contains("0～86400", vm.Status);
+        Assert.Equal(1, service.StartCount);
     }
 
     [Fact]
@@ -376,6 +512,8 @@ public sealed class InventoryViewModelTests
         public TaskCompletionSource? StopStarted { get; init; }
         public TaskCompletionSource? StopRelease { get; init; }
         public int StopCount { get; private set; }
+        public int StartCount { get; private set; }
+        public InventorySpec? LastSpec { get; private set; }
         public long DroppedTagReportCount => 0;
 
         public event EventHandler<InventoryLifecycleChangedEventArgs>? LifecycleChanged;
@@ -397,6 +535,8 @@ public sealed class InventoryViewModelTests
             InventorySpec spec,
             CancellationToken ct = default)
         {
+            StartCount++;
+            LastSpec = spec;
             if (ThrowOnStart)
             {
                 throw new IOException("start failed");
@@ -447,7 +587,9 @@ public sealed class InventoryViewModelTests
     private sealed class BurstInventoryService : IInventoryService
     {
         private Guid readerId;
-        private readonly List<TagObservation> tags = [];
+        private readonly Dictionary<Guid, List<TagObservation>> tags = [];
+
+        public bool StopBeforeStartReturns { get; init; }
 
         public long DroppedTagReportCount => 0;
 
@@ -466,9 +608,18 @@ public sealed class InventoryViewModelTests
             CancellationToken ct = default)
         {
             this.readerId = readerId;
+            _ = tags.TryGetValue(readerId, out _);
             LifecycleChanged?.Invoke(this, new InventoryLifecycleChangedEventArgs(
                 readerId,
                 InventoryLifecycleState.Started));
+            if (StopBeforeStartReturns)
+            {
+                LifecycleChanged?.Invoke(this, new InventoryLifecycleChangedEventArgs(
+                    readerId,
+                    InventoryLifecycleState.Stopped,
+                    InventoryStopReason.Gpi));
+            }
+
             return Task.FromResult(new StartInventoryResult(true));
         }
 
@@ -481,8 +632,16 @@ public sealed class InventoryViewModelTests
             return Task.CompletedTask;
         }
 
-        public IReadOnlyList<TagObservation> GetTags(Guid readerId) => tags;
-        public void ClearTags(Guid readerId) { }
+        public IReadOnlyList<TagObservation> GetTags(Guid readerId) =>
+            tags.TryGetValue(readerId, out List<TagObservation>? values) ? values : [];
+
+        public void ClearTags(Guid readerId)
+        {
+            if (tags.TryGetValue(readerId, out List<TagObservation>? values))
+            {
+                values.Clear();
+            }
+        }
 
         public Task<IReadOnlyList<GpiPortStatus>> GetGpiStatusAsync(
             Guid readerId,
@@ -510,8 +669,31 @@ public sealed class InventoryViewModelTests
 
         public void Emit(TagObservation tag)
         {
-            tags.Add(tag);
+            if (!tags.TryGetValue(readerId, out List<TagObservation>? values))
+            {
+                values = [];
+                tags[readerId] = values;
+            }
+
+            values.Add(tag);
             TagObserved?.Invoke(this, new TagObservedEventArgs(readerId, tag));
+        }
+
+        public void Seed(Guid readerId, string epc)
+        {
+            if (!tags.TryGetValue(readerId, out List<TagObservation>? values))
+            {
+                values = [];
+                tags[readerId] = values;
+            }
+
+            values.Add(new TagObservation
+            {
+                Epc = epc,
+                ReadCount = 1,
+                FirstSeen = DateTimeOffset.UtcNow,
+                LastSeen = DateTimeOffset.UtcNow,
+            });
         }
     }
 }

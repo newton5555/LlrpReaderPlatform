@@ -7,7 +7,8 @@ public enum InventoryError
 {
     None = 0,
     ReaderBusy = 1,
-    DeviceFailed = 2,
+    InvalidSettings = 2,
+    DeviceFailed = 3,
 }
 
 /// <summary>盘存启动结果。</summary>
@@ -17,7 +18,9 @@ public sealed record StartInventoryResult(bool Succeeded, InventoryError Error =
         ? PlatformErrorCode.None
         : Error == InventoryError.ReaderBusy
             ? PlatformErrorCode.ReaderBusy
-            : PlatformErrorCode.DeviceFailed;
+            : Error == InventoryError.InvalidSettings
+                ? PlatformErrorCode.InvalidSettings
+                : PlatformErrorCode.DeviceFailed;
 }
 
 /// <summary>盘存租约的生命周期状态。</summary>

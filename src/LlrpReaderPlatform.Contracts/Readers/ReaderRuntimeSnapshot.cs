@@ -50,6 +50,9 @@ public sealed record ReaderRuntimeSnapshot
 
     /// <summary>最近一次成功激活得到的能力目录；断开后随能力快照保留并标记为陈旧。</summary>
     public ReaderFeatureCatalog FeatureCatalog { get; init; } = ReaderFeatureCatalog.Empty;
+
+    /// <summary>当前 Session 选择的扩展模块稳定 Id；空集合表示标准路径。</summary>
+    public IReadOnlyList<string> ActiveExtensionIds { get; init; } = [];
 }
 
 /// <summary>一次性能力捕获（激活/短连接探测得到，用于填充内存缓存）。</summary>
@@ -71,6 +74,9 @@ public sealed record ReaderCapabilityCapture
     public ushort? GpoCount { get; init; }
 
     public ReaderFeatureCatalog FeatureCatalog { get; init; } = ReaderFeatureCatalog.Empty;
+
+    /// <summary>捕获能力时使用的扩展模块稳定 Id；不持久化。</summary>
+    public IReadOnlyList<string> ActiveExtensionIds { get; init; } = [];
 }
 
 public sealed record ReaderAntennaInfo

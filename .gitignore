@@ -6,6 +6,7 @@
 # Build output
 bin/
 obj/
+artifacts/
 
 # Test and coverage output
 TestResults/

@@ -133,6 +133,7 @@ public sealed class FakeSession : IReaderSession
     public int GpoSetCount { get; private set; }
     public int ReadTagMemoryCount { get; private set; }
     public int WriteTagMemoryCount { get; private set; }
+    public int DisposeCount { get; private set; }
 
     /// <summary>连接时抛出的异常；null 表示连接成功。</summary>
     public Exception? ConnectThrows { get; set; }
@@ -149,6 +150,9 @@ public sealed class FakeSession : IReaderSession
     /// <summary>停止盘存前执行的测试回调，可用于在异步操作中触发取消。</summary>
     public Action? BeforeStopInventory { get; set; }
 
+    /// <summary>测试需要时让连接操作显式尊重传入的取消令牌。</summary>
+    public bool HonorCancellation { get; set; }
+
     /// <summary>设置 GPO 前执行的异步测试回调，可用于覆盖 UI 忙碌和防重入行为。</summary>
     public Func<Task>? BeforeSetGpoAsync { get; set; }
 
@@ -157,6 +161,12 @@ public sealed class FakeSession : IReaderSession
 
     /// <summary>StopInventoryAsync 抛出的异常；null 表示成功。</summary>
     public Exception? StopInventoryThrows { get; set; }
+
+    /// <summary>DisconnectAsync 抛出的异常；null 表示成功。</summary>
+    public Exception? DisconnectThrows { get; set; }
+
+    /// <summary>DisposeAsync 抛出的异常；用于验证应用退出时仍会清理其他 Reader。</summary>
+    public Exception? DisposeThrows { get; set; }
 
     /// <summary>StartInventoryAsync 成功时立即发出的 EPC，用于覆盖设备早期 TagReport。</summary>
     public byte[]? TagToEmitOnStart { get; set; }
@@ -203,6 +213,16 @@ public sealed class FakeSession : IReaderSession
     public Task DisconnectAsync(CancellationToken cancellationToken)
     {
         IfDisposed();
+        if (HonorCancellation)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+
+        if (DisconnectThrows is not null)
+        {
+            throw DisconnectThrows;
+        }
+
         IsConnected = false;
         InventoryRunning = false;
         DisconnectCount++;
@@ -286,6 +306,11 @@ public sealed class FakeSession : IReaderSession
     {
         IfDisposed();
         BeforeStopInventory?.Invoke();
+        if (HonorCancellation)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+
         StopInventoryCount++;
         if (StopInventoryThrows is not null)
         {
@@ -422,14 +447,20 @@ public sealed class FakeSession : IReaderSession
     public void RaiseConnectionFaulted(string message = "Simulated connection fault.") =>
         OnConnectionFaulted(message);
 
-    public void RaiseGpiChanged(ushort portNumber, bool state) =>
-        GpiChanged?.Invoke(this, new SdkGpiChangedEventArgs(portNumber, state, DateTimeOffset.UtcNow));
+    public void RaiseGpiChanged(ushort portNumber, bool state, DateTimeOffset? timestamp = null) =>
+        GpiChanged?.Invoke(this, new SdkGpiChangedEventArgs(portNumber, state, timestamp ?? DateTimeOffset.UtcNow));
 
     public async ValueTask DisposeAsync()
     {
+        DisposeCount++;
         disposed = true;
         IsConnected = false;
         InventoryRunning = false;
+        if (DisposeThrows is not null)
+        {
+            throw DisposeThrows;
+        }
+
         await Task.CompletedTask.ConfigureAwait(false);
     }
 

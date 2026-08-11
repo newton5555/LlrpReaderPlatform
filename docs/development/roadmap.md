@@ -16,7 +16,27 @@
 8. **P7：WPF Consumer**——接入完整页面和 ViewModel，ViewModel 不直接碰 SDK、数据库或连接；
 9. **P8：真机与兼容性**——完成 R420、标准 Reader、未知设备、多 Reader 和故障恢复验收。
 
-当前进度：P0～P7 首版代码已落地；P3 已完成 EF Core SQLite、Profile/Settings/TagList/InventoryRun/AppSettings、JSONL Logging 和启动恢复；P4/P5 已接入标准深度设置、Impinj 设置贡献、TagReport 扩展字段投影和完整 Inventory 生命周期；P6/P7 已完成 TagList/Run 管理 UI、设备设置 Tab1/Tab2（GPO/GPI 状态）、Tag Memory、App Settings、原生 ProgressBar、EPC/TID Tag Access 目标、能力驱动频率集合编辑和旧 WPF 多 Reader 全局寻卡编排；能力目录已接入运行时快照、设置布局和 Impinj 扩展贡献，并按型号、固件和 SDK 能力画像逐项限定 L4 字段，R420 已确认不开放 Doppler；P8 已完成真机标准 Probe/Settings Query、WPF Settings Apply、GPO/GPI 状态查询、GPI 状态事件的平台链路、Impinj debounce/FastID/Phase/Search/Low Duty/固定频率回写、有界 Inventory Start/Stop/Disconnect、真实 TagReport 聚合、EPC/TID/User/Reserved 四个 Memory Bank 读取、User Bank 写入恢复和 FastID/Phase 扩展 TagReport，代码级一般 Connection Faulted/ReaderException、匹配 GPI Stop 触发器收敛与重新 Start 已有自动化验证；GPI 物理触发、其它 Memory Bank 写入、多 Reader、断网/重启恢复现场验收待执行。标准 Tag Access 已按 ReaderCapabilities 明确能力做服务/UI 降级，标准 GPIO 端口数量已按 General Device Capabilities 驱动 Tab1/Tab2 降级，部分 GPO 设备按实际端口启用控件。自动化测试基线为 201 项全绿；平台 `LifecycleChanged` 事件统一驱动 WPF 的手动 Stop、GPI Stop、定时结束和连接故障收尾，设备列表提供 Faulted Reader 重新连接/刷新能力；SQLite 只维护新平台数据，早期 schema 变化允许清空数据库重建；TagReport 和 TagLog 队列均有界，WPF 事件队列和展示集合也已设置硬上限，生命周期、设置取消、消费者异步操作忙碌状态、设备主动断连运行记录落库、一般 Connection Faulted/ReaderException 收敛、应用关闭时排空 TagLog、单 Reader 断连不影响其它 Reader、四个标准 Memory Bank 读写映射、匹配 GPI Stop 触发、GPI 启停配置透传、多 Reader GPI 隔离、幂等异步释放和 WPF 异常状态回退已有回归覆盖。
+当前进度：P0～P7 首版代码已落地；P3 已完成 EF Core SQLite、Profile/Settings/TagList/InventoryRun/AppSettings、JSONL Logging 和启动恢复；P4/P5 已接入标准深度设置、Impinj 设置贡献、TagReport 扩展字段投影和完整 Inventory 生命周期；P6/P7 已完成 TagList/Run 管理 UI、设备设置 Tab1/Tab2（GPO/GPI 状态）、Tag Memory、App Settings、原生 ProgressBar、EPC/TID Tag Access 目标、能力驱动频率集合编辑、旧 WPF 风格的寻卡页布局与 DataGrid 列头右键选择、按时长自动停止、稳定错误码到 WPF 状态投影和旧 WPF 多 Reader 全局寻卡编排；能力目录已接入运行时快照、设置布局和 Impinj 扩展贡献，并按型号、固件和 SDK 能力画像逐项限定 L4 字段，R420 已确认不开放 Doppler；P8 已完成真机标准 Probe/Settings Query、WPF Settings Apply，且已修复设备列表刷新期间取消设置查询的竞态，R420 设置页可显示 Loaded from Reader、Save 和 62 个回读值、GPO/GPI 状态查询、GPI 状态事件的平台链路、Impinj debounce/FastID/Phase/Search/Low Duty/固定频率回写、有界 Inventory Start/Stop/Disconnect、真实 TagReport 聚合、EPC/TID/User/Reserved 四个 Memory Bank 读取、User Bank 写入恢复和 FastID/Phase 扩展 TagReport，代码级一般 Connection Faulted/ReaderException、故障 Session 回收/干净 Session 重建、匹配 GPI Stop 触发器收敛与重新 Start 已有自动化验证；无 GPI/GPO 能力的状态查询已统一返回 `Unsupported` 且不把 Reader 置为 Faulted；GPI 物理触发、其它 Memory Bank 写入、多 Reader、断网/重启恢复现场验收待执行。标准 Tag Access 已按 ReaderCapabilities 明确能力做服务/UI 降级，标准 GPIO 端口数量已按 General Device Capabilities 驱动 Tab1/Tab2 降级，部分 GPO 设备按实际端口启用控件。自动化测试基线为 304 项全绿；平台 `LifecycleChanged` 事件统一驱动 WPF 的手动 Stop、GPI Stop、定时结束和连接故障收尾，设备列表提供 Faulted Reader 重新连接/刷新能力；SQLite 只维护新平台数据，早期 schema 变化允许清空数据库重建；Settings Preset 的版本化语义 JSON 同时承载 Inventory 字段，不引入旧库导入；短连接断开时设置布局转为只读并要求重新激活，能力快照过期时设置页同步禁用编辑和保存；能力解析循环使用整数索引，避免 `ushort` 最大值回绕；Inventory 服务入口拒绝无效时长、重复天线和混合全部天线/指定天线参数；TagReport 和 TagLog 队列均有界，WPF 事件队列和展示集合也已设置硬上限，生命周期、设置取消、消费者异步操作忙碌状态、设备主动断连运行记录落库、一般 Connection Faulted/ReaderException 收敛、单 Reader 断连不影响其它 Reader、四个标准 Memory Bank 读写映射、匹配 GPI Stop 触发、多 Reader GPI 隔离、幂等异步释放和 WPF 异常状态回退已有回归覆盖；全局寻卡的部分启动/停止失败会按 Reader 名称和错误摘要显示，便于多 Reader 验收定位。
+
+2026-08-11 的 P8 补充证据：使用 `win-x64` 发布包直接运行 WPF 并连接 R420，寻卡页收到真实 EPC，5～6 个唯一标签以约 269～300 tags/s 更新；Stop 最终回到 `Start`/已同步能力，正常关闭窗口验证应用退出释放。第二台 `192.168.41.148` 已用强制 LLRP 1.0.1 完成 Probe→Add→Activate、Settings Query 和 `Report Every N Tags` 的 `1→2→1` 真实 Apply/回读闭环，设备无天线，尚未执行 Inventory。当前 P8 剩余仍是 GPI 物理事件/触发、其它 Memory Bank 写入、第二台 Reader 的带天线 Inventory、多 Reader 并行 Inventory 以及断网/重启恢复。
+
+本轮 WPF 可用性补充：设备列表和设置页同时显示 Reader 持久化的 LLRP 版本策略与最近一次实际协商版本；因此 `192.168.41.148` 即使尚未重新连接或应用刚重启，也能明确看到 `Force LLRP 1.0.1`，不改变现有连接编排。
+
+设备列表和设置页同时解释连接生命周期：短操作完成后的 `Disconnected` 会显示为能力已同步、短连接已释放；只有 Inventory 运行期间才保持 LLRP 长连接。
+
+本轮又完成双 Reader 的短连接隔离：R420 与 148 并行完成激活、设置查询和 GPIO 查询，分别保持各自的扩展/标准能力上下文，均无 Faulted，操作结束后两台活动 TCP 均为 0；这证明多 Reader 的短操作隔离，不把它计作多 Reader 同时寻卡通过。
+
+第二台标准 Reader 的能力快照没有声明 GPI/GPO 数量，但真实 `GetGpiStatusAsync`/`GetGpoStatusAsync` 各返回 4 个端口；平台继续把未知能力作为兼容回退，不把它误判为明确不支持，物理事件/触发仍须接线验收。
+
+本轮补充：寻卡页继续以平台 `LifecycleChanged` 作为唯一收尾来源，并将手动停止、GPI 触发、定时结束、设备断开和 Reader 异常的 `Inventory.Status` 投影到主窗口底部状态栏，便于 WPF 真机验收直接确认停止原因；同时防止 Start 返回与早到终止生命周期事件之间的状态覆盖竞态；添加数据源页和主设备页对 Probe、添加、激活的未结构化异常统一投影为稳定设备错误并保留详细信息；Settings Query 在 ReaderBusy 时通过 Contracts 平台异常保留稳定错误码；无 GPI/GPO 能力的状态查询通过同一平台异常返回 Unsupported；构建与 304 项全量测试保持通过。
+
+本轮已补齐 ReaderManager 退出期间的 Session 注册保护、已知能力下的 Inventory 天线边界、Tag Access 选择长度边界、Tab2 GPO 端口输入边界和按 GPI 能力数量生成/回写 Impinj debounce；设置 Tab1 分组和 Tab2 GPO/GPI 区域也按实际语义行、端口能力隐藏空控件；这些变化不改变现有 UI → Services → Contracts 依赖方向。
+
+本轮还把 IPv6 端点归一化提升到 Contracts：程序化添加、服务端去重、SQLite Profile 保存、SDK 会话构造和 WPF 展示共用 Host 规则；带方括号的 IPv6 不会再因消费者不同而产生重复端点或传输构造差异。
+
+发现服务、WPF 主设备页和添加数据源页现在共用 Contracts 的发现结果归一化器：重复端点、非法端口、空 Host 和 IPv6 展示在两个入口保持一致。
+
+本轮再补两项收尾保证：ReaderManager 直接启动 Inventory 时的扩展探测取消会统一清理 Session 并回到 `Disconnected`；WPF 在收到平台停止事件后会继续排空已入队的最后一批 TagObserved，避免服务端先完成 Drain 而 UI 丢失尾部显示。两项均已加入自动化回归，当前基线为 304 项全绿。
 
 ## 阶段出口
 

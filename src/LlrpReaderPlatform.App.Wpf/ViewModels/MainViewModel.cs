@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LlrpReaderPlatform.Contracts.Lifecycle;
 using LlrpReaderPlatform.Contracts.Discovery;
+using LlrpReaderPlatform.Contracts.Errors;
 using LlrpReaderPlatform.Contracts.Persistence;
 using LlrpReaderPlatform.Contracts.Readers;
 using LlrpReaderPlatform.Contracts.Settings;
@@ -20,6 +21,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly IReaderManager readerManager;
     private readonly IReaderDiscoveryService discovery;
     private readonly Dispatcher dispatcher;
+    private readonly CancellationTokenSource discoveryCts = new();
+    private readonly CancellationToken lifetimeToken;
+    private CancellationTokenSource? activeSettingsLoadCts;
+    private bool disposed;
 
     [ObservableProperty]
     private string host = "192.0.2.1";
@@ -38,23 +43,23 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IReaderSettingsService settings,
         IInventoryService inventory,
         IReaderDiscoveryService discovery,
-        IAppSettingsStore? appSettingsStore = null,
-        ITagListStore? tagListStore = null,
-        IInventoryRunStore? inventoryRunStore = null)
+        IAppSettingsStore appSettingsStore,
+        ITagListStore tagListStore,
+        IInventoryRunStore inventoryRunStore)
     {
         this.readerManager = readerManager;
         this.discovery = discovery;
         dispatcher = System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
+        lifetimeToken = discoveryCts.Token;
         readerManager.StateChanged += OnReaderStateChanged;
-        ITagListStore resolvedTagListStore = tagListStore ?? new LlrpReaderPlatform.Services.Persistence.InMemoryTagListStore();
-        Inventory = new InventoryViewModel(inventory, resolvedTagListStore, readerManager);
+        Inventory = new InventoryViewModel(inventory, tagListStore, readerManager);
         TagMemory = new TagMemoryViewModel(inventory);
         Diagnostics = new DiagnosticsViewModel(inventory);
-        Settings = new ReaderSettingsViewModel(settings, Diagnostics);
+        Settings = new ReaderSettingsViewModel(settings, Diagnostics, readerManager);
         Settings.CancelRequested += OnSettingsCancelRequested;
         AppSettings = new AppSettingsViewModel(appSettingsStore);
-        TagLists = new TagListsViewModel(resolvedTagListStore);
-        InventoryRuns = new InventoryRunsViewModel(inventoryRunStore ?? new LlrpReaderPlatform.Services.Persistence.InMemoryInventoryRunStore());
+        TagLists = new TagListsViewModel(tagListStore);
+        InventoryRuns = new InventoryRunsViewModel(inventoryRunStore, inventory);
 
         AddDataSource = new AddDataSourceViewModel(readerManager, discovery);
         AddDataSource.DataSourceAdded += OnDataSourceAdded;
@@ -79,10 +84,31 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private ReaderItemViewModel? selectedReader;
 
+    // Refresh() rebuilds the ListBox items after a Reader state event. WPF can
+    // transiently write SelectedReader = null while the old item is removed;
+    // that transient value must not cancel an in-flight settings load.
+    private bool refreshingReaderList;
+
     partial void OnSelectedReaderChanged(ReaderItemViewModel? value)
     {
+        if (refreshingReaderList)
+        {
+            return;
+        }
+
+        ApplySelectedReaderContext(value);
+    }
+
+    private void ApplySelectedReaderContext(ReaderItemViewModel? value)
+    {
+        Inventory.SetReaderContext(value);
         TagMemory.SetReaderContext(value);
         Settings.SetReaderContext(value);
+        if (ReferenceEquals(CurrentPage, InventoryRuns)
+            && InventoryRuns.ReaderId != value?.ReaderId)
+        {
+            InventoryRuns.SelectReader(value?.ReaderId);
+        }
     }
 
     /// <summary>当前导航页（ContentControl 路由）。</summary>
@@ -96,18 +122,28 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public async Task InitializeAsync(CancellationToken ct = default)
     {
+        if (disposed)
+        {
+            return;
+        }
+
         IsBusy = true;
         Status = "正在初始化 Reader 平台...";
         try
         {
-            await readerManager.InitializeAsync(ct);
-            await AppSettings.LoadAsync(ct);
+            using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetimeToken);
+            await readerManager.InitializeAsync(linked.Token);
+            await AppSettings.LoadAsync(linked.Token);
             Refresh();
             Status = Readers.Count == 0 ? "平台已就绪，请添加 Reader。" : $"平台已就绪，已加载 {Readers.Count} 个 Reader。";
         }
+        catch (OperationCanceledException) when (discoveryCts.IsCancellationRequested)
+        {
+            // 窗口退出时取消启动恢复。
+        }
         catch (Exception ex)
         {
-            Status = $"平台初始化失败: {ex.Message}";
+            Status = PlatformErrorDisplay.Failure("平台初始化", ex);
             throw;
         }
         finally
@@ -119,19 +155,37 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     public void Refresh()
     {
-        Guid? selectedReaderId = SelectedReader?.ReaderId;
-        Readers.Clear();
-        foreach (ReaderRuntimeSnapshot snapshot in readerManager.Readers)
+        if (disposed)
         {
-            Readers.Add(new ReaderItemViewModel(snapshot, enabled =>
-            {
-                _ = SetReaderEnabledFromListAsync(snapshot.ReaderId, enabled);
-            }));
+            return;
         }
 
-        SelectedReader = selectedReaderId is { } id
-            ? Readers.FirstOrDefault(reader => reader.ReaderId == id)
-            : Readers.FirstOrDefault();
+        Guid? selectedReaderId = SelectedReader?.ReaderId;
+        refreshingReaderList = true;
+        try
+        {
+            Readers.Clear();
+            foreach (ReaderRuntimeSnapshot snapshot in readerManager.Readers)
+            {
+                Readers.Add(new ReaderItemViewModel(snapshot, enabled =>
+                {
+                    _ = SetReaderEnabledFromListAsync(snapshot.ReaderId, enabled);
+                }));
+            }
+
+            SelectedReader = selectedReaderId is { } id
+                ? Readers.FirstOrDefault(reader => reader.ReaderId == id)
+                : Readers.FirstOrDefault();
+        }
+        finally
+        {
+            refreshingReaderList = false;
+        }
+
+        // Apply the final item once, after the ListBox's transient null selection
+        // has been suppressed. This keeps settings/inventory/tag-memory context
+        // aligned with the rebuilt ReaderItemViewModel instance.
+        ApplySelectedReaderContext(SelectedReader);
     }
 
     [RelayCommand]
@@ -154,14 +208,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         try
         {
-            ReaderAddResult result = await readerManager.AddAsync(profile, enableAfterAdding: true, CancellationToken.None);
+            ReaderAddResult result = await readerManager.AddAsync(profile, enableAfterAdding: true, lifetimeToken);
             Status = result.Succeeded
                 ? $"已添加并同步 {profile.Host}:{profile.Port}"
-                : $"添加失败: {result.Error}";
+                : PlatformErrorDisplay.Failure("添加", result.ErrorCode, result.Error);
+        }
+        catch (OperationCanceledException) when (discoveryCts.IsCancellationRequested)
+        {
+            // 窗口退出时取消添加 Reader。
         }
         catch (Exception ex)
         {
-            Status = $"添加失败: {ex.Message}";
+            if (!disposed)
+            {
+                Status = PlatformErrorDisplay.Failure("添加", ex);
+            }
         }
         finally
         {
@@ -182,7 +243,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             bool removedSettingsReader = Settings.ReaderId == readerId;
-            await readerManager.RemoveAsync(readerId, CancellationToken.None);
+            await readerManager.RemoveAsync(readerId, lifetimeToken);
             if (removedSettingsReader)
             {
                 Settings.SetReaderContext(null);
@@ -191,9 +252,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             Status = "已移除";
         }
+        catch (OperationCanceledException) when (discoveryCts.IsCancellationRequested)
+        {
+            // 窗口退出时取消移除 Reader。
+        }
         catch (Exception ex)
         {
-            Status = $"移除失败: {ex.Message}";
+            if (!disposed)
+            {
+                Status = PlatformErrorDisplay.Failure("移除", ex);
+            }
         }
         finally
         {
@@ -219,12 +287,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IsBusy = true;
         try
         {
-            ReaderActivationResult result = await readerManager.ActivateAsync(item.ReaderId, CancellationToken.None);
-            Status = result.Succeeded ? "激活成功" : $"激活失败: {result.Error}";
+            ReaderActivationResult result = await readerManager.ActivateAsync(item.ReaderId, lifetimeToken);
+            Status = result.Succeeded
+                ? "激活成功"
+                : PlatformErrorDisplay.Failure("激活", result.ErrorCode, result.Error);
+        }
+        catch (OperationCanceledException) when (discoveryCts.IsCancellationRequested)
+        {
+            // 窗口退出时取消 Reader 激活。
         }
         catch (Exception ex)
         {
-            Status = $"激活失败: {ex.Message}";
+            if (!disposed)
+            {
+                Status = PlatformErrorDisplay.Failure("激活", ex);
+            }
         }
         finally
         {
@@ -245,19 +322,30 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Status = "正在扫描 _llrp._tcp...";
         try
         {
-            IReadOnlyList<DiscoveredReader> found = await discovery.DiscoverAsync(TimeSpan.FromSeconds(3), CancellationToken.None);
+            IReadOnlyList<DiscoveredReader> found = await discovery.DiscoverAsync(TimeSpan.FromSeconds(3), lifetimeToken);
+            IReadOnlyList<DiscoveredReader> normalized = DiscoveredReaderNormalization.Normalize(found);
             Discovered.Clear();
-            foreach (DiscoveredReader r in found)
+            foreach (DiscoveredReader r in normalized)
             {
                 Discovered.Add(new DiscoveredReaderViewModel(r));
             }
 
-            Status = found.Count == 0 ? "未发现 LLRP 设备" : $"发现 {found.Count} 个设备，可选用后再添加";
+            Status = normalized.Count == 0 ? "未发现 LLRP 设备" : $"发现 {normalized.Count} 个设备，可选用后再添加";
+        }
+        catch (OperationCanceledException) when (discoveryCts.IsCancellationRequested)
+        {
+            if (!disposed)
+            {
+                Status = "发现已取消。";
+            }
         }
         catch (Exception ex)
         {
-            Discovered.Clear();
-            Status = $"发现失败: {ex.Message}";
+            if (!disposed)
+            {
+                Discovered.Clear();
+                Status = PlatformErrorDisplay.Failure("发现", ex);
+            }
         }
         finally
         {
@@ -278,7 +366,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void Navigate(string page)
     {
-        CurrentPage = page switch
+        object nextPage = page switch
         {
             "Inventory" => Inventory,
             "TagMemory" => TagMemory,
@@ -291,6 +379,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
             "AddDataSource" => AddDataSource,
             _ => Settings,
         };
+
+        if (!ReferenceEquals(CurrentPage, nextPage))
+        {
+            CancelPendingPageOperations(CurrentPage);
+        }
+
+        CurrentPage = nextPage;
 
         if (string.Equals(page, "TagLists", StringComparison.Ordinal))
         {
@@ -310,16 +405,49 @@ public partial class MainViewModel : ObservableObject, IDisposable
         await LoadReaderSettingsAsync(item.ReaderId);
     }
 
-    private async void OnDataSourceAdded(object? sender, Guid readerId)
+    private void OnDataSourceAdded(object? sender, Guid readerId)
     {
-        Refresh();
-        SelectedReader = Readers.FirstOrDefault(r => r.ReaderId == readerId);
-        await LoadReaderSettingsAsync(readerId);
+        _ = HandleDataSourceAddedAsync(readerId);
     }
 
-    private void OnAddDataSourceCancelled(object? sender, EventArgs args) => CurrentPage = Inventory;
+    private async Task HandleDataSourceAddedAsync(Guid readerId)
+    {
+        if (disposed)
+        {
+            return;
+        }
 
-    private void OnSettingsCancelRequested(object? sender, EventArgs args) => CurrentPage = Inventory;
+        try
+        {
+            Refresh();
+            SelectedReader = Readers.FirstOrDefault(r => r.ReaderId == readerId);
+            await LoadReaderSettingsAsync(readerId);
+        }
+        catch (OperationCanceledException) when (discoveryCts.IsCancellationRequested)
+        {
+            // 窗口退出时取消添加完成后的设置加载。
+        }
+        catch (Exception ex)
+        {
+            if (!disposed)
+            {
+                Status = PlatformErrorDisplay.Failure("加载 Reader 配置", ex);
+                CurrentPage = Settings;
+            }
+        }
+    }
+
+    private void OnAddDataSourceCancelled(object? sender, EventArgs args)
+    {
+        AddDataSource.CancelPendingOperations();
+        CurrentPage = Inventory;
+    }
+
+    private void OnSettingsCancelRequested(object? sender, EventArgs args)
+    {
+        Settings.CancelPendingOperations();
+        CurrentPage = Inventory;
+    }
 
     private async Task SetReaderEnabledFromListAsync(Guid readerId, bool enabled)
     {
@@ -331,27 +459,33 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IsBusy = true;
         try
         {
-            await readerManager.SetEnabledAsync(readerId, enabled, CancellationToken.None);
+            await readerManager.SetEnabledAsync(readerId, enabled, lifetimeToken);
             if (!enabled)
             {
-                await readerManager.DeactivateAsync(readerId, CancellationToken.None);
                 Status = "Reader 已停用。";
                 return;
             }
 
-            ReaderActivationResult activation = await readerManager.ActivateAsync(readerId, CancellationToken.None);
+            ReaderActivationResult activation = await readerManager.ActivateAsync(readerId, lifetimeToken);
             if (!activation.Succeeded)
             {
-                await readerManager.SetEnabledAsync(readerId, false, CancellationToken.None);
-                Status = $"连接失败: {activation.Error}";
+                await readerManager.SetEnabledAsync(readerId, false, lifetimeToken);
+                Status = PlatformErrorDisplay.Failure("连接", activation.ErrorCode, activation.Error);
                 return;
             }
 
             Status = "Reader 已连接并同步能力。";
         }
+        catch (OperationCanceledException) when (discoveryCts.IsCancellationRequested)
+        {
+            // 窗口退出时取消 Reader 状态更新。
+        }
         catch (Exception ex)
         {
-            Status = $"Reader 状态更新失败: {ex.Message}";
+            if (!disposed)
+            {
+                Status = PlatformErrorDisplay.Failure("Reader 状态更新", ex);
+            }
         }
         finally
         {
@@ -362,29 +496,54 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private async Task LoadReaderSettingsAsync(Guid readerId)
     {
-        if (IsBusy)
+        // 允许新的设置加载取消并替换旧的设置加载；其它主窗口操作仍保持独占。
+        if (IsBusy && !Settings.IsBusy)
         {
             return;
         }
 
+        int generation = Interlocked.Increment(ref settingsLoadGeneration);
+        CancellationTokenSource settingsLoadCts =
+            CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
+        CancellationTokenSource? previousLoadCts = Interlocked.Exchange(
+            ref activeSettingsLoadCts,
+            settingsLoadCts);
+        CancelAndDispose(previousLoadCts);
         IsBusy = true;
         try
         {
+            if (!IsCurrentSettingsLoad(generation))
+            {
+                return;
+            }
+
             Settings.SetReaderContext(SelectedReader);
             ReaderRuntimeSnapshot snapshot = readerManager.GetSnapshot(readerId);
             if (snapshot.State == ReaderState.Faulted
                 || snapshot.IsStale
                 || snapshot.CapabilityRevision == 0)
             {
-                ReaderActivationResult activation = await readerManager.ActivateAsync(readerId, CancellationToken.None);
+                ReaderActivationResult activation = await readerManager.ActivateAsync(
+                    readerId,
+                    settingsLoadCts.Token);
+                if (!IsCurrentSettingsLoad(generation))
+                {
+                    return;
+                }
+
                 if (!activation.Succeeded)
                 {
-                    Status = $"连接失败: {activation.Error}";
+                    Status = PlatformErrorDisplay.Failure("连接", activation.ErrorCode, activation.Error);
                     // 离线 Reader 也要进入设置页，让 SettingsService 尝试读取最后一次
                     // 保存的语义 Preset；没有缓存时再显示能力未就绪占位页。
                     Refresh();
                     SelectedReader = Readers.FirstOrDefault(r => r.ReaderId == readerId);
-                    await Settings.LoadCommand.ExecuteAsync(readerId);
+                    await Settings.LoadForNavigationAsync(readerId, settingsLoadCts.Token);
+                    if (!IsCurrentSettingsLoad(generation))
+                    {
+                        return;
+                    }
+
                     CurrentPage = Settings;
                     return;
                 }
@@ -392,40 +551,148 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             Refresh();
             SelectedReader = Readers.FirstOrDefault(r => r.ReaderId == readerId);
-            await Settings.LoadCommand.ExecuteAsync(readerId);
+            bool settingsLoadedFromReader = await Settings.LoadForNavigationAsync(
+                readerId,
+                settingsLoadCts.Token);
+            if (!IsCurrentSettingsLoad(generation))
+            {
+                return;
+            }
+
             CurrentPage = Settings;
-            Status = "已连接并同步 Reader 能力。";
+            Status = settingsLoadedFromReader
+                ? "已连接并同步 Reader 能力。"
+                : "Reader 能力已同步，但设置回读未成功，当前显示只读内容。";
+        }
+        catch (OperationCanceledException) when (
+            discoveryCts.IsCancellationRequested
+            || settingsLoadCts.IsCancellationRequested
+            || generation != Volatile.Read(ref settingsLoadGeneration))
+        {
+            // 窗口退出时取消设置加载。
         }
         catch (Exception ex)
         {
-            Status = $"加载 Reader 配置失败: {ex.Message}";
-            CurrentPage = Settings;
+            if (!disposed && IsCurrentSettingsLoad(generation))
+            {
+                Status = PlatformErrorDisplay.Failure("加载 Reader 配置", ex);
+                CurrentPage = Settings;
+            }
         }
         finally
         {
-            IsBusy = false;
+            if (ReferenceEquals(
+                Interlocked.CompareExchange(ref activeSettingsLoadCts, null, settingsLoadCts),
+                settingsLoadCts))
+            {
+                IsBusy = false;
+            }
+
+            settingsLoadCts.Dispose();
         }
+    }
+
+    private int settingsLoadGeneration;
+
+    private bool IsCurrentSettingsLoad(int generation) =>
+        !disposed && generation == Volatile.Read(ref settingsLoadGeneration);
+
+    private void CancelPendingPageOperations(object? page)
+    {
+        if (page is IPageOperationOwner pageOperations)
+        {
+            pageOperations.CancelPendingOperations();
+        }
+
+        Interlocked.Increment(ref settingsLoadGeneration);
+        CancellationTokenSource? settingsLoadCts = Volatile.Read(ref activeSettingsLoadCts);
+        try
+        {
+            settingsLoadCts?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // 侧栏切换与设置加载完成的释放可能并发发生。
+        }
+    }
+
+    private static void CancelAndDispose(CancellationTokenSource? operationCts)
+    {
+        if (operationCts is null)
+        {
+            return;
+        }
+
+        try
+        {
+            operationCts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            return;
+        }
+
+        operationCts.Dispose();
     }
 
     private void OnReaderStateChanged(object? sender, ReaderStateChangedEventArgs args)
     {
-        void RefreshOnUiThread() => Refresh();
+        if (disposed)
+        {
+            return;
+        }
+
+        void RefreshOnUiThread()
+        {
+            if (!disposed)
+            {
+                Refresh();
+            }
+        }
         if (dispatcher.CheckAccess())
         {
             RefreshOnUiThread();
             return;
         }
 
-        _ = dispatcher.BeginInvoke(RefreshOnUiThread);
+        if (disposed || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
+
+        try
+        {
+            _ = dispatcher.BeginInvoke(RefreshOnUiThread);
+        }
+        catch (InvalidOperationException)
+        {
+            // WPF shutdown may race the Dispatcher state check.
+        }
     }
 
     public void Dispose()
     {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        CancelPendingPageOperations(CurrentPage);
+        discoveryCts.Cancel();
+        discoveryCts.Dispose();
+        Interlocked.Increment(ref settingsLoadGeneration);
         readerManager.StateChanged -= OnReaderStateChanged;
         AddDataSource.DataSourceAdded -= OnDataSourceAdded;
         AddDataSource.CancelRequested -= OnAddDataSourceCancelled;
         Settings.CancelRequested -= OnSettingsCancelRequested;
+        AddDataSource.Dispose();
+        Settings.Dispose();
         Inventory.Dispose();
+        TagMemory.Dispose();
         Diagnostics.Dispose();
+        AppSettings.Dispose();
+        TagLists.Dispose();
+        InventoryRuns.Dispose();
     }
 }

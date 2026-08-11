@@ -26,6 +26,13 @@ public sealed class TwoPhaseExtensionTests
         public void ConfigureBuilder(ReaderBuilderContext context) { }
     }
 
+    private sealed class ThrowingMatchModule : IReaderExtensionModule
+    {
+        public string Id => "throwing";
+        public bool IsApplicable(ReaderProbeInfo info) => throw new InvalidOperationException("matcher failed");
+        public void ConfigureBuilder(ReaderBuilderContext context) { }
+    }
+
     private sealed class ManufacturerMatchModule : IReaderExtensionModule
     {
         public string Id => "manufacturer-42";
@@ -72,7 +79,7 @@ public sealed class TwoPhaseExtensionTests
         var sessionFactory = new FakeSessionFactory();
         var store = new FakeProfileStore();
         var module = new NeverMatchModule();
-        await using var manager = new ReaderManager(sessionFactory, store, null, [module]);
+        await using var manager = new ReaderManager(sessionFactory, store, null, [module, new ThrowingMatchModule()]);
         ReaderProfile profile = new() { Id = Guid.NewGuid(), Host = "192.0.2.4" };
         sessionFactory.Queue.Enqueue(new FakeSession()); // probe
         sessionFactory.Queue.Enqueue(new FakeSession()); // register
@@ -120,6 +127,7 @@ public sealed class TwoPhaseExtensionTests
         Assert.Contains(
             new Feature("test-capability", "test-vendor"),
             manager.GetSnapshot(profile.Id).FeatureCatalog.SupportedFeatures);
+        Assert.Equal(["manufacturer-42"], manager.GetSnapshot(profile.Id).ActiveExtensionIds);
         Assert.False(restoredStandardSession.IsConnected);
         Assert.Single(sessionFactory.Created[3].Extensions);
         Assert.Same(module, sessionFactory.Created[3].Extensions[0]);
@@ -261,5 +269,63 @@ public sealed class TwoPhaseExtensionTests
         Assert.True(extensionSession.InventoryRunning);
 
         await manager.StopInventoryAsync(profile.Id);
+    }
+
+    [Fact]
+    public async Task Fault_recovery_uses_standard_session_before_matching_current_extension()
+    {
+        var sessionFactory = new FakeSessionFactory();
+        var store = new FakeProfileStore();
+        var module = new ManufacturerMatchModule();
+        ReaderProfile profile = new()
+        {
+            Id = Guid.NewGuid(),
+            Host = "192.0.2.48",
+            IsEnabled = false,
+        };
+
+        var addProbe = new FakeSession();
+        addProbe.SetIdentity(42, 7, "firmware");
+        sessionFactory.Queue.Enqueue(addProbe);
+        var runtime = new FakeSession();
+        runtime.SetIdentity(42, 7, "firmware");
+        sessionFactory.Queue.Enqueue(runtime);
+
+        await using var manager = new ReaderManager(sessionFactory, store, null, [module]);
+        ReaderAddResult added = await manager.AddAsync(profile, enableAfterAdding: false);
+        Assert.True(added.Succeeded);
+        ReaderActivationResult activation = await manager.ActivateAsync(profile.Id);
+        Assert.True(activation.Succeeded);
+
+        StartInventoryResult started = await manager.StartInventoryAsync(profile.Id, new InventorySpec());
+        Assert.True(started.Succeeded);
+        runtime.RaiseDeviceInitiatedClosed();
+        for (int i = 0; i < 40 && manager.GetSnapshot(profile.Id).State != ReaderState.Faulted; i++)
+        {
+            await Task.Delay(10);
+        }
+
+        var failedProbe = new FakeSession
+        {
+            ConnectThrows = new TimeoutException("probe temporarily unavailable"),
+        };
+        var standardRecovery = new FakeSession();
+        standardRecovery.SetIdentity(42, 7, "firmware");
+        var extensionRecovery = new FakeSession();
+        extensionRecovery.SetIdentity(42, 7, "firmware");
+        sessionFactory.Queue.Enqueue(failedProbe);
+        sessionFactory.Queue.Enqueue(standardRecovery);
+        sessionFactory.Queue.Enqueue(extensionRecovery);
+
+        ReaderActivationResult recovered = await manager.ActivateAsync(profile.Id);
+
+        Assert.True(recovered.Succeeded, recovered.Error);
+        Assert.Empty(sessionFactory.Created[2].Extensions);
+        Assert.Empty(sessionFactory.Created[3].Extensions);
+        Assert.Single(sessionFactory.Created[4].Extensions);
+        Assert.Same(module, sessionFactory.Created[4].Extensions[0]);
+        Assert.False(runtime.IsConnected);
+        Assert.False(standardRecovery.IsConnected);
+        Assert.False(extensionRecovery.IsConnected);
     }
 }

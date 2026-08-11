@@ -37,10 +37,17 @@ public sealed record ReaderProfile
 
     public void Validate()
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(Host, nameof(Host));
+        ArgumentException.ThrowIfNullOrWhiteSpace(ReaderEndpoint.NormalizeHost(Host), nameof(Host));
         if (Port is < 1 or > 65535)
         {
             throw new ArgumentOutOfRangeException(nameof(Port), "LLRP 端口必须在 1~65535 之间。");
+        }
+
+        if (!Enum.IsDefined(LlrpVersion))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(LlrpVersion),
+                "LLRP 协议版本策略无效。");
         }
     }
 }

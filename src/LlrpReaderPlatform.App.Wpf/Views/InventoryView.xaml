@@ -44,45 +44,33 @@
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center"
                             VerticalAlignment="Center">
-                    <TextBlock Text="UNIQUE TAGS: " FontSize="12" FontWeight="Bold"
+                    <TextBlock Text="ELAPSED TIME: " FontSize="12" FontWeight="Bold"
                                VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <TextBlock Text="{Binding UniqueTagCount}" FontSize="30"
+                    <TextBlock Text="{Binding Elapsed}" FontSize="36"
                                FontFamily="Consolas, Courier New" FontWeight="Bold"
                                VerticalAlignment="Center" />
-                    <TextBlock Text="  |  " FontSize="16" VerticalAlignment="Center" Margin="12,0,0,0" />
-                    <TextBlock Text="{Binding Elapsed}" FontSize="15" VerticalAlignment="Center" />
-                    <TextBlock Text="  |  " FontSize="16" VerticalAlignment="Center" Margin="12,0,0,0" />
-                    <TextBlock Text="{Binding TagRate}" FontSize="15" VerticalAlignment="Center" />
-                    <TextBlock Text="  |  DROPPED: " FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0" />
-                    <TextBlock Text="{Binding DroppedTagReportCount}" FontSize="15" VerticalAlignment="Center" />
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Duration(s)" VerticalAlignment="Center" Margin="0,0,4,0" />
+                    <TextBox Text="{Binding DurationSecondsText, UpdateSourceTrigger=PropertyChanged}"
+                             Width="64" Padding="4,2" ToolTip="0 = continuous inventory" />
                     <Button Content="REFRESH" Command="{Binding RefreshCommand}" Padding="12,6" />
                     <Button Content="CLEAR" Command="{Binding ClearCommand}" Padding="12,6" Margin="8,0,0,0" />
                 </StackPanel>
             </Grid>
         </Border>
 
-        <WrapPanel Grid.Row="0" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,4">
-            <CheckBox Content="#" IsChecked="{Binding ShowIndexColumn}" Margin="8,0" />
-            <CheckBox Content="Count" IsChecked="{Binding ShowCountColumn}" Margin="8,0" />
-            <CheckBox Content="Reader" IsChecked="{Binding ShowReaderColumn}" Margin="8,0" />
-            <CheckBox Content="TID" IsChecked="{Binding ShowTidColumn}" Margin="8,0" />
-            <CheckBox Content="First" IsChecked="{Binding ShowFirstSeenColumn}" Margin="8,0" />
-            <CheckBox Content="Last" IsChecked="{Binding ShowLastSeenColumn}" Margin="8,0" />
-            <CheckBox Content="Antenna" IsChecked="{Binding ShowAntennaColumn}" Margin="8,0" />
-            <CheckBox Content="RSSI" IsChecked="{Binding ShowRssiColumn}" Margin="8,0" />
-            <CheckBox Content="Channel" IsChecked="{Binding ShowChannelColumn}" Margin="8,0" />
-            <CheckBox Content="PC" IsChecked="{Binding ShowPcBitsColumn}" Margin="8,0" />
-        </WrapPanel>
-
-                <ProgressBar Grid.Row="0" VerticalAlignment="Bottom" Height="3"
+        <ProgressBar Grid.Row="0" VerticalAlignment="Bottom" Height="3"
                      IsIndeterminate="{Binding IsBusy}" />
 
         <DataGrid Grid.Row="1" ItemsSource="{Binding Tags}" AutoGenerateColumns="False" IsReadOnly="True"
                   CanUserAddRows="False" GridLinesVisibility="Horizontal" RowHeight="32"
-                  FontSize="12" Margin="16" BorderThickness="1">
+                  FontSize="12" Margin="16" BorderThickness="1"
+                  EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                  ScrollViewer.CanContentScroll="True"
+                  VirtualizingPanel.IsVirtualizing="True"
+                  VirtualizingPanel.VirtualizationMode="Recycling">
             <DataGrid.Resources>
                 <Style x:Key="CenteredCellTextStyle" TargetType="TextBlock">
                     <Setter Property="VerticalAlignment" Value="Center" />
@@ -96,6 +84,25 @@
                     <Setter Property="FontWeight" Value="Bold" />
                     <Setter Property="Padding" Value="10,8" />
                     <Setter Property="BorderThickness" Value="0,0,1,1" />
+                    <Setter Property="ContextMenu">
+                        <Setter.Value>
+                            <ContextMenu>
+                                <StackPanel Margin="4">
+                                    <CheckBox Content="#" IsChecked="{Binding Data.ShowIndexColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
+                                    <CheckBox Content="EPC" IsChecked="{Binding Data.ShowEpcColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
+                                    <CheckBox Content="TID" IsChecked="{Binding Data.ShowTidColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
+                                    <CheckBox Content="Count" IsChecked="{Binding Data.ShowCountColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
+                                    <CheckBox Content="First Seen" IsChecked="{Binding Data.ShowFirstSeenColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
+                                    <CheckBox Content="Last Seen" IsChecked="{Binding Data.ShowLastSeenColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
+                                    <CheckBox Content="Reader" IsChecked="{Binding Data.ShowReaderColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
+                                    <CheckBox Content="Antenna" IsChecked="{Binding Data.ShowAntennaColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
+                                    <CheckBox Content="Peak RSSI" IsChecked="{Binding Data.ShowRssiColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
+                                    <CheckBox Content="Channel" IsChecked="{Binding Data.ShowChannelColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
+                                    <CheckBox Content="PC Bits" IsChecked="{Binding Data.ShowPcBitsColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
+                                </StackPanel>
+                            </ContextMenu>
+                        </Setter.Value>
+                    </Setter>
                 </Style>
                 <Style TargetType="DataGridCell">
                     <Setter Property="Padding" Value="8,4" />
@@ -107,12 +114,8 @@
                                     Visibility="{Binding Data.ShowIndexColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredCellTextStyle}" />
                 <DataGridTextColumn Header="EPC" Binding="{Binding Epc}" Width="2.2*"
+                                    Visibility="{Binding Data.ShowEpcColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredMonoCellTextStyle}" />
-                <DataGridTextColumn Header="Tag List" Binding="{Binding TagListName}" Width="1.4*"
-                                    ElementStyle="{StaticResource CenteredCellTextStyle}" />
-                <DataGridTextColumn Header="Reader" Binding="{Binding ReaderName}" Width="1.3*"
-                                    Visibility="{Binding Data.ShowReaderColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                    ElementStyle="{StaticResource CenteredCellTextStyle}" />
                 <DataGridTextColumn Header="TID" Binding="{Binding Tid}" Width="1.8*"
                                     Visibility="{Binding Data.ShowTidColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredMonoCellTextStyle}" />
@@ -125,10 +128,13 @@
                 <DataGridTextColumn Header="Last Seen" Binding="{Binding LastSeen}" Width="110"
                                     Visibility="{Binding Data.ShowLastSeenColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                <DataGridTextColumn Header="Reader" Binding="{Binding ReaderName}" Width="1.3*"
+                                    Visibility="{Binding Data.ShowReaderColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                    ElementStyle="{StaticResource CenteredCellTextStyle}" />
                 <DataGridTextColumn Header="Antenna" Binding="{Binding LastAntenna}" Width="80"
                                     Visibility="{Binding Data.ShowAntennaColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredCellTextStyle}" />
-                <DataGridTextColumn Header="RSSI" Binding="{Binding LastRssi}" Width="80"
+                <DataGridTextColumn Header="Peak RSSI" Binding="{Binding PeakRssi}" Width="90"
                                     Visibility="{Binding Data.ShowRssiColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredCellTextStyle}" />
                 <DataGridTextColumn Header="Channel" Binding="{Binding LastChannelIndex}" Width="80"
@@ -137,6 +143,8 @@
                 <DataGridTextColumn Header="PC Bits" Binding="{Binding PcBitsHex}" Width="90"
                                     Visibility="{Binding Data.ShowPcBitsColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredMonoCellTextStyle}" />
+                <DataGridTextColumn Header="Tag List" Binding="{Binding TagListName}" Width="1.4*"
+                                    ElementStyle="{StaticResource CenteredCellTextStyle}" />
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

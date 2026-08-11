@@ -61,6 +61,11 @@ public static class SdkTagAccessMapper
         }
 
         byte[] target = Convert.FromHexString(normalized);
+        if (target.Length > ushort.MaxValue / 8)
+        {
+            throw new FormatException("目标匹配数据超过 LLRP 选择条件的最大长度。");
+        }
+
         return new LlrpSdk.TagSelection
         {
             MemoryBank = (LlrpSdk.TagMemoryBank)selectionBank,

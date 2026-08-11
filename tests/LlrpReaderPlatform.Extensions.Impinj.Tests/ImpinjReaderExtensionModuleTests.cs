@@ -128,6 +128,7 @@ public sealed class ImpinjReaderExtensionModuleTests
             ManufacturerId = ImpinjReaderExtensionModule.ImpinjManufacturerId,
             ModelId = ImpinjReaderExtensionModule.R420ModelId,
             CapabilityRevision = 1,
+            GpiCount = 2,
             FeatureCatalog = R420Features(),
         };
         var runtime = new ReaderSettingsRuntimeSnapshot(
@@ -141,6 +142,14 @@ public sealed class ImpinjReaderExtensionModuleTests
 
         Assert.Contains(entries, entry => entry.Key == ImpinjSettingsContributor.FastId);
         Assert.All(entries, entry => Assert.Equal(SettingsSource.VendorExtension, entry.Source));
+        Assert.Contains(entries, entry => entry.Key == ImpinjSettingsContributor.GpiDebounce(1));
+        Assert.Contains(entries, entry => entry.Key == ImpinjSettingsContributor.GpiDebounce(2));
+        Assert.DoesNotContain(entries, entry => entry.Key == ImpinjSettingsContributor.GpiDebounce(3));
+        Assert.DoesNotContain(entries, entry => entry.Key == ImpinjSettingsContributor.GpiDebounce(4));
+
+        var noGpiEntries = new List<SettingsEntry>();
+        contributor.ContributeLayout(noGpiEntries, reader with { GpiCount = 0 }, runtime);
+        Assert.DoesNotContain(noGpiEntries, entry => entry.Key.StartsWith("impinj.gpi-debounce-", StringComparison.Ordinal));
         Assert.False(contributor.IsApplicable(reader with { FeatureCatalog = ReaderFeatureCatalog.Empty }));
     }
 
@@ -149,6 +158,12 @@ public sealed class ImpinjReaderExtensionModuleTests
     {
         var contributor = new ImpinjSettingsContributor();
         Guid id = Guid.NewGuid();
+        ReaderFeatureCatalog featuresWithoutFastId = new()
+        {
+            SupportedFeatures = R420Features().SupportedFeatures
+                .Where(feature => feature is not { Vendor: "impinj", Id: "fast-id" or "doppler" })
+                .ToArray(),
+        };
         var reader = new ReaderRuntimeSnapshot
         {
             ReaderId = id,
@@ -157,18 +172,14 @@ public sealed class ImpinjReaderExtensionModuleTests
             ManufacturerId = ImpinjReaderExtensionModule.ImpinjManufacturerId,
             ModelId = ImpinjReaderExtensionModule.R420ModelId,
             CapabilityRevision = 1,
-            FeatureCatalog = new ReaderFeatureCatalog
-            {
-                SupportedFeatures = R420Features().SupportedFeatures
-                    .Where(feature => feature != ReaderFeatures.ImpinjDoppler)
-                    .ToArray(),
-            },
+            FeatureCatalog = featuresWithoutFastId,
         };
         var runtime = new ReaderSettingsRuntimeSnapshot(
             new ReaderSettingsSnapshot(new ReaderSettings(), new ManagedRoSpecSnapshot(
                 new InventorySettings(), InventoryRuntimeState.Disabled)), null);
         var entries = new List<SettingsEntry>();
 
+        Assert.True(contributor.IsApplicable(reader));
         contributor.ContributeLayout(entries, reader, runtime);
 
         Assert.Contains(entries, entry => entry.Key == ImpinjSettingsContributor.PhaseAngle);
@@ -188,6 +199,7 @@ public sealed class ImpinjReaderExtensionModuleTests
             ManufacturerId = ImpinjReaderExtensionModule.ImpinjManufacturerId,
             ModelId = ImpinjReaderExtensionModule.R420ModelId,
             CapabilityRevision = 1,
+            GpiCount = 2,
             FeatureCatalog = R420Features(),
         };
         var runtime = new ReaderSettingsRuntimeSnapshot(
@@ -196,12 +208,25 @@ public sealed class ImpinjReaderExtensionModuleTests
         var draft = new SettingsDraft { ReaderId = id, CapabilityRevision = 1 };
         draft.Values[ImpinjSettingsContributor.GpiDebounce(1)] = 250;
 
+        var baseSettings = new ReaderSettings
+        {
+            Configuration = new ReaderConfiguration
+            {
+                Extensions = new Dictionary<string, object?>
+                {
+                    [ImpinjReaderConfiguration.ExtensionKey] = new ImpinjReaderConfiguration
+                    {
+                        GpiDebounce = [new ImpinjGpiDebounceSetting(3, 999)],
+                    },
+                },
+            },
+        };
         ReaderSettings applied = contributor.Apply(draft, new EffectiveSettingsLayout
         {
             ReaderId = id,
             CapabilityRevision = 1,
             Entries = [],
-        }, reader, runtime, new ReaderSettings());
+        }, reader, runtime, baseSettings);
 
         var configuration = Assert.IsType<ImpinjReaderConfiguration>(
             applied.Configuration.Extensions[ImpinjReaderConfiguration.ExtensionKey]);

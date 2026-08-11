@@ -16,10 +16,15 @@ public static class ReaderAntennaFactory
             return [];
         }
 
-        var antennas = new List<ReaderAntennaInfo>(maxAntennas);
-        for (ushort i = 1; i <= maxAntennas; i++)
+        int count = maxAntennas;
+        var antennas = new List<ReaderAntennaInfo>(count);
+        for (int i = 1; i <= count; i++)
         {
-            antennas.Add(new ReaderAntennaInfo { AntennaId = i, Name = $"Antenna {i}" });
+            antennas.Add(new ReaderAntennaInfo
+            {
+                AntennaId = checked((ushort)i),
+                Name = $"Antenna {i}",
+            });
         }
 
         return antennas;

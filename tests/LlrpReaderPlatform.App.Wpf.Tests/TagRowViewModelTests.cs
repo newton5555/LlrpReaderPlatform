@@ -33,6 +33,7 @@ public sealed class TagRowViewModelTests
         Assert.Equal("10:30:00", row.FirstSeen);
         Assert.Equal("10:30:05", row.LastSeen);
         Assert.Equal((sbyte)-50, row.LastRssi);
+        Assert.Equal((sbyte)-50, row.PeakRssi);
         Assert.Equal((ushort)1, row.LastAntenna);
         Assert.Equal((ushort)2, row.LastChannelIndex);
     }

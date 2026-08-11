@@ -29,6 +29,8 @@ public sealed record TagRowViewModel
     public long ReadCount => Tag.ReadCount;
     public string FirstSeen => Tag.FirstSeen.ToString("HH:mm:ss");
     public string LastSeen => Tag.LastSeen.ToString("HH:mm:ss");
+    /// <summary>旧 WPF 的 Peak RSSI 列；平台报告模型内部仍保留 LastRssi 命名。</summary>
+    public sbyte? PeakRssi => Tag.LastRssi;
     public sbyte? LastRssi => Tag.LastRssi;
     public ushort? LastAntenna => Tag.LastAntenna;
     public ushort? LastChannelIndex => Tag.LastChannelIndex;

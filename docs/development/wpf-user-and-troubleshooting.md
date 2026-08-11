@@ -17,7 +17,7 @@ dotnet run --project src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj
 - SDK/LLRP 日志：`%LocalAppData%\LlrpReaderPlatform\logs\sdk-*.log`；
 - Tag Logging：由 Software Settings 中的配置决定，默认位于 `%LocalAppData%\LlrpReaderPlatform\tag-logs`。
 
-应用退出时会先停止运行中的 Inventory、等待已入队的 TagReport/TagLog 完成，再断开 Reader 并异步释放 DI 容器。不要在应用仍运行时复制或删除 SQLite 文件。
+应用退出时会先取消各页面尚未完成的网络/数据库操作，再停止运行中的 Inventory、等待已入队的 TagReport/TagLog 完成，最后断开 Reader 并异步释放 DI 容器。取消不会被显示为设备故障。不要在应用仍运行时复制或删除 SQLite 文件。
 
 ## 2. 添加和激活 Reader
 
@@ -45,13 +45,13 @@ Tab1（Inventory）包括：
 
 Tab2（Diagnostics）包括四路 GPO 开关和 GPI 状态刷新/事件显示。GPI 配置仍在 Tab1 的 GPI CONFIGURATION 分组中，GPO 控制不需要另开独立页面。
 
-设置操作遵循以下顺序：Query → 编辑 → Validate → Apply → Query 回读。Load Defaults 只更新编辑器，不会直接下发。Inventory 运行时保存设置、GPO 和 Tag Access 会返回 ReaderBusy，不能隐式停止或重启寻卡。
+设置操作遵循以下顺序：Query → 编辑 → Validate → Apply → Query 回读。Load Defaults 只更新编辑器，不会直接下发。切换左侧 Reader 时，旧 Reader 的 Query/Defaults/回读会取消或丢弃，避免慢响应覆盖当前设备页面；如果能力快照过期或 Reader 进入故障/断开状态，设置行仍可查看但编辑和 SAVE 会暂时禁用，先从左侧重新 Activate。若 Apply 已成功但回读只能得到 SQLite 只读缓存，页面会明确显示“保存成功，但设备回读失败”，不会把缓存冒充成设备当前值。Inventory 运行时保存设置、GPO 和 Tag Access 会返回 ReaderBusy，不能隐式停止或重启寻卡。
 
 ## 4. 寻卡与标签数据
 
 1. 在 Inventory 页点击 Start；默认使用 Reader 当前天线配置，不会偷偷限制为天线 1；
-2. 使用列开关选择 EPC、TID、PC Bits、RSSI、天线、信道、时间和 Count；
-3. 运行期间观察 Unique Tags、Read Rate、Elapsed 和 Dropped 计数；原生 ProgressBar 表示正在执行异步生命周期操作；
+2. 在 DataGrid 任一列头上右键，使用列头菜单选择 EPC、TID、PC Bits、Peak RSSI、天线、信道、时间和 Count；Tag List 是平台附加列；
+3. 运行期间观察旧 WPF 风格的 ELAPSED TIME、Unique Tags、Read Rate 和 Dropped 状态；原生 ProgressBar 表示正在执行异步生命周期操作；
 4. 点击 Stop 或达到时长后，服务停止 Inventory、排空已接收报告、写入 Inventory Run/Tag Log，并断开 Reader；
 5. Clear 只清除当前展示和内存聚合，不删除历史 Inventory Runs。
 
@@ -64,6 +64,12 @@ Tag Memory Read/Write 需要提供 EPC、Memory Bank、Word Pointer、Word Count
 Tag Lists 用于维护 EPC 与显示名称的匹配，启用后的列表会在寻卡展示中提供 Tag List 标签。修改 Tag List 不会修改 Reader 内部配置。
 
 ## 6. 常见故障排查
+
+### 添加页操作被取消或不再自动切页
+
+- Probe、mDNS 发现和提交是互斥操作；一个操作进行中，其他按钮不会再次启动同类流程；
+- 点击 CANCEL 会先取消添加页的在途操作，再返回上一页；取消不会写入 Profile，也不会把取消显示为设备故障；
+- 若需要查看刚刚的 Probe 结果，重新进入 Add Data Source 后再次 Probe。
 
 ### 显示“未发现设备”
 
@@ -81,6 +87,7 @@ Tag Lists 用于维护 EPC 与显示名称的匹配，启用后的列表会在�
 - 确认没有处于 Inventory；
 - 点击 Query 确认当前 Reader 配置；
 - 检查该字段是否只读或设备能力不支持；
+- 如果页面提示连接未可靠释放并进入只读，先从 Data Sources 重新 Activate，再刷新设置；不要在该状态下反复点击 SAVE；
 - 保存后必须等待 Validate、Apply 和回读完成；
 - 若回读失败，使用 `platform-*.log` 和 `sdk-*.log` 的同一时间戳定位原始错误。
 

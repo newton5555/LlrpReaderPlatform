@@ -1,6 +1,10 @@
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using LlrpReaderPlatform.Contracts.Readers;
 using LlrpReaderPlatform.Contracts.Settings;
 using LlrpReaderPlatform.Services.Settings;
+using LlrpNet.Protocol.Messages;
+using LlrpNet.Protocol.Parameters;
 using LlrpSdk;
 using Xunit;
 
@@ -85,6 +89,7 @@ public sealed class StandardSettingsCompilerTests
         Feature feature = new("test-runtime-feature", "test-vendor");
         snapshot = snapshot with
         {
+            GpiCount = 1,
             FeatureCatalog = new ReaderFeatureCatalog { SupportedFeatures = [feature] },
         };
         var runtime = new ReaderSettingsRuntimeSnapshot(
@@ -100,6 +105,10 @@ public sealed class StandardSettingsCompilerTests
         Assert.Contains(layout.Entries, static e => e.Key == SettingsKeys.StartGpiPort);
         Assert.Contains(layout.Entries, static e => e.Key == SettingsKeys.ReportPcBits);
         Assert.Contains(layout.Entries, static e => e.Key == SettingsKeys.AntennaTxPowerDbm(2));
+        Assert.Equal(new SettingsRange(1, 1),
+            Assert.Single(layout.Entries, e => e.Key == SettingsKeys.StartGpiPort).Range);
+        Assert.Equal(new SettingsRange(1, 1),
+            Assert.Single(layout.Entries, e => e.Key == SettingsKeys.StopGpiPort).Range);
 
         SettingsEntry memoryBank = Assert.Single(layout.Entries, e => e.Key == SettingsKeys.FilterMemoryBank(1));
         Assert.Equal(
@@ -124,6 +133,51 @@ public sealed class StandardSettingsCompilerTests
         Assert.Empty(rfMode.Options);
         Assert.Equal(new SettingsRange(0, ushort.MaxValue), rfMode.Range);
         Assert.Equal(3, rfMode.CurrentValue);
+    }
+
+    [Fact]
+    public void Runtime_layout_keeps_reader_current_rf_mode_when_capability_table_omits_it()
+    {
+        var compiler = new StandardSettingsCompiler();
+        var capabilities = (ReaderCapabilities)Activator.CreateInstance(
+            typeof(ReaderCapabilities),
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            binder: null,
+            args:
+            [
+                (ushort)4,
+                false,
+                false,
+                Array.Empty<ILlrpParameter>(),
+                (ILlrpMessage)RuntimeHelpers.GetUninitializedObject(
+                    typeof(LlrpNet.Protocol.Messages.V1_0_1.GET_READER_CAPABILITIES_RESPONSE)),
+                Array.Empty<ILlrpParameter>(),
+                Array.Empty<TxPowerEntry>(),
+                Array.Empty<RxSensitivityEntry>(),
+                Array.Empty<uint>(),
+                Array.Empty<FrequencyHopTableEntry>(),
+                new[] { new C1G2RfModeEntry(7, "", false, 0, "", "", 0, 0, 0, 0, 0) },
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                null,
+            ],
+            culture: null)!;
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(new ReaderSettings(), new ManagedRoSpecSnapshot(
+                new InventorySettings { ModeIndex = 1000 }, InventoryRuntimeState.Disabled)),
+            capabilities);
+
+        EffectiveSettingsLayout layout = compiler.BuildLayout(Snapshot(), runtime);
+
+        SettingsEntry rfMode = Assert.Single(layout.Entries, static entry => entry.Key == SettingsKeys.RfMode);
+        Assert.Equal(EditorKind.Choice, rfMode.EditorKind);
+        Assert.Contains(rfMode.Options, static option => Equals(option.Value, 7));
+        Assert.Contains(rfMode.Options, static option => Equals(option.Value, 1000));
+        Assert.Equal(1000, rfMode.CurrentValue);
     }
 
     [Fact]
@@ -178,6 +232,33 @@ public sealed class StandardSettingsCompilerTests
         Assert.False(inventory.StopTrigger.GpiState);
         Assert.Equal((uint)1500, inventory.StopTrigger.TimeoutMilliseconds);
         Assert.True(compiled.Configuration.Events.GpiEventEnabled);
+
+        draft.Values[SettingsKeys.FilterBitLength(1)] = 24;
+        Assert.Throws<FormatException>(() => compiler.CompileSdk(draft, layout, runtime, snapshot));
+    }
+
+    [Fact]
+    public void CompileSdk_rejects_empty_antenna_selection()
+    {
+        var compiler = new StandardSettingsCompiler();
+        ReaderRuntimeSnapshot snapshot = Snapshot(new ReaderAntennaInfo { AntennaId = 1, Name = "A1" });
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(new ReaderSettings(), new ManagedRoSpecSnapshot(
+                new InventorySettings { AntennaIds = [1] }, InventoryRuntimeState.Disabled)),
+            Capabilities: null);
+        EffectiveSettingsLayout layout = compiler.BuildLayout(snapshot, runtime);
+        var draft = new SettingsDraft { ReaderId = ReaderId, CapabilityRevision = 7 };
+        foreach (SettingsEntry entry in layout.Entries.Where(static entry => !entry.IsReadOnly))
+        {
+            draft.Values[entry.Key] = entry.CurrentValue;
+        }
+
+        draft.Values[SettingsKeys.AntennaIds] = string.Empty;
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+            () => compiler.CompileSdk(draft, layout, runtime, snapshot));
+
+        Assert.Contains("use ALL", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -258,6 +339,7 @@ public sealed class StandardSettingsCompilerTests
         var compiler = new StandardSettingsCompiler();
         ReaderRuntimeSnapshot snapshot = Snapshot() with
         {
+            GpiCount = 0,
             FeatureCatalog = new ReaderFeatureCatalog
             {
                 SupportedFeatures =
@@ -300,7 +382,9 @@ public sealed class StandardSettingsCompilerTests
 
         EffectiveSettingsLayout layout = compiler.BuildLayout(snapshot, runtime);
         Assert.True(Assert.Single(layout.Entries, e => e.Key == SettingsKeys.StartGpiEnabled).IsReadOnly);
+        Assert.True(Assert.Single(layout.Entries, e => e.Key == SettingsKeys.StartGpiPort).IsReadOnly);
         Assert.True(Assert.Single(layout.Entries, e => e.Key == SettingsKeys.StopGpiEnabled).IsReadOnly);
+        Assert.True(Assert.Single(layout.Entries, e => e.Key == SettingsKeys.StopGpiPort).IsReadOnly);
 
         ReaderSettings compiled = compiler.CompileSdk(
             new SettingsDraft { ReaderId = ReaderId, CapabilityRevision = 7 },

@@ -8,8 +8,8 @@ public sealed class SqliteAppSettingsStore(IDbContextFactory<PlatformDbContext> 
     public async Task<string?> GetAsync(string key, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        await PlatformDbSchema.EnsureMigratedAsync(contextFactory, ct).ConfigureAwait(false);
         await using PlatformDbContext db = await contextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        await db.Database.MigrateAsync(ct).ConfigureAwait(false);
         return await db.AppSettings.AsNoTracking()
             .Where(x => x.Key == key)
             .Select(x => x.Value)
@@ -20,8 +20,8 @@ public sealed class SqliteAppSettingsStore(IDbContextFactory<PlatformDbContext> 
     public async Task SetAsync(string key, string value, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        await PlatformDbSchema.EnsureMigratedAsync(contextFactory, ct).ConfigureAwait(false);
         await using PlatformDbContext db = await contextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        await db.Database.MigrateAsync(ct).ConfigureAwait(false);
         AppSettingEntity? entity = await db.AppSettings.SingleOrDefaultAsync(x => x.Key == key, ct).ConfigureAwait(false);
         if (entity is null)
         {

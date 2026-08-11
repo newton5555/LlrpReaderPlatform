@@ -1,7 +1,8 @@
 <Application x:Class="LlrpReaderPlatform.App.Wpf.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:LlrpReaderPlatform.App.Wpf">
+             xmlns:local="clr-namespace:LlrpReaderPlatform.App.Wpf"
+             xmlns:converters="clr-namespace:LlrpReaderPlatform.App.Wpf.Converters">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -11,6 +12,7 @@
             </ResourceDictionary.MergedDictionaries>
 
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+            <converters:TagMemoryBankDisplayConverter x:Key="TagMemoryBankDisplayConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

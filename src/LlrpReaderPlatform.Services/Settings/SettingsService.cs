@@ -6,6 +6,7 @@ using LlrpReaderPlatform.Contracts.Errors;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Text.Json.Serialization;
 using System.Text.Json;
 
@@ -41,6 +42,13 @@ public sealed class SettingsService : IReaderSettingsService
     public async Task<SettingsEditorModel> QueryAsync(Guid readerId, CancellationToken ct = default)
     {
         ReaderRuntimeSnapshot snapshot = readerManager.GetSnapshot(readerId);
+        logger.LogDebug(
+            "Querying settings for {Id}: state={State}, stale={Stale}, revision={Revision}, extensions={Extensions}.",
+            readerId,
+            snapshot.State,
+            snapshot.IsStale,
+            snapshot.CapabilityRevision,
+            string.Join(",", snapshot.ActiveExtensionIds));
         if (IsNoCapability(snapshot))
         {
             ReaderActivationResult activation = await readerManager.ActivateAsync(readerId, ct).ConfigureAwait(false);
@@ -72,9 +80,20 @@ public sealed class SettingsService : IReaderSettingsService
             try
             {
                 ReaderSettingsRuntimeSnapshot current = await runtime.QueryAsync(readerId, ct).ConfigureAwait(false);
-                var model = new SettingsEditorModel(
+                var model = ReconcileAfterRuntimeOperation(
+                    readerId,
+                    new SettingsEditorModel(
                     sdkCompiler.BuildLayout(snapshot, current),
-                    sdkCompiler.BuildSnapshot(snapshot, current));
+                    sdkCompiler.BuildSnapshot(snapshot, current)));
+                ReaderRuntimeSnapshot latest = readerManager.GetSnapshot(readerId);
+                logger.LogDebug(
+                    "Reader settings query returned for {Id}: state={State}, stale={Stale}, revision={Revision}, editable={Editable}, values={ValueCount}.",
+                    readerId,
+                    latest.State,
+                    latest.IsStale,
+                    latest.CapabilityRevision,
+                    model.Layout.HasEditableSettings,
+                    model.Snapshot.Values.Count);
                 lastLiveLayouts[readerId] = model.Layout;
                 await SaveSemanticPresetAsync(model, ct).ConfigureAwait(false);
                 return model;
@@ -89,6 +108,7 @@ public sealed class SettingsService : IReaderSettingsService
             }
             catch (Exception ex)
             {
+                logger.LogWarning(ex, "Reader settings query failed for {Id}; attempting semantic preset fallback.", readerId);
                 SettingsEditorModel? cached = await TryBuildCachedModelAsync(snapshot, ex, ct).ConfigureAwait(false);
                 if (cached is not null)
                 {
@@ -123,9 +143,11 @@ public sealed class SettingsService : IReaderSettingsService
         if (runtime is not null && compiler is ISdkSettingsCompiler sdkCompiler)
         {
             ReaderSettingsRuntimeSnapshot defaults = await runtime.GetDefaultsAsync(readerId, ct).ConfigureAwait(false);
-            var model = new SettingsEditorModel(
+            var model = ReconcileAfterRuntimeOperation(
+                readerId,
+                new SettingsEditorModel(
                 sdkCompiler.BuildLayout(snapshot, defaults),
-                sdkCompiler.BuildSnapshot(snapshot, defaults));
+                sdkCompiler.BuildSnapshot(snapshot, defaults)));
             lastLiveLayouts[readerId] = model.Layout;
             return model;
         }
@@ -214,6 +236,15 @@ public sealed class SettingsService : IReaderSettingsService
         try
         {
             current = await runtime.QueryAsync(readerId, ct).ConfigureAwait(false);
+            ReaderRuntimeSnapshot latestSnapshot = readerManager.GetSnapshot(readerId);
+            if (IsNoCapability(latestSnapshot)
+                || draft.CapabilityRevision != latestSnapshot.CapabilityRevision)
+            {
+                return new SettingsApplyResult(false, "能力已过期或在保存期间发生变化，请刷新后重试。")
+                { ErrorCode = PlatformErrorCode.StaleCapability };
+            }
+
+            snapshot = latestSnapshot;
             layout = sdkCompiler.BuildLayout(snapshot, current);
             SettingsValidationResult currentValidation = ValidateDraft(draft, layout);
             if (!currentValidation.IsValid)
@@ -261,9 +292,19 @@ public sealed class SettingsService : IReaderSettingsService
                 {
                     try
                     {
-                        return sdkCompiler.CompileSdk(draft, layout, latest, snapshot);
+                        ReaderRuntimeSnapshot applySnapshot = readerManager.GetSnapshot(readerId);
+                        if (IsNoCapability(applySnapshot)
+                            || draft.CapabilityRevision != applySnapshot.CapabilityRevision)
+                        {
+                            throw new SettingsCapabilityChangedException(
+                                "Reader 能力在设置下发期间发生变化，请刷新后重试。");
+                        }
+
+                        return sdkCompiler.CompileSdk(draft, layout, latest, applySnapshot);
                     }
-                    catch (Exception ex) when (ex is ArgumentException or FormatException or OverflowException or InvalidOperationException)
+                    catch (Exception ex) when (
+                        ex is not SettingsCapabilityChangedException
+                        && (ex is ArgumentException or FormatException or OverflowException or InvalidOperationException))
                     {
                         throw new SettingsCompilationException(ex.Message, ex);
                     }
@@ -271,13 +312,28 @@ public sealed class SettingsService : IReaderSettingsService
                 ct).ConfigureAwait(false);
             if (presetStore is not null)
             {
-                await presetStore.SaveAsync(new ReaderSettingsPreset
+                try
                 {
-                    ReaderId = readerId,
-                    SchemaVersion = 1,
-                    SettingsJson = BuildSemanticPresetJson(draft.Values, layout),
-                    UpdatedAtUtc = DateTimeOffset.UtcNow,
-                }, ct).ConfigureAwait(false);
+                    await presetStore.SaveAsync(new ReaderSettingsPreset
+                    {
+                        ReaderId = readerId,
+                        SchemaVersion = 1,
+                        SettingsJson = BuildSemanticPresetJson(draft.Values, layout),
+                        UpdatedAtUtc = DateTimeOffset.UtcNow,
+                    }, ct).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    // Reader 已经完成 Apply；本地缓存取消不能把设备成功误报成失败。
+                    logger.LogWarning(
+                        "Settings applied for {Id}, but saving the local preset was cancelled.",
+                        readerId);
+                }
+                catch (Exception ex)
+                {
+                    // SQLite preset 只服务于离线回退，不是设备 Apply 的事务参与者。
+                    logger.LogWarning(ex, "Settings applied for {Id}, but saving the local preset failed.", readerId);
+                }
             }
             return new SettingsApplyResult(true);
         }
@@ -289,6 +345,11 @@ public sealed class SettingsService : IReaderSettingsService
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             throw;
+        }
+        catch (SettingsCapabilityChangedException ex)
+        {
+            return new SettingsApplyResult(false, ex.Message)
+            { ErrorCode = PlatformErrorCode.StaleCapability };
         }
         catch (SettingsCompilationException ex)
         {
@@ -354,12 +415,20 @@ public sealed class SettingsService : IReaderSettingsService
 
     private static void ValidateValue(SettingsEntry entry, object value, List<SettingsEntryIssue> issues)
     {
-        // 类型检查。
-        bool typeOk = entry.ValueType.IsInstanceOfType(value)
-            || TypeCoercible(entry.ValueType, value);
-        if (!typeOk && entry.ValueType != typeof(object))
+        // 类型检查和数值规范化。Validate 是公开契约边界，不能因为外部消费者
+        // 传入了可转换但格式错误的字符串而把 FormatException 直接抛出。
+        if (!TryNormalizeValue(entry.ValueType, value, out object? normalized))
         {
             issues.Add(new SettingsEntryIssue(entry.Key, $"{entry.Title} 值类型不正确。"));
+            return;
+        }
+
+        if (entry.Key == SettingsKeys.AntennaIds
+            && string.IsNullOrWhiteSpace(Convert.ToString(normalized, CultureInfo.InvariantCulture)))
+        {
+            issues.Add(new SettingsEntryIssue(
+                entry.Key,
+                "天线选择不能为空，请使用 ALL 选择全部天线。"));
             return;
         }
 
@@ -367,17 +436,17 @@ public sealed class SettingsService : IReaderSettingsService
         // 不能把整串字符串直接与单个 option（通常是 int/ushort）比较。
         if (entry.EditorKind == EditorKind.Collection)
         {
-            ValidateCollectionValue(entry, value, issues);
+            ValidateCollectionValue(entry, normalized!, issues);
         }
-        else if (entry.Options.Count > 0 && !entry.Options.Any(o => Equals(o.Value, value)))
+        else if (entry.Options.Count > 0 && !entry.Options.Any(o => Equals(o.Value, normalized)))
         {
             issues.Add(new SettingsEntryIssue(entry.Key, $"{entry.Title} 不在可选范围内。"));
         }
 
         // 数值范围检查。
-        if (entry.Range is not null && value is IConvertible conv)
+        if (entry.Range is not null && normalized is IConvertible conv)
         {
-            decimal d = Convert.ToDecimal(conv);
+            decimal d = Convert.ToDecimal(conv, CultureInfo.InvariantCulture);
             if (d < entry.Range.Min || d > entry.Range.Max)
             {
                 issues.Add(new SettingsEntryIssue(entry.Key, $"{entry.Title} 超出允许范围。"));
@@ -406,14 +475,41 @@ public sealed class SettingsService : IReaderSettingsService
         }
     }
 
-    private static bool TypeCoercible(Type type, object value) =>
-        type switch
+    private static bool TryNormalizeValue(Type type, object value, out object? normalized)
+    {
+        if (type == typeof(object) || type.IsInstanceOfType(value))
         {
-            _ when type == typeof(ushort) => value is IConvertible,
-            _ when type == typeof(int) => value is IConvertible,
-            _ when type == typeof(decimal) => value is IConvertible,
-            _ => false,
-        };
+            normalized = value;
+            return true;
+        }
+
+        try
+        {
+            normalized = type switch
+            {
+                _ when type == typeof(ushort) => Convert.ToUInt16(value, CultureInfo.InvariantCulture),
+                _ when type == typeof(int) => Convert.ToInt32(value, CultureInfo.InvariantCulture),
+                _ when type == typeof(decimal) => Convert.ToDecimal(value, CultureInfo.InvariantCulture),
+                _ => null,
+            };
+            return normalized is not null;
+        }
+        catch (FormatException)
+        {
+            normalized = null;
+            return false;
+        }
+        catch (InvalidCastException)
+        {
+            normalized = null;
+            return false;
+        }
+        catch (OverflowException)
+        {
+            normalized = null;
+            return false;
+        }
+    }
 
     private static string FormatValidationError(SettingsValidationResult validation)
     {
@@ -427,6 +523,44 @@ public sealed class SettingsService : IReaderSettingsService
 
     private static bool IsNoCapability(ReaderRuntimeSnapshot snapshot) =>
         snapshot.IsStale || snapshot.CapabilityRevision == 0;
+
+    private sealed class SettingsCapabilityChangedException(string message)
+        : InvalidOperationException(message);
+
+    private SettingsEditorModel ReconcileAfterRuntimeOperation(
+        Guid readerId,
+        SettingsEditorModel model)
+    {
+        ReaderRuntimeSnapshot latest = readerManager.GetSnapshot(readerId);
+        if (!latest.IsStale && latest.State is not ReaderState.Faulted)
+        {
+            return model;
+        }
+
+        logger.LogWarning(
+            "Reader settings query completed with a non-live runtime snapshot for {Id}: state={State}, stale={Stale}, error={Error}.",
+            readerId,
+            latest.State,
+            latest.IsStale,
+            latest.Error);
+
+        string reason = string.IsNullOrWhiteSpace(latest.Error)
+            ? "Reader 连接未可靠释放；当前设置只读，请重新连接后刷新。"
+            : $"Reader 连接未可靠释放：{latest.Error} 请重新连接后刷新。";
+        EffectiveSettingsLayout readOnlyLayout = new()
+        {
+            ReaderId = model.Layout.ReaderId,
+            CapabilityRevision = model.Layout.CapabilityRevision,
+            FeatureCatalog = model.Layout.FeatureCatalog,
+            Entries = model.Layout.Entries
+                .Select(entry => entry with
+                {
+                    ReadOnlyReason = entry.ReadOnlyReason ?? reason,
+                })
+                .ToArray(),
+        };
+        return model with { Layout = readOnlyLayout };
+    }
 
     private async Task<SettingsEditorModel?> TryBuildCachedModelAsync(
         ReaderRuntimeSnapshot snapshot,
@@ -453,14 +587,15 @@ public sealed class SettingsService : IReaderSettingsService
                 return null;
             }
 
-            JsonElement valuesRoot = document.RootElement;
-            IReadOnlyList<SettingsEntry> cachedEntries = [];
-            if (document.RootElement.TryGetProperty("values", out JsonElement cachedValues)
-                && cachedValues.ValueKind == JsonValueKind.Object)
+            if (!document.RootElement.TryGetProperty("values", out JsonElement valuesRoot)
+                || valuesRoot.ValueKind != JsonValueKind.Object)
             {
-                valuesRoot = cachedValues;
-                cachedEntries = ReadCachedLayout(document.RootElement);
+                // 新平台语义 Preset 必须使用结构化 values 根节点；旧 SDK/旧原型的
+                // 扁平 JSON 不属于新库兼容范围，数据库损坏或格式过旧时回到占位页。
+                return null;
             }
+
+            IReadOnlyList<SettingsEntry> cachedEntries = ReadCachedLayout(document.RootElement);
 
             EffectiveSettingsLayout baseLayout = compiler.BuildLayout(snapshot);
             IReadOnlyList<SettingsEntry> sourceEntries = cachedEntries.Count > 0
@@ -500,6 +635,10 @@ public sealed class SettingsService : IReaderSettingsService
                 CapabilityRevision = snapshot.CapabilityRevision,
                 Values = values,
             });
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -568,6 +707,10 @@ public sealed class SettingsService : IReaderSettingsService
                 SettingsJson = BuildSemanticPresetJson(model.Snapshot.Values, model.Layout),
                 UpdatedAtUtc = DateTimeOffset.UtcNow,
             }, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {

@@ -7,8 +7,8 @@ public sealed class SqliteTagListStore(IDbContextFactory<PlatformDbContext> cont
 {
     public async Task<IReadOnlyList<TagListDefinition>> GetAllAsync(CancellationToken ct = default)
     {
+        await PlatformDbSchema.EnsureMigratedAsync(contextFactory, ct).ConfigureAwait(false);
         await using PlatformDbContext db = await contextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        await db.Database.MigrateAsync(ct).ConfigureAwait(false);
         List<TagListEntity> entities = await db.TagLists.AsNoTracking().Include(x => x.Entries)
             .OrderBy(x => x.Name).ToListAsync(ct).ConfigureAwait(false);
         return entities.Select(ToDefinition).ToArray();
@@ -16,8 +16,8 @@ public sealed class SqliteTagListStore(IDbContextFactory<PlatformDbContext> cont
 
     public async Task<TagListDefinition?> GetAsync(Guid tagListId, CancellationToken ct = default)
     {
+        await PlatformDbSchema.EnsureMigratedAsync(contextFactory, ct).ConfigureAwait(false);
         await using PlatformDbContext db = await contextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        await db.Database.MigrateAsync(ct).ConfigureAwait(false);
         TagListEntity? entity = await db.TagLists.Include(x => x.Entries)
             .AsNoTracking().SingleOrDefaultAsync(x => x.Id == tagListId, ct).ConfigureAwait(false);
         return entity is null ? null : ToDefinition(entity);
@@ -26,8 +26,8 @@ public sealed class SqliteTagListStore(IDbContextFactory<PlatformDbContext> cont
     public async Task SaveAsync(TagListDefinition tagList, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(tagList);
+        await PlatformDbSchema.EnsureMigratedAsync(contextFactory, ct).ConfigureAwait(false);
         await using PlatformDbContext db = await contextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        await db.Database.MigrateAsync(ct).ConfigureAwait(false);
         TagListEntity? entity = await db.TagLists.Include(x => x.Entries)
             .SingleOrDefaultAsync(x => x.Id == tagList.Id, ct).ConfigureAwait(false);
         if (entity is null)
@@ -56,8 +56,8 @@ public sealed class SqliteTagListStore(IDbContextFactory<PlatformDbContext> cont
 
     public async Task DeleteAsync(Guid tagListId, CancellationToken ct = default)
     {
+        await PlatformDbSchema.EnsureMigratedAsync(contextFactory, ct).ConfigureAwait(false);
         await using PlatformDbContext db = await contextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        await db.Database.MigrateAsync(ct).ConfigureAwait(false);
         await db.TagLists.Where(x => x.Id == tagListId).ExecuteDeleteAsync(ct).ConfigureAwait(false);
     }
 

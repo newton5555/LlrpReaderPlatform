@@ -15,11 +15,13 @@ namespace LlrpReaderPlatform.Services.Sdk;
 internal sealed class LlrpReaderSession : IReaderSession
 {
     private readonly LlrpReader reader;
+    private readonly ILogger<LlrpReaderSession>? logger;
     private InventorySession? inventorySession;
 
-    public LlrpReaderSession(LlrpReader reader)
+    public LlrpReaderSession(LlrpReader reader, ILogger<LlrpReaderSession>? logger = null)
     {
         this.reader = reader;
+        this.logger = logger;
         reader.TagsReported += OnTagsReported;
         reader.ReaderExceptionOccurred += OnReaderExceptionOccurred;
         reader.ConnectionChanged += OnConnectionChanged;
@@ -327,6 +329,11 @@ internal sealed class LlrpReaderSession : IReaderSession
 
     private void OnConnectionChanged(object? sender, ReaderConnectionChangedEventArgs args)
     {
+        logger?.LogDebug(
+            "LLRP connection state changed: current={CurrentState}, previous={PreviousState}, deviceClose={DeviceClose}.",
+            args.CurrentState,
+            args.PreviousState,
+            args.DeviceInitiatedClose);
         if (args.CurrentState != ReaderConnectionState.Faulted)
         {
             return;
@@ -362,7 +369,9 @@ public sealed class LlrpReaderSessionFactory : IReaderSessionFactory
         ArgumentNullException.ThrowIfNull(profile);
         profile.Validate();
 
-        var builder = new LlrpReaderBuilder(profile.Host)
+        // UI 会把方括号用于 IPv6 展示，但持久化或其它消费者可能直接传入带
+        // 方括号的 Host；传输构造器需要裸 IPv6 地址，统一在服务边界处理。
+        var builder = new LlrpReaderBuilder(ReaderEndpoint.NormalizeHost(profile.Host))
             .WithPort(profile.Port)
             .WithProtocolVersionPolicy(profile.LlrpVersion switch
             {
@@ -380,6 +389,6 @@ public sealed class LlrpReaderSessionFactory : IReaderSessionFactory
             }
         }
 
-        return new LlrpReaderSession(builder.Build());
+        return new LlrpReaderSession(builder.Build(), loggerFactory.CreateLogger<LlrpReaderSession>());
     }
 }

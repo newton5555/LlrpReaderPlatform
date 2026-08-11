@@ -1,6 +1,8 @@
 using LlrpReaderPlatform.Contracts.Readers;
+using LlrpReaderPlatform.Contracts.Lifecycle;
 using LlrpReaderPlatform.Contracts.Persistence;
 using LlrpReaderPlatform.Contracts.Errors;
+using LlrpReaderPlatform.Contracts.Tagging;
 using LlrpReaderPlatform.Services.Lifecycle;
 using LlrpReaderPlatform.Services.Settings;
 using LlrpReaderPlatform.Services.Extensions;
@@ -53,6 +55,86 @@ public sealed class InventoryReaderManagerTests
         Assert.Equal(0, session.DisconnectCount);
         Assert.Equal(new ushort[] { 1 }, session.LastStartedInventorySettings?.AntennaIds);
         Assert.Equal(ReaderState.Inventorying, h.Manager.GetSnapshot(h.Profile.Id).State);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(86_401)]
+    public async Task StartInventory_invalid_duration_returns_invalid_settings_without_connecting(int durationSeconds)
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+
+        StartInventoryResult result = await h.Manager.StartInventoryAsync(
+            h.Profile.Id,
+            new InventorySpec { DurationSeconds = durationSeconds });
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(InventoryError.InvalidSettings, result.Error);
+        Assert.Equal(PlatformErrorCode.InvalidSettings, result.ErrorCode);
+        Assert.Equal(0, session.ConnectCount);
+        Assert.Equal(ReaderState.Disconnected, h.Manager.GetSnapshot(h.Profile.Id).State);
+    }
+
+    [Fact]
+    public async Task StartInventory_rejects_mixed_all_and_specific_antennas_without_connecting()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+
+        StartInventoryResult result = await h.Manager.StartInventoryAsync(
+            h.Profile.Id,
+            new InventorySpec { Antennas = [0, 1] });
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(InventoryError.InvalidSettings, result.Error);
+        Assert.Equal(PlatformErrorCode.InvalidSettings, result.ErrorCode);
+        Assert.Contains("全部天线", result.Message);
+        Assert.Equal(0, session.ConnectCount);
+    }
+
+    [Fact]
+    public async Task StartInventory_rejects_antenna_above_advertised_count_after_connecting_for_capabilities()
+    {
+        var h = new Harness();
+        FakeSession session = new();
+        session.SetCapabilities(maxNumberOfAntennas: 2);
+        h.SessionFactory.Queue.Enqueue(new FakeSession()); // probe
+        h.SessionFactory.Queue.Enqueue(session);           // register
+        Assert.True((await h.Manager.AddAsync(h.Profile, enableAfterAdding: false)).Succeeded);
+
+        StartInventoryResult result = await h.Manager.StartInventoryAsync(
+            h.Profile.Id,
+            new InventorySpec { Antennas = [3] });
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(InventoryError.InvalidSettings, result.Error);
+        Assert.Equal(PlatformErrorCode.InvalidSettings, result.ErrorCode);
+        Assert.Contains("天线 3", result.Message);
+        Assert.Equal(1, session.ConnectCount);
+        Assert.Equal(1, session.DisconnectCount);
+        Assert.Null(session.LastStartedInventorySettings);
+        Assert.Equal(ReaderState.Disconnected, h.Manager.GetSnapshot(h.Profile.Id).State);
+    }
+
+    [Fact]
+    public async Task StopInventory_publishes_stopping_and_disconnecting_states()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        Tagging.StartInventoryResult started = await h.Manager.StartInventoryAsync(h.Profile.Id, Spec);
+        Assert.True(started.Succeeded);
+
+        List<ReaderState> states = [];
+        h.Manager.StateChanged += (_, args) => states.Add(args.Snapshot.State);
+
+        await h.Manager.StopInventoryAsync(h.Profile.Id);
+
+        Assert.Equal(
+            [ReaderState.Stopping, ReaderState.Disconnecting, ReaderState.Disconnected],
+            states);
+        Assert.False(session.IsConnected);
+        await h.Manager.DisposeAsync();
     }
 
     [Fact]
@@ -175,8 +257,10 @@ public sealed class InventoryReaderManagerTests
         Assert.False(result.Succeeded);
         Assert.Equal(Tagging.InventoryError.DeviceFailed, result.Error);
         Assert.False(session.IsConnected);
-        Assert.Equal(ReaderState.Disconnected, h.Manager.GetSnapshot(h.Profile.Id).State);
-        Assert.Contains("rospect failed", h.Manager.GetSnapshot(h.Profile.Id).Error);
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.Equal(ReaderState.Faulted, snapshot.State);
+        Assert.True(snapshot.IsStale);
+        Assert.Contains("rospect failed", snapshot.Error);
     }
 
     [Fact]
@@ -209,6 +293,108 @@ public sealed class InventoryReaderManagerTests
         Assert.False(session.IsConnected);
         Assert.False(session.InventoryRunning);
         Assert.Equal(ReaderState.Disconnected, h.Manager.GetSnapshot(h.Profile.Id).State);
+    }
+
+    [Fact]
+    public async Task StartInventory_cancellation_during_extension_probe_cleans_up_and_propagates()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        session.RaiseConnectionFaulted("force extension reprobe");
+        for (int i = 0; i < 40 && h.Manager.GetSnapshot(h.Profile.Id).State != ReaderState.Faulted; i++)
+        {
+            await Task.Delay(10);
+        }
+
+        using var cancellation = new CancellationTokenSource();
+        FakeSession probe = new()
+        {
+            BeforeConnect = cancellation.Cancel,
+            ConnectThrows = new OperationCanceledException(),
+        };
+        h.SessionFactory.Queue.Enqueue(probe);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => h.Manager.StartInventoryAsync(h.Profile.Id, Spec, cancellation.Token));
+
+        Assert.False(session.IsConnected);
+        Assert.False(probe.IsConnected);
+        Assert.False(session.InventoryRunning);
+        Assert.Equal(ReaderState.Disconnected, h.Manager.GetSnapshot(h.Profile.Id).State);
+    }
+
+    [Fact]
+    public async Task StopInventory_disconnect_failure_marks_reader_faulted_and_stale()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        await h.Manager.StartInventoryAsync(h.Profile.Id, Spec);
+        session.DisconnectThrows = new IOException("disconnect failed");
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => h.Manager.StopInventoryAsync(h.Profile.Id));
+
+        Assert.Contains("disconnect", exception.Message, StringComparison.OrdinalIgnoreCase);
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.Equal(ReaderState.Faulted, snapshot.State);
+        Assert.True(snapshot.IsStale);
+        Assert.Contains("disconnect failed", snapshot.Error);
+        Assert.False(session.InventoryRunning);
+    }
+
+    [Fact]
+    public async Task Activate_disconnect_failure_returns_device_failure_and_stale_snapshot()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        session.DisconnectThrows = new IOException("activation disconnect failed");
+
+        ReaderActivationResult result = await h.Manager.ActivateAsync(h.Profile.Id);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(PlatformErrorCode.DeviceFailed, result.ErrorCode);
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.Equal(ReaderState.Faulted, snapshot.State);
+        Assert.True(snapshot.IsStale);
+        Assert.Contains("activation disconnect failed", snapshot.Error);
+    }
+
+    [Fact]
+    public async Task Deactivate_disconnect_failure_marks_reader_faulted_and_stale()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        await h.Manager.StartInventoryAsync(h.Profile.Id, Spec);
+        session.DisconnectThrows = new IOException("deactivation disconnect failed");
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => h.Manager.DeactivateAsync(h.Profile.Id));
+
+        Assert.Contains("deactivate", exception.Message, StringComparison.OrdinalIgnoreCase);
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.Equal(ReaderState.Faulted, snapshot.State);
+        Assert.True(snapshot.IsStale);
+        Assert.Contains("deactivation disconnect failed", snapshot.Error);
+        Assert.False(session.InventoryRunning);
+    }
+
+    [Fact]
+    public async Task Deactivate_stop_failure_marks_reader_faulted_and_stale()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        await h.Manager.StartInventoryAsync(h.Profile.Id, Spec);
+        session.StopInventoryThrows = new IOException("deactivation stop failed");
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => h.Manager.DeactivateAsync(h.Profile.Id));
+
+        Assert.Contains("deactivate", exception.Message, StringComparison.OrdinalIgnoreCase);
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.Equal(ReaderState.Faulted, snapshot.State);
+        Assert.True(snapshot.IsStale);
+        Assert.Contains("deactivation stop failed", snapshot.Error);
+        Assert.False(session.InventoryRunning);
     }
 
     [Fact]
@@ -300,7 +486,10 @@ public sealed class InventoryReaderManagerTests
         Assert.Equal(1, session.WriteTagMemoryCount);
         Assert.Equal(request, session.LastTagWriteRequest);
         Assert.False(session.IsConnected);
-        Assert.Equal(ReaderState.Disconnected, h.Manager.GetSnapshot(h.Profile.Id).State);
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.Equal(ReaderState.Disconnected, snapshot.State);
+        Assert.False(snapshot.IsStale);
+        Assert.True(snapshot.CapabilityRevision > 0);
     }
 
     [Theory]
@@ -459,6 +648,34 @@ public sealed class InventoryReaderManagerTests
     }
 
     [Fact]
+    public async Task Cancelling_timed_inventory_does_not_stop_the_next_run()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+
+        Tagging.StartInventoryResult timed = await h.Manager.StartInventoryAsync(
+            h.Profile.Id,
+            new Tagging.InventorySpec { DurationSeconds = 1 });
+        Assert.True(timed.Succeeded);
+
+        await h.Manager.StopInventoryAsync(h.Profile.Id);
+
+        Tagging.StartInventoryResult restarted = await h.Manager.StartInventoryAsync(
+            h.Profile.Id,
+            new Tagging.InventorySpec());
+        Assert.True(restarted.Succeeded);
+
+        // Let the cancelled timer from the first run reach its original deadline.
+        // It must not tear down the new run or reuse a disposed cancellation source.
+        await Task.Delay(TimeSpan.FromMilliseconds(1_250));
+
+        Assert.True(session.IsConnected);
+        Assert.True(session.InventoryRunning);
+
+        await h.Manager.StopInventoryAsync(h.Profile.Id);
+    }
+
+    [Fact]
     public async Task StopInventory_waits_for_bounded_tag_log_consumer_before_completion()
     {
         var factory = new FakeSessionFactory();
@@ -542,6 +759,44 @@ public sealed class InventoryReaderManagerTests
     }
 
     [Fact]
+    public async Task Operations_started_after_dispose_are_rejected_before_creating_sessions()
+    {
+        var factory = new FakeSessionFactory();
+        await using var manager = new ReaderManager(factory, new FakeProfileStore());
+
+        await manager.DisposeAsync();
+
+        ReaderProfile profile = new() { Id = Guid.NewGuid(), Host = "192.0.2.200" };
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => manager.ProbeAsync(profile));
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => manager.AddAsync(profile, enableAfterAdding: false));
+        Assert.Empty(factory.Created);
+    }
+
+    [Fact]
+    public async Task DisposeAsync_continues_releasing_other_readers_when_one_session_dispose_fails()
+    {
+        var factory = new FakeSessionFactory();
+        await using var manager = new ReaderManager(factory, new FakeProfileStore());
+        var firstProfile = new ReaderProfile { Id = Guid.NewGuid(), Host = "192.0.2.74" };
+        var secondProfile = new ReaderProfile { Id = Guid.NewGuid(), Host = "192.0.2.75" };
+        var firstSession = new FakeSession { DisposeThrows = new IOException("first dispose failed") };
+        var secondSession = new FakeSession();
+        factory.Queue.Enqueue(new FakeSession());
+        factory.Queue.Enqueue(firstSession);
+        factory.Queue.Enqueue(new FakeSession());
+        factory.Queue.Enqueue(secondSession);
+
+        Assert.True((await manager.AddAsync(firstProfile, enableAfterAdding: false)).Succeeded);
+        Assert.True((await manager.AddAsync(secondProfile, enableAfterAdding: false)).Succeeded);
+
+        await manager.DisposeAsync();
+
+        Assert.Equal(1, firstSession.DisposeCount);
+        Assert.Equal(1, secondSession.DisposeCount);
+        Assert.Empty(manager.Readers);
+    }
+
+    [Fact]
     public async Task SetGpo_performs_short_operation_and_disconnects()
     {
         var h = new Harness();
@@ -551,6 +806,126 @@ public sealed class InventoryReaderManagerTests
 
         Assert.Equal(((ushort)1, true), session.LastGpoState);
         Assert.False(session.IsConnected); // 短操作后断开
+    }
+
+    [Fact]
+    public async Task SetGpo_rejects_a_port_outside_declared_capability_without_faulting_reader()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        session.SetCapabilities(gpiCount: 0, gpoCount: 2);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => h.Manager.SetGpoAsync(
+            h.Profile.Id,
+            new Tagging.GpioCommand { PortNumber = 3, State = true }));
+
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.Equal(ReaderState.Disconnected, snapshot.State);
+        Assert.False(snapshot.IsStale);
+        Assert.Equal(0, session.GpoSetCount);
+        Assert.False(session.IsConnected);
+        await h.Manager.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task SetGpo_reports_unsupported_when_reader_has_no_gpo_capability()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        session.SetCapabilities(gpiCount: 0, gpoCount: 0);
+
+        PlatformOperationException exception = await Assert.ThrowsAsync<PlatformOperationException>(() =>
+            h.Manager.SetGpoAsync(
+                h.Profile.Id,
+                new Tagging.GpioCommand { PortNumber = 1, State = true }));
+
+        Assert.Equal(PlatformErrorCode.Unsupported, exception.ErrorCode);
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.Equal(ReaderState.Disconnected, snapshot.State);
+        Assert.False(snapshot.IsStale);
+        Assert.Equal(0, session.GpoSetCount);
+        Assert.False(session.IsConnected);
+        await h.Manager.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task GetGpiStatus_reports_unsupported_when_reader_has_no_gpi_capability()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        session.SetCapabilities(gpiCount: 0, gpoCount: 1);
+
+        PlatformOperationException exception = await Assert.ThrowsAsync<PlatformOperationException>(() =>
+            h.Manager.GetGpiStatusAsync(h.Profile.Id));
+
+        Assert.Equal(PlatformErrorCode.Unsupported, exception.ErrorCode);
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.Equal(ReaderState.Disconnected, snapshot.State);
+        Assert.False(snapshot.IsStale);
+        Assert.False(session.IsConnected);
+        await h.Manager.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task GetGpoStatus_reports_unsupported_when_reader_has_no_gpo_capability()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        session.SetCapabilities(gpiCount: 1, gpoCount: 0);
+
+        PlatformOperationException exception = await Assert.ThrowsAsync<PlatformOperationException>(() =>
+            h.Manager.GetGpoStatusAsync(h.Profile.Id));
+
+        Assert.Equal(PlatformErrorCode.Unsupported, exception.ErrorCode);
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.Equal(ReaderState.Disconnected, snapshot.State);
+        Assert.False(snapshot.IsStale);
+        Assert.False(session.IsConnected);
+        await h.Manager.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task GetGpioStatus_reports_unsupported_when_reader_has_no_gpi_capability()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        session.SetCapabilities(gpiCount: 0, gpoCount: 0);
+
+        PlatformOperationException exception = await Assert.ThrowsAsync<PlatformOperationException>(() =>
+            h.Manager.GetGpioStatusAsync(h.Profile.Id));
+
+        Assert.Equal(PlatformErrorCode.Unsupported, exception.ErrorCode);
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.Equal(ReaderState.Disconnected, snapshot.State);
+        Assert.False(snapshot.IsStale);
+        Assert.False(session.IsConnected);
+        await h.Manager.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task GetGpioStatus_keeps_supported_side_for_partial_gpio_capability()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        session.SetCapabilities(gpiCount: 0, gpoCount: 1);
+        session.SettingsSnapshot = session.SettingsSnapshot with
+        {
+            Settings = new ReaderSettings
+            {
+                Configuration = new ReaderConfiguration
+                {
+                    Gpos = [new GpoConfiguration { GpoPortNumber = 1, GpoData = true }],
+                },
+            },
+        };
+
+        Tagging.GpioStatusSnapshot statuses = await h.Manager.GetGpioStatusAsync(h.Profile.Id);
+
+        Assert.Empty(statuses.Gpis);
+        Assert.True(Assert.Single(statuses.Gpos).State);
+        Assert.Equal(ReaderState.Disconnected, h.Manager.GetSnapshot(h.Profile.Id).State);
+        Assert.False(session.IsConnected);
+        await h.Manager.DisposeAsync();
     }
 
     [Fact]
@@ -665,15 +1040,91 @@ public sealed class InventoryReaderManagerTests
         Tagging.StartInventoryResult started = await h.Manager.StartInventoryAsync(h.Profile.Id, Spec);
         Assert.True(started.Succeeded);
 
-        session.RaiseGpiChanged(portNumber: 2, state: true);
+        DateTimeOffset timestamp = new(2026, 8, 10, 12, 34, 56, TimeSpan.Zero);
+        session.RaiseGpiChanged(portNumber: 2, state: true, timestamp);
 
         Tagging.GpiPortStatus status = await observed.Task.WaitAsync(TimeSpan.FromSeconds(2));
         Assert.Equal((ushort)2, status.PortNumber);
         Assert.True(status.Configured);
         Assert.True(status.State);
+        Assert.Equal(timestamp, status.Timestamp);
 
         await h.Manager.StopInventoryAsync(h.Profile.Id);
         await h.Manager.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task Gpi_subscriber_failure_does_not_prevent_gpi_stop()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        var configured = new InventorySettings
+        {
+            StopTrigger = new InventoryStopTrigger
+            {
+                Type = InventoryStopTriggerType.GpiWithTimeout,
+                GpiPortNumber = 1,
+                GpiState = true,
+                TimeoutMilliseconds = 1000,
+            },
+        };
+        session.SettingsSnapshot = new ReaderSettingsSnapshot(
+            new ReaderSettings { Inventory = configured },
+            new ManagedRoSpecSnapshot(configured, InventoryRuntimeState.Disabled));
+        h.Manager.GpiChanged += (_, _) => throw new InvalidOperationException("UI observer failed");
+        var lifecycleEvents = new List<InventoryLifecycleChangedEventArgs>();
+        h.Manager.LifecycleChanged += (_, args) => lifecycleEvents.Add(args);
+
+        Tagging.StartInventoryResult started = await h.Manager.StartInventoryAsync(h.Profile.Id, Spec);
+        Assert.True(started.Succeeded);
+
+        session.RaiseGpiChanged(portNumber: 1, state: true);
+        for (int i = 0; i < 50 && session.InventoryRunning; i++)
+        {
+            await Task.Delay(10);
+        }
+
+        Assert.False(session.InventoryRunning);
+        Assert.Equal(1, session.StopInventoryCount);
+        Assert.Equal(InventoryStopReason.Gpi, Assert.Single(
+            lifecycleEvents,
+            args => args.State == InventoryLifecycleState.Stopped).StopReason);
+    }
+
+    [Fact]
+    public async Task Gpio_short_operation_releases_reader_gate_when_disconnect_state_observer_fails()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        session.DisconnectThrows = new IOException("disconnect observer test");
+
+        EventHandler<ReaderStateChangedEventArgs> throwingObserver = (_, args) =>
+        {
+            if (args.Snapshot.State == ReaderState.Faulted)
+            {
+                throw new InvalidOperationException("state observer failed");
+            }
+        };
+        h.Manager.StateChanged += throwingObserver;
+        try
+        {
+            await h.Manager.GetGpioStatusAsync(h.Profile.Id);
+        }
+        finally
+        {
+            h.Manager.StateChanged -= throwingObserver;
+        }
+
+        Assert.Equal(ReaderState.Faulted, h.Manager.GetSnapshot(h.Profile.Id).State);
+
+        // The failed event subscriber must not strand the Reader Gate. A second
+        // short operation should be able to recover with a clean Session.
+        Tagging.GpioStatusSnapshot recovered = await h.Manager
+            .GetGpioStatusAsync(h.Profile.Id)
+            .WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.NotNull(recovered);
+        Assert.Equal(ReaderState.Disconnected, h.Manager.GetSnapshot(h.Profile.Id).State);
     }
 
     [Fact]
@@ -841,6 +1292,68 @@ public sealed class InventoryReaderManagerTests
     }
 
     [Fact]
+    public async Task Two_readers_can_run_independent_gpio_short_operations_in_parallel()
+    {
+        var factory = new FakeSessionFactory();
+        var profiles = new[]
+        {
+            new ReaderProfile { Id = Guid.NewGuid(), Host = "192.0.2.85", Name = "A" },
+            new ReaderProfile { Id = Guid.NewGuid(), Host = "192.0.2.86", Name = "B" },
+        };
+        var sessions = new[] { new FakeSession(), new FakeSession() };
+        foreach (FakeSession session in sessions)
+        {
+            session.SetCapabilities(gpiCount: 2, gpoCount: 2);
+            session.SettingsSnapshot = new ReaderSettingsSnapshot(
+                new ReaderSettings
+                {
+                    Configuration = new ReaderConfiguration
+                    {
+                        Gpis =
+                        [
+                            new GpiStatus { GpiPortNumber = 1, Configured = true, State = GpiState.Low },
+                            new GpiStatus { GpiPortNumber = 2, Configured = true, State = GpiState.High },
+                        ],
+                        Gpos =
+                        [
+                            new GpoConfiguration { GpoPortNumber = 1, GpoData = false },
+                            new GpoConfiguration { GpoPortNumber = 2, GpoData = true },
+                        ],
+                    },
+                },
+                new ManagedRoSpecSnapshot(new InventorySettings(), InventoryRuntimeState.Disabled));
+        }
+
+        factory.Queue.Enqueue(new FakeSession());
+        factory.Queue.Enqueue(sessions[0]);
+        factory.Queue.Enqueue(new FakeSession());
+        factory.Queue.Enqueue(sessions[1]);
+
+        await using var manager = new ReaderManager(factory, new FakeProfileStore());
+        await manager.AddAsync(profiles[0], enableAfterAdding: false);
+        await manager.AddAsync(profiles[1], enableAfterAdding: false);
+
+        GpioStatusSnapshot[] results = await Task.WhenAll(
+            manager.GetGpioStatusAsync(profiles[0].Id),
+            manager.GetGpioStatusAsync(profiles[1].Id));
+
+        Assert.Equal(2, results.Length);
+        Assert.All(results, result =>
+        {
+            Assert.Equal(2, result.Gpis.Count);
+            Assert.Equal(2, result.Gpos.Count);
+        });
+        Assert.All(sessions, session =>
+        {
+            Assert.Equal(1, session.ConnectCount);
+            Assert.Equal(1, session.DisconnectCount);
+            Assert.False(session.IsConnected);
+        });
+        Assert.All(profiles, profile =>
+            Assert.Equal(ReaderState.Disconnected, manager.GetSnapshot(profile.Id).State));
+    }
+
+    [Fact]
     public async Task Gpi_stop_on_one_reader_does_not_stop_another_reader()
     {
         var factory = new FakeSessionFactory();
@@ -900,6 +1413,177 @@ public sealed class InventoryReaderManagerTests
             && args.State == Tagging.InventoryLifecycleState.Stopped);
 
         await manager.StopInventoryAsync(profiles[1].Id);
+    }
+
+    [Fact]
+    public async Task Gpi_stop_received_during_inventory_start_is_not_lost()
+    {
+        var factory = new FakeSessionFactory();
+        var profile = new ReaderProfile { Id = Guid.NewGuid(), Host = "192.0.2.85" };
+        factory.Queue.Enqueue(new FakeSession()); // probe
+        var session = new FakeSession
+        {
+            SettingsSnapshot = new ReaderSettingsSnapshot(
+                new ReaderSettings
+                {
+                    Inventory = new InventorySettings
+                    {
+                        StopTrigger = new InventoryStopTrigger
+                        {
+                            Type = InventoryStopTriggerType.GpiWithTimeout,
+                            GpiPortNumber = 1,
+                            GpiState = true,
+                            TimeoutMilliseconds = 1000,
+                        },
+                    },
+                },
+                new ManagedRoSpecSnapshot(
+                    new InventorySettings
+                    {
+                        StopTrigger = new InventoryStopTrigger
+                        {
+                            Type = InventoryStopTriggerType.GpiWithTimeout,
+                            GpiPortNumber = 1,
+                            GpiState = true,
+                            TimeoutMilliseconds = 1000,
+                        },
+                    },
+                    InventoryRuntimeState.Disabled)),
+        };
+        session.BeforeStartInventory = () => session.RaiseGpiChanged(1, state: true);
+        factory.Queue.Enqueue(session); // registered session
+
+        await using var manager = new ReaderManager(factory, new FakeProfileStore());
+        await manager.AddAsync(profile, enableAfterAdding: false);
+        var lifecycleEvents = new List<InventoryLifecycleChangedEventArgs>();
+        manager.LifecycleChanged += (_, args) => lifecycleEvents.Add(args);
+
+        StartInventoryResult started = await manager.StartInventoryAsync(profile.Id, Spec);
+        Assert.True(started.Succeeded);
+
+        for (int i = 0; i < 50 && session.InventoryRunning; i++)
+        {
+            await Task.Delay(10);
+        }
+
+        Assert.False(session.InventoryRunning);
+        Assert.False(session.IsConnected);
+        Assert.Equal(1, session.StopInventoryCount);
+        Assert.Single(lifecycleEvents, args => args.State == InventoryLifecycleState.Stopped);
+        Assert.Equal(InventoryStopReason.Gpi, Assert.Single(
+            lifecycleEvents,
+            args => args.State == InventoryLifecycleState.Stopped).StopReason);
+    }
+
+    [Fact]
+    public async Task Queued_gpi_stop_from_failed_session_does_not_overwrite_replacement_fault_state()
+    {
+        var factory = new FakeSessionFactory();
+        var profile = new ReaderProfile { Id = Guid.NewGuid(), Host = "192.0.2.87" };
+        factory.Queue.Enqueue(new FakeSession()); // probe
+        var session = new FakeSession
+        {
+            SettingsSnapshot = new ReaderSettingsSnapshot(
+                new ReaderSettings
+                {
+                    Inventory = new InventorySettings
+                    {
+                        StopTrigger = new InventoryStopTrigger
+                        {
+                            Type = InventoryStopTriggerType.GpiWithTimeout,
+                            GpiPortNumber = 1,
+                            GpiState = true,
+                            TimeoutMilliseconds = 1000,
+                        },
+                    },
+                },
+                new ManagedRoSpecSnapshot(
+                    new InventorySettings
+                    {
+                        StopTrigger = new InventoryStopTrigger
+                        {
+                            Type = InventoryStopTriggerType.GpiWithTimeout,
+                            GpiPortNumber = 1,
+                            GpiState = true,
+                            TimeoutMilliseconds = 1000,
+                        },
+                    },
+                    InventoryRuntimeState.Disabled)),
+            StartInventoryThrows = new IOException("inventory start failed"),
+        };
+        session.BeforeStartInventory = () => session.RaiseGpiChanged(1, state: true);
+        factory.Queue.Enqueue(session); // registered session
+        var replacement = new FakeSession();
+        factory.Queue.Enqueue(replacement); // clean session after failed start
+
+        await using var manager = new ReaderManager(factory, new FakeProfileStore());
+        await manager.AddAsync(profile, enableAfterAdding: false);
+
+        StartInventoryResult started = await manager.StartInventoryAsync(profile.Id, Spec);
+        Assert.False(started.Succeeded);
+        await Task.Delay(50);
+
+        Assert.Equal(ReaderState.Faulted, manager.GetSnapshot(profile.Id).State);
+    }
+
+    [Fact]
+    public async Task Manual_and_gpi_stop_race_completes_only_one_inventory_stop()
+    {
+        var factory = new FakeSessionFactory();
+        var profile = new ReaderProfile { Id = Guid.NewGuid(), Host = "192.0.2.86" };
+        factory.Queue.Enqueue(new FakeSession()); // probe
+        var session = new FakeSession
+        {
+            SettingsSnapshot = new ReaderSettingsSnapshot(
+                new ReaderSettings
+                {
+                    Inventory = new InventorySettings
+                    {
+                        StopTrigger = new InventoryStopTrigger
+                        {
+                            Type = InventoryStopTriggerType.GpiWithTimeout,
+                            GpiPortNumber = 1,
+                            GpiState = true,
+                            TimeoutMilliseconds = 1000,
+                        },
+                    },
+                },
+                new ManagedRoSpecSnapshot(
+                    new InventorySettings
+                    {
+                        StopTrigger = new InventoryStopTrigger
+                        {
+                            Type = InventoryStopTriggerType.GpiWithTimeout,
+                            GpiPortNumber = 1,
+                            GpiState = true,
+                            TimeoutMilliseconds = 1000,
+                        },
+                    },
+                    InventoryRuntimeState.Disabled)),
+        };
+        factory.Queue.Enqueue(session); // registered session
+
+        await using var manager = new ReaderManager(factory, new FakeProfileStore());
+        await manager.AddAsync(profile, enableAfterAdding: false);
+        await manager.StartInventoryAsync(profile.Id, Spec);
+        var lifecycleEvents = new List<InventoryLifecycleChangedEventArgs>();
+        manager.LifecycleChanged += (_, args) => lifecycleEvents.Add(args);
+
+        session.RaiseGpiChanged(1, state: true);
+        await manager.StopInventoryAsync(profile.Id);
+        for (int i = 0; i < 50 && session.StopInventoryCount == 0; i++)
+        {
+            await Task.Delay(10);
+        }
+
+        Assert.False(session.InventoryRunning);
+        Assert.False(session.IsConnected);
+        Assert.Equal(1, session.StopInventoryCount);
+        Assert.Equal(1, session.DisconnectCount);
+        InventoryLifecycleChangedEventArgs stopped = Assert.Single(
+            lifecycleEvents,
+            args => args.State == InventoryLifecycleState.Stopped);
+        Assert.Equal(InventoryStopReason.Manual, stopped.StopReason);
     }
 
     private sealed class ProjectionExtension : IReaderExtensionModule

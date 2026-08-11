@@ -47,5 +47,21 @@ LlrpReaderPlatform.slnx
 - WPF 页面已对齐旧 `LlrpReaderStudio.Wpf` 的布局和功能入口，设备设置 Tab1/Tab2、寻卡、Tag Memory、Tag Lists、Inventory Runs、App Settings、About 已接入真实服务，并使用原生 `ProgressBar`；最终交付仍要求完成真实设备闭环；
 - WPF 组合根已按旧项目拆分应用日志与 SDK/LLRP 日志，分别写入 `%LocalAppData%\\LlrpReaderPlatform\\logs\\platform-*.log` 和 `sdk-*.log`，按天/50 MB 滚动并保留 14 个文件；
 - 平台为更多设备类型适配做准备：厂商无关 Contracts、单 Session/Gate、Inventory 长连接租约、能力分级和可插拔扩展模块；
-- `dotnet build LlrpReaderPlatform.slnx`：0 警告 0 错误；`dotnet test`：201 项全绿；
-- 真机 `192.168.41.134` 已完成标准 Probe/Settings Query、Impinj 扩展连接、有界 Inventory Start/Stop/Disconnect，以及 WPF Tab1 Settings Apply、Tab2 GPO、GPI 状态查询和 Impinj GPI debounce 回写；随后用真实标签验证了新平台 ReaderManager 的 TagReport 聚合（10 秒、1533 条事件、8 个唯一 EPC）、TID 读取、User Bank 写入恢复和 FastID/Phase 扩展字段，详见[设备矩阵](docs/compatibility/device-matrix.md)与[总体规划](docs/llrp-framework-vision.md)。
+- Reader 连接故障或短连接释放不可靠时，服务层会回收旧 Session，下一次激活/寻卡/短操作创建干净 Session，不复用故障连接；
+- `dotnet build LlrpReaderPlatform.slnx`：0 警告 0 错误；`dotnet test`：304 项全绿；
+- 真机 `192.168.41.134` 已完成标准 Probe/Settings Query、Impinj 扩展连接、有界 Inventory Start/Stop/Disconnect，以及 WPF Tab1 Settings Apply、Tab2 GPO、GPI 状态查询和 Impinj GPI debounce 回写；2026-08-11 又确认设备列表状态刷新不会取消在途设置查询，WPF 设置页稳定显示 `Loaded from Reader`、Save 和 62 个回读值；随后用真实标签验证了新平台 ReaderManager 的 TagReport 聚合（10 秒、1533 条事件、8 个唯一 EPC）、TID 读取、User Bank 写入恢复和 FastID/Phase 扩展字段，详见[设备矩阵](docs/compatibility/device-matrix.md)与[总体规划](docs/llrp-framework-vision.md)。
+
+## 构建、发布与运行
+
+在安装 .NET 10 SDK 的 Windows 机器上：
+
+```powershell
+dotnet build LlrpReaderPlatform.slnx
+dotnet test LlrpReaderPlatform.slnx --no-build
+dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj `
+  -c Release -r win-x64 --self-contained false `
+  -o artifacts/publish/win-x64
+& .\artifacts\publish\win-x64\App.Wpf.exe
+```
+
+应用首次运行会在 `%LocalAppData%\LlrpReaderPlatform\llrp-reader-platform.db` 创建新平台 SQLite 数据库；早期 schema 变化允许清空数据库重建。平台日志和 SDK/LLRP 日志分别写入 `%LocalAppData%\LlrpReaderPlatform\logs\platform-*.log` 与 `sdk-*.log`；启用 Tag Logging 且未指定目录时，JSONL 标签日志默认写入 `%LocalAppData%\LlrpReaderPlatform\tag-logs`。`artifacts/`、`bin/` 和 `obj/` 均为本地生成物，不应提交。

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LlrpReaderPlatform.Contracts.Errors;
 using LlrpReaderPlatform.Contracts.Persistence;
 
 namespace LlrpReaderPlatform.App.Wpf.ViewModels;
@@ -8,14 +9,19 @@ namespace LlrpReaderPlatform.App.Wpf.ViewModels;
 /// <summary>
 /// Tag List 管理页。列表、条目和保存全部通过 Contracts store 完成，WPF 不接触 EF/SQLite。
 /// </summary>
-public partial class TagListsViewModel : ObservableObject
+public partial class TagListsViewModel : ObservableObject, IPageOperationOwner, IDisposable
 {
     private readonly ITagListStore store;
+    private readonly CancellationTokenSource lifetimeCts = new();
+    private readonly CancellationToken lifetimeToken;
+    private CancellationTokenSource? activeOperationCts;
     private bool loading;
+    private bool disposed;
 
     public TagListsViewModel(ITagListStore store)
     {
         this.store = store;
+        lifetimeToken = lifetimeCts.Token;
     }
 
     public ObservableCollection<TagListEditorItem> Lists { get; } = [];
@@ -70,29 +76,40 @@ public partial class TagListsViewModel : ObservableObject
     [RelayCommand]
     private async Task LoadAsync()
     {
+        if (disposed)
+        {
+            return;
+        }
+
         if (!TryBeginOperation())
         {
             Status = "Tag List 操作进行中，请稍候。";
             return;
         }
 
+        CancellationTokenSource operationCts = BeginOperation();
         try
         {
-            await LoadCoreAsync();
+            await LoadCoreAsync(operationCts.Token);
         }
         finally
         {
-            EndOperation();
+            EndOperation(operationCts);
         }
     }
 
-    private async Task LoadCoreAsync()
+    private async Task LoadCoreAsync(CancellationToken ct)
     {
         try
         {
             Guid? selectedId = SelectedList?.Id;
             loading = true;
-            IReadOnlyList<TagListDefinition> definitions = await store.GetAllAsync(CancellationToken.None);
+            IReadOnlyList<TagListDefinition> definitions = await store.GetAllAsync(ct);
+            if (disposed || ct.IsCancellationRequested)
+            {
+                return;
+            }
+
             Lists.Clear();
             foreach (TagListDefinition definition in definitions)
             {
@@ -109,9 +126,16 @@ public partial class TagListsViewModel : ObservableObject
                 SelectedList = Lists.FirstOrDefault(x => x.Id == id);
             }
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // 页面销毁时取消数据库读取。
+        }
         catch (Exception ex)
         {
-            Status = $"读取 Tag List 失败：{ex.Message}";
+            if (!disposed)
+            {
+                Status = PlatformErrorDisplay.Failure("读取 Tag List", PlatformErrorCode.PersistenceFailed, ex.Message);
+            }
         }
         finally
         {
@@ -171,6 +195,11 @@ public partial class TagListsViewModel : ObservableObject
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (disposed)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(ListName))
         {
             Status = "Tag List 名称不能为空。";
@@ -184,6 +213,7 @@ public partial class TagListsViewModel : ObservableObject
         }
 
         Guid listId = SelectedList?.Id ?? Guid.NewGuid();
+        CancellationTokenSource operationCts = BeginOperation();
         try
         {
             var normalizedEntries = new List<TagListEntry>(Entries.Count);
@@ -214,24 +244,41 @@ public partial class TagListsViewModel : ObservableObject
                 IsEnabled = ListEnabled,
                 Entries = normalizedEntries,
             };
-            await store.SaveAsync(definition, CancellationToken.None);
-            await LoadCoreAsync();
+            await store.SaveAsync(definition, operationCts.Token);
+            await LoadCoreAsync(operationCts.Token);
+            if (disposed || operationCts.IsCancellationRequested)
+            {
+                return;
+            }
+
             SelectedList = Lists.FirstOrDefault(x => x.Id == listId);
             Status = $"Tag List “{definition.Name}” 已保存。";
         }
+        catch (OperationCanceledException) when (operationCts.IsCancellationRequested)
+        {
+            // 页面销毁时取消数据库保存。
+        }
         catch (Exception ex)
         {
-            Status = $"保存 Tag List 失败：{ex.Message}";
+            if (!disposed)
+            {
+                Status = PlatformErrorDisplay.Failure("保存 Tag List", PlatformErrorCode.PersistenceFailed, ex.Message);
+            }
         }
         finally
         {
-            EndOperation();
+            EndOperation(operationCts);
         }
     }
 
     [RelayCommand]
     private async Task DeleteAsync()
     {
+        if (disposed)
+        {
+            return;
+        }
+
         if (SelectedList is null)
         {
             Status = "请先选择 Tag List。";
@@ -245,21 +292,34 @@ public partial class TagListsViewModel : ObservableObject
         }
 
         Guid id = SelectedList.Id;
+        CancellationTokenSource operationCts = BeginOperation();
         try
         {
-            await store.DeleteAsync(id, CancellationToken.None);
+            await store.DeleteAsync(id, operationCts.Token);
             SelectedList = null;
             Entries.Clear();
-            await LoadCoreAsync();
+            await LoadCoreAsync(operationCts.Token);
+            if (disposed || operationCts.IsCancellationRequested)
+            {
+                return;
+            }
+
             Status = "Tag List 已删除。";
+        }
+        catch (OperationCanceledException) when (operationCts.IsCancellationRequested)
+        {
+            // 页面销毁时取消数据库删除。
         }
         catch (Exception ex)
         {
-            Status = $"删除 Tag List 失败：{ex.Message}";
+            if (!disposed)
+            {
+                Status = PlatformErrorDisplay.Failure("删除 Tag List", PlatformErrorCode.PersistenceFailed, ex.Message);
+            }
         }
         finally
         {
-            EndOperation();
+            EndOperation(operationCts);
         }
     }
 
@@ -273,10 +333,70 @@ public partial class TagListsViewModel : ObservableObject
         return true;
     }
 
-    private void EndOperation()
+    public void CancelPendingOperations() => CancelActiveOperation();
+
+    private CancellationTokenSource BeginOperation()
     {
+        CancellationTokenSource operationCts =
+            CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
+        CancellationTokenSource? previous = Interlocked.Exchange(
+            ref activeOperationCts,
+            operationCts);
+        CancelAndDispose(previous);
+        return operationCts;
+    }
+
+    private void EndOperation(CancellationTokenSource operationCts)
+    {
+        Interlocked.CompareExchange(ref activeOperationCts, null, operationCts);
+        operationCts.Dispose();
         IsBusy = false;
         Volatile.Write(ref operationInFlight, 0);
+    }
+
+    private void CancelActiveOperation()
+    {
+        CancellationTokenSource? operationCts = Volatile.Read(ref activeOperationCts);
+        try
+        {
+            operationCts?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // 页面切换与操作完成的释放可能并发发生。
+        }
+    }
+
+    private static void CancelAndDispose(CancellationTokenSource? operationCts)
+    {
+        if (operationCts is null)
+        {
+            return;
+        }
+
+        try
+        {
+            operationCts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            return;
+        }
+
+        operationCts.Dispose();
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        CancelActiveOperation();
+        lifetimeCts.Cancel();
+        lifetimeCts.Dispose();
     }
 
     private static string NormalizeHex(string value) => value.Trim()
