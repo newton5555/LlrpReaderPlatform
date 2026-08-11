@@ -326,7 +326,7 @@
                                         <Border DockPanel.Dock="Top" Style="{StaticResource SectionHeaderStyle}">
                                             <TextBlock Text="POWER AND SENSITIVITY SETTINGS" Style="{StaticResource SectionHeaderTextStyle}" />
                                         </Border>
-                                        <Grid Margin="12,12,12,0">
+                                        <Grid DockPanel.Dock="Top" Margin="8">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="160" />
                                                 <ColumnDefinition Width="*" />
@@ -339,36 +339,41 @@
                                             <ComboBox Grid.Column="1" ItemsSource="{Binding TxPowerRow.ChoiceDisplays}"
                                                       SelectedIndex="{Binding TxPowerRow.SelectedChoiceIndex, Mode=TwoWay}"
                                                       Text="{Binding TxPowerRow.ValueText, UpdateSourceTrigger=PropertyChanged}"
-                                                      IsEditable="True" IsEnabled="{Binding IsTxPowerEditable}" Margin="0,0,0,6" />
+                                                      IsEditable="True" IsEnabled="{Binding IsTxPowerEditable}"
+                                                      Style="{StaticResource FieldControlStyle}" />
                                             <TextBlock Grid.Row="1" Grid.Column="0" Text="Rx Sensitivity:" Style="{StaticResource FieldLabelStyle}" />
                                             <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding RxSensitivityRow.ChoiceDisplays}"
                                                       SelectedIndex="{Binding RxSensitivityRow.SelectedChoiceIndex, Mode=TwoWay}"
                                                       Text="{Binding RxSensitivityRow.ValueText, UpdateSourceTrigger=PropertyChanged}"
-                                                      IsEditable="True" IsEnabled="{Binding IsRxSensitivityEditable}" />
+                                                      IsEditable="True" IsEnabled="{Binding IsRxSensitivityEditable}"
+                                                      Style="{StaticResource FieldControlStyle}" />
                                         </Grid>
-                                        <Expander Header="INDIVIDUAL ANTENNAS" IsExpanded="{Binding IsIndividualAntennaSettingsExpanded, Mode=TwoWay}" Margin="12,8,12,12">
-                                            <Border BorderBrush="{DynamicResource MahApps.Brushes.Accent}" BorderThickness="1" Padding="8">
-                                                <ItemsControl ItemsSource="{Binding AntennaSettings}">
+                                        <Expander DockPanel.Dock="Top"
+                                                  IsExpanded="{Binding IsIndividualAntennaSettingsExpanded, Mode=TwoWay}"
+                                                  Margin="8,0,8,8">
+                                            <Expander.Header>
+                                                <Border Style="{StaticResource SectionHeaderStyle}" MinWidth="280">
+                                                    <TextBlock Text="INDIVIDUAL ANTENNAS" Style="{StaticResource SectionHeaderTextStyle}" />
+                                                </Border>
+                                            </Expander.Header>
+                                            <Border BorderBrush="{DynamicResource MahApps.Brushes.Accent}" BorderThickness="1">
+                                                <ItemsControl ItemsSource="{Binding AntennaSettings}" Margin="8">
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
                                                             <Grid Margin="0,4">
-                                                                <Grid.RowDefinitions>
-                                                                    <RowDefinition Height="Auto" />
-                                                                    <RowDefinition Height="Auto" />
-                                                                </Grid.RowDefinitions>
                                                                 <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="120" />
-                                                                    <ColumnDefinition Width="100" />
+                                                                    <ColumnDefinition Width="140" />
+                                                                    <ColumnDefinition Width="110" />
                                                                     <ColumnDefinition Width="*" />
-                                                                    <ColumnDefinition Width="115" />
+                                                                    <ColumnDefinition Width="120" />
                                                                     <ColumnDefinition Width="*" />
                                                                 </Grid.ColumnDefinitions>
-                                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="Tx Power Index:" VerticalAlignment="Center" />
-                                                                <ComboBox Grid.Row="0" Grid.Column="2" ItemsSource="{Binding TxPower.ChoiceDisplays}"
+                                                                <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                                <TextBlock Grid.Column="1" Text="Tx Power Index:" VerticalAlignment="Center" />
+                                                                <ComboBox Grid.Column="2" ItemsSource="{Binding TxPower.ChoiceDisplays}"
                                                                           SelectedIndex="{Binding TxPower.SelectedChoiceIndex, Mode=TwoWay}"
                                                                           Text="{Binding TxPower.ValueText, UpdateSourceTrigger=PropertyChanged}"
-                                                                          IsEditable="True" Margin="0,0,10,0">
+                                                                          IsEditable="True" Margin="0,0,12,0">
                                                                     <ComboBox.Style>
                                                                         <Style TargetType="ComboBox">
                                                                             <Style.Triggers>
@@ -379,8 +384,8 @@
                                                                         </Style>
                                                                     </ComboBox.Style>
                                                                 </ComboBox>
-                                                                <TextBlock Grid.Row="0" Grid.Column="3" Text="Rx Sensitivity:" VerticalAlignment="Center" />
-                                                                <ComboBox Grid.Row="0" Grid.Column="4" ItemsSource="{Binding RxSensitivity.ChoiceDisplays}"
+                                                                <TextBlock Grid.Column="3" Text="Rx Sensitivity:" VerticalAlignment="Center" />
+                                                                <ComboBox Grid.Column="4" ItemsSource="{Binding RxSensitivity.ChoiceDisplays}"
                                                                           SelectedIndex="{Binding RxSensitivity.SelectedChoiceIndex, Mode=TwoWay}"
                                                                           Text="{Binding RxSensitivity.ValueText, UpdateSourceTrigger=PropertyChanged}"
                                                                           IsEditable="True">
@@ -394,22 +399,6 @@
                                                                         </Style>
                                                                     </ComboBox.Style>
                                                                 </ComboBox>
-                                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Channel:" VerticalAlignment="Center"
-                                                                           Visibility="{Binding HasChannel, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                                <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
-                                                                         Text="{Binding Channel.ValueText, UpdateSourceTrigger=PropertyChanged}"
-                                                                         Visibility="{Binding HasChannel, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                                         Margin="0,4,10,0">
-                                                                    <TextBox.Style>
-                                                                        <Style TargetType="TextBox">
-                                                                            <Style.Triggers>
-                                                                                <DataTrigger Binding="{Binding Channel.IsReadOnly}" Value="True">
-                                                                                    <Setter Property="IsEnabled" Value="False" />
-                                                                                </DataTrigger>
-                                                                            </Style.Triggers>
-                                                                        </Style>
-                                                                    </TextBox.Style>
-                                                                </TextBox>
                                                             </Grid>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
@@ -437,7 +426,6 @@
                                                    HorizontalGridLinesBrush="{DynamicResource MahApps.Brushes.Gray8}"
                                                    AlternatingRowBackground="{DynamicResource MahApps.Brushes.Gray10}"
                                                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                   MinHeight="150"
                                                    BorderThickness="1"
                                                    IsReadOnly="False">
                                              <DataGrid.Columns>
@@ -452,7 +440,7 @@
                                                  </DataGridTextColumn>
                                                  <DataGridCheckBoxColumn Header="START" Binding="{Binding StartEnabled, Mode=TwoWay}" Width="65">
                                                      <DataGridCheckBoxColumn.ElementStyle>
-                                                         <Style TargetType="CheckBox">
+                                                         <Style TargetType="CheckBox" BasedOn="{StaticResource MahApps.Styles.CheckBox.DataGrid}">
                                                              <Setter Property="HorizontalAlignment" Value="Center" />
                                                              <Setter Property="VerticalAlignment" Value="Center" />
                                                          </Style>
@@ -468,7 +456,7 @@
                                                         </Style>
                                                     </DataGridCheckBoxColumn.CellStyle>
                                                  </DataGridCheckBoxColumn>
-                                                 <DataGridTextColumn Header="LEVEL" Binding="{Binding StartLevel, Mode=TwoWay}" Width="70">
+                                                 <DataGridTextColumn Header="LEVEL" Binding="{Binding StartLevel, Mode=TwoWay}" Width="65">
                                                      <DataGridTextColumn.ElementStyle>
                                                          <Style TargetType="TextBlock">
                                                              <Setter Property="TextAlignment" Value="Center" />
@@ -488,7 +476,7 @@
                                                  </DataGridTextColumn>
                                                  <DataGridCheckBoxColumn Header="STOP" Binding="{Binding StopEnabled, Mode=TwoWay}" Width="65">
                                                      <DataGridCheckBoxColumn.ElementStyle>
-                                                         <Style TargetType="CheckBox">
+                                                         <Style TargetType="CheckBox" BasedOn="{StaticResource MahApps.Styles.CheckBox.DataGrid}">
                                                              <Setter Property="HorizontalAlignment" Value="Center" />
                                                              <Setter Property="VerticalAlignment" Value="Center" />
                                                          </Style>
@@ -504,7 +492,7 @@
                                                         </Style>
                                                     </DataGridCheckBoxColumn.CellStyle>
                                                  </DataGridCheckBoxColumn>
-                                                 <DataGridTextColumn Header="LEVEL" Binding="{Binding StopLevel, Mode=TwoWay}" Width="70">
+                                                 <DataGridTextColumn Header="LEVEL" Binding="{Binding StopLevel, Mode=TwoWay}" Width="65">
                                                      <DataGridTextColumn.ElementStyle>
                                                          <Style TargetType="TextBlock">
                                                              <Setter Property="TextAlignment" Value="Center" />
@@ -788,28 +776,28 @@
                                             Visibility="{Binding Diagnostics.IsGpo1Available, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <mah:ToggleSwitch IsOn="{Binding Diagnostics.Gpo1, Mode=TwoWay}"
                                                       IsEnabled="{Binding Diagnostics.IsGpo1Available}"
-                                                      OnContent="" OffContent="" MinWidth="44" />
+                                                      OnContent="" OffContent="" MinWidth="44" VerticalAlignment="Center" />
                                     <TextBlock Text="GPO 1" VerticalAlignment="Center" Margin="10,0,0,0" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="4,0,4,10" VerticalAlignment="Center"
                                             Visibility="{Binding Diagnostics.IsGpo2Available, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <mah:ToggleSwitch IsOn="{Binding Diagnostics.Gpo2, Mode=TwoWay}"
                                                       IsEnabled="{Binding Diagnostics.IsGpo2Available}"
-                                                      OnContent="" OffContent="" MinWidth="44" />
+                                                      OnContent="" OffContent="" MinWidth="44" VerticalAlignment="Center" />
                                     <TextBlock Text="GPO 2" VerticalAlignment="Center" Margin="10,0,0,0" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="4,0,20,10" VerticalAlignment="Center"
                                             Visibility="{Binding Diagnostics.IsGpo3Available, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <mah:ToggleSwitch IsOn="{Binding Diagnostics.Gpo3, Mode=TwoWay}"
                                                       IsEnabled="{Binding Diagnostics.IsGpo3Available}"
-                                                      OnContent="" OffContent="" MinWidth="44" />
+                                                      OnContent="" OffContent="" MinWidth="44" VerticalAlignment="Center" />
                                     <TextBlock Text="GPO 3" VerticalAlignment="Center" Margin="10,0,0,0" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="4,0,4,10" VerticalAlignment="Center"
                                             Visibility="{Binding Diagnostics.IsGpo4Available, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <mah:ToggleSwitch IsOn="{Binding Diagnostics.Gpo4, Mode=TwoWay}"
                                                       IsEnabled="{Binding Diagnostics.IsGpo4Available}"
-                                                      OnContent="" OffContent="" MinWidth="44" />
+                                                      OnContent="" OffContent="" MinWidth="44" VerticalAlignment="Center" />
                                     <TextBlock Text="GPO 4" VerticalAlignment="Center" Margin="10,0,0,0" />
                                 </StackPanel>
                             </UniformGrid>

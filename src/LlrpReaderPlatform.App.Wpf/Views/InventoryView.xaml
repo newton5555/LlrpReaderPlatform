@@ -109,6 +109,14 @@
                     <Setter Property="VerticalContentAlignment" Value="Center" />
                 </Style>
             </DataGrid.Resources>
+            <DataGrid.RowStyle>
+                <Style TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource MahApps.Styles.DataGridRow}">
+                    <!-- MahApps' base row style inherits this value through a FindAncestor
+                         binding. Override it on the recyclable row container so a detached row
+                         does not emit a transient missing-DataGrid binding warning. -->
+                    <Setter Property="mah:DataGridHelper.CellPadding" Value="8,4" />
+                </Style>
+            </DataGrid.RowStyle>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="50"
                                     Visibility="{Binding Data.ShowIndexColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"

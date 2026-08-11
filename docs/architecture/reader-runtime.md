@@ -18,7 +18,7 @@
   明确为 0 时分别移除对应能力，未返回该参数时保留未知能力的兼容回退；
 - Inventory：`Start` 建立一个完整 LLRP 长连接租约，并一直持有到 `Stop`；期间所有 TagReport 都来自这一个 Session，不允许按报告或按批次重新连接；
 - Inventory 入口：服务层先拒绝无效时长、重复天线以及“全部天线(0)”与指定天线混用的参数，不为无效请求建立 LLRP 连接；
-- TagReport 先进入有界 Channel，由单消费者聚合；启用 Tag Logging 时再进入独立有界 TagLog Channel，由单消费者串行写入，避免高频报告创建无界后台 Task；
+- TagReport 先进入容量 8,192 的有界 Channel，由单消费者按最多 512 条一批聚合；同一批内只向消费者发布每个 Reader/EPC 的最新累计状态，不把每条原始报告变成一次 UI 通知。启用 Tag Logging 时再进入独立有界 TagLog Channel，由单消费者串行写入，避免高频报告创建无界后台 Task；
 - Inventory `Stop`：停止 ROSpec/InventorySession、断开 TCP、释放 Gate 后才发布 `Disconnected`；如果 Stop 或断开失败，则发布 `StopFailed` 并保留 `Faulted + IsStale`，不把未确认释放的长连接伪装为正常离线；
 - Disable/Remove：取消操作、停止盘存、断开并释放 Session。
 
@@ -55,6 +55,11 @@ Inventory 运行时，Settings、Tag Access 和 GPO 默认返回 `ReaderBusy`，
 ## 状态事件
 
 Services 不捕获 UI SynchronizationContext。状态事件可以在后台线程发布，WPF、Avalonia 或其他 UI 消费者负责切换到自己的 UI 线程。
+
+高频 TagReport 的 UI 投影属于消费者职责。当前 WPF 按 Reader/EPC 合并最多 2,000 个待刷新项，
+以 250ms 的 `DispatcherTimer` 每次最多更新 25 行，并最多保留 1,000 个可见 EPC；已存在行原地更新，
+不得为每个报告调用 Dispatcher、线性扫描整个 DataGrid 或替换整行对象。这些上限只约束实时视图，
+不会改变 Reader Session、后台聚合、InventoryRun 收尾或可选 TagLog 的生命周期。
 
 `IReaderManager.StateChanged` 描述 Reader 的连接/能力快照；`IInventoryService.LifecycleChanged`
 是 Inventory 长租约的唯一生命周期事实来源。手动 Stop、GPI 触发、定时结束、设备断连、

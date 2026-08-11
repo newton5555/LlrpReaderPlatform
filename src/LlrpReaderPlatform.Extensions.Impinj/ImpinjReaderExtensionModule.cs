@@ -16,7 +16,7 @@ namespace LlrpReaderPlatform.Extensions.Impinj;
 public sealed class ImpinjReaderExtensionModule : IReaderExtensionModule
 {
     private static readonly ImpinjSettingsContributor Settings = new();
-    /// <summary>Impinj 的 LLRP 厂商标识；已由 192.168.41.134 的标准 Probe 实测校准。</summary>
+    /// <summary>Impinj 的 LLRP 厂商标识；已由 Impinj R420 的标准 Probe 实测校准。</summary>
     public const uint ImpinjManufacturerId = 0x651A;
 
     /// <summary>首批 L4 真机基线：Impinj R420 的 ModelId。</summary>

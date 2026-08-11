@@ -320,7 +320,112 @@ public sealed class InventoryReaderManagerTests
         Assert.False(session.IsConnected);
         Assert.False(probe.IsConnected);
         Assert.False(session.InventoryRunning);
-        Assert.Equal(ReaderState.Disconnected, h.Manager.GetSnapshot(h.Profile.Id).State);
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.Equal(ReaderState.Disconnected, snapshot.State);
+        Assert.True(snapshot.IsStale);
+        Assert.True(session.DisposeCount > 0);
+        Assert.True(probe.DisposeCount > 0);
+    }
+
+    [Fact]
+    public async Task Activate_cancellation_during_extension_probe_recreates_session_and_marks_capabilities_stale()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        session.RaiseConnectionFaulted("force extension reprobe");
+        for (int i = 0; i < 40 && h.Manager.GetSnapshot(h.Profile.Id).State != ReaderState.Faulted; i++)
+        {
+            await Task.Delay(10);
+        }
+
+        using var cancellation = new CancellationTokenSource();
+        FakeSession probe = new()
+        {
+            BeforeConnect = cancellation.Cancel,
+            ConnectThrows = new OperationCanceledException(),
+        };
+        h.SessionFactory.Queue.Enqueue(probe);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => h.Manager.ActivateAsync(h.Profile.Id, cancellation.Token));
+
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.False(session.IsConnected);
+        Assert.False(probe.IsConnected);
+        Assert.True(session.DisposeCount > 0);
+        Assert.Equal(ReaderState.Disconnected, snapshot.State);
+        Assert.True(snapshot.IsStale);
+        Assert.Null(snapshot.Error);
+        await h.Manager.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task Activate_after_cancellation_reprobes_and_recovers_capabilities()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        session.RaiseConnectionFaulted("force extension reprobe");
+        for (int i = 0; i < 40 && h.Manager.GetSnapshot(h.Profile.Id).State != ReaderState.Faulted; i++)
+        {
+            await Task.Delay(10);
+        }
+
+        using var cancellation = new CancellationTokenSource();
+        FakeSession cancelledProbe = new()
+        {
+            BeforeConnect = cancellation.Cancel,
+            ConnectThrows = new OperationCanceledException(),
+        };
+        h.SessionFactory.Queue.Enqueue(cancelledProbe);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => h.Manager.ActivateAsync(h.Profile.Id, cancellation.Token));
+
+        FakeSession recoveryProbe = new();
+        h.SessionFactory.Queue.Enqueue(recoveryProbe);
+
+        ReaderActivationResult result = await h.Manager.ActivateAsync(h.Profile.Id);
+
+        Assert.True(result.Succeeded);
+        Assert.True(recoveryProbe.DisposeCount > 0);
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.Equal(ReaderState.Disconnected, snapshot.State);
+        Assert.False(snapshot.IsStale);
+        Assert.True(snapshot.CapabilityRevision > 0);
+        await h.Manager.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task Gpio_short_operation_cancellation_during_extension_probe_recreates_session()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        session.RaiseConnectionFaulted("force extension reprobe");
+        for (int i = 0; i < 40 && h.Manager.GetSnapshot(h.Profile.Id).State != ReaderState.Faulted; i++)
+        {
+            await Task.Delay(10);
+        }
+
+        using var cancellation = new CancellationTokenSource();
+        FakeSession probe = new()
+        {
+            BeforeConnect = cancellation.Cancel,
+            ConnectThrows = new OperationCanceledException(),
+        };
+        h.SessionFactory.Queue.Enqueue(probe);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => h.Manager.GetGpioStatusAsync(h.Profile.Id, cancellation.Token));
+
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.False(session.IsConnected);
+        Assert.False(probe.IsConnected);
+        Assert.True(session.DisposeCount > 0);
+        Assert.True(probe.DisposeCount > 0);
+        Assert.Equal(ReaderState.Disconnected, snapshot.State);
+        Assert.True(snapshot.IsStale);
+        Assert.Null(snapshot.Error);
+        await h.Manager.DisposeAsync();
     }
 
     [Fact]

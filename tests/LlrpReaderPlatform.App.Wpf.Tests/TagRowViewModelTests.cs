@@ -37,4 +37,34 @@ public sealed class TagRowViewModelTests
         Assert.Equal((ushort)1, row.LastAntenna);
         Assert.Equal((ushort)2, row.LastChannelIndex);
     }
+
+    [Fact]
+    public void Update_changes_values_without_replacing_the_row_identity()
+    {
+        var first = new TagObservation
+        {
+            Epc = "3001",
+            ReadCount = 1,
+            FirstSeen = DateTimeOffset.UtcNow,
+            LastSeen = DateTimeOffset.UtcNow,
+        };
+        var row = new TagRowViewModel(first);
+        var changed = new List<string?>();
+        row.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+
+        row.Update("Reader A", first with
+        {
+            ReadCount = 100,
+            LastSeen = first.LastSeen.AddSeconds(1),
+            LastRssi = -40,
+        }, "Known tag");
+
+        Assert.Equal("3001", row.Epc);
+        Assert.Equal(100, row.ReadCount);
+        Assert.Equal("Reader A", row.ReaderName);
+        Assert.Equal("Known tag", row.TagListName);
+        Assert.Contains(nameof(TagRowViewModel.ReadCount), changed);
+        Assert.Contains(nameof(TagRowViewModel.LastSeen), changed);
+        Assert.Contains(nameof(TagRowViewModel.PeakRssi), changed);
+    }
 }

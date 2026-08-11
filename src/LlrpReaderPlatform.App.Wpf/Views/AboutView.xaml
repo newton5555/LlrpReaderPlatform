@@ -13,13 +13,13 @@
                                Foreground="{DynamicResource MahApps.Brushes.Gray3}" Margin="0,4,0,0" />
                     <Separator Margin="0,16" Background="{DynamicResource MahApps.Brushes.Gray7}" />
                     <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="15"
-                               Margin="0,0,0,24" />
+                               LineHeight="24" Margin="0,0,0,24" />
                     <Border Background="{DynamicResource MahApps.Brushes.Gray10}" Padding="16" CornerRadius="4">
                         <StackPanel>
                             <TextBlock Text="License / Notice" FontSize="16" FontWeight="SemiBold"
                                        Margin="0,0,0,8" />
                             <TextBlock Text="{Binding LicenseNotice}" TextWrapping="Wrap" FontSize="13"
-                                       Foreground="{DynamicResource MahApps.Brushes.Gray3}" />
+                                       LineHeight="22" Foreground="{DynamicResource MahApps.Brushes.Gray3}" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

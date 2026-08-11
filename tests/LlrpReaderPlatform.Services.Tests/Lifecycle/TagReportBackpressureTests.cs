@@ -42,7 +42,7 @@ public sealed class TagReportBackpressureTests
 
         // The consumer is deliberately blocked after the first report. This makes the
         // bounded channel reach capacity deterministically instead of relying on timing.
-        for (int i = 1; i <= 100_100; i++)
+        for (int i = 1; i <= 8_300; i++)
         {
             session.EmitTag([(byte)(i >> 8), (byte)i]);
         }

@@ -486,33 +486,42 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
                 : inventory.StopTrigger with { Type = InventoryStopTriggerType.None },
         };
 
-        ReaderSettings compiledSettings = baseline with { Inventory = inventory };
+        // ReaderConfiguration.Antennas is the Reader-wide SET_READER_CONFIG projection
+        // returned by GET_READER_CONFIG. Inventory RF belongs to the ROSpec projection
+        // above. Echoing the Reader-wide antenna list makes some standard readers reject
+        // their own RFTransmitter values, while the same tuple is valid in a ROSpec.
+        // Do not replay those unrelated Reader-wide antenna defaults when saving Inventory.
+        ReaderSettings compiledSettings = baseline with
+        {
+            Inventory = inventory,
+            Configuration = baseline.Configuration with { Antennas = [] },
+        };
         if (inventory.StartTrigger.Type == InventoryStartTriggerType.Gpi
             || inventory.StopTrigger.Type == InventoryStopTriggerType.GpiWithTimeout)
         {
             // LLRP 的 Inventory GPI 触发器与 GPI_EVENT 通知是两个独立配置。
             // 只下发 ROSpec 触发器而不打开事件通知时，Reader 可能不会发送
             // GPI 状态变化，平台也就无法把物理输入统一映射为生命周期事件。
-            EventNotificationConfiguration events = baseline.Configuration.Events with
+            EventNotificationConfiguration events = compiledSettings.Configuration.Events with
             {
                 GpiEventEnabled = true,
             };
             compiledSettings = compiledSettings with
             {
-                Configuration = baseline.Configuration with { Events = events },
+                Configuration = compiledSettings.Configuration with { Events = events },
             };
         }
-        else if (!gpiSupported && baseline.Configuration.Events.GpiEventEnabled)
+        else if (!gpiSupported && compiledSettings.Configuration.Events.GpiEventEnabled)
         {
             // 设备明确没有 GPI 时不保留一份无效的 GPI_EVENT 请求，避免把
             // 设备对事件通知的拒绝误报为普通设置 Apply 失败。
-            EventNotificationConfiguration events = baseline.Configuration.Events with
+            EventNotificationConfiguration events = compiledSettings.Configuration.Events with
             {
                 GpiEventEnabled = false,
             };
             compiledSettings = compiledSettings with
             {
-                Configuration = baseline.Configuration with { Events = events },
+                Configuration = compiledSettings.Configuration with { Events = events },
             };
         }
 
@@ -888,9 +897,17 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             ? (ushort)channelValue
             : configuration.ChannelIndex;
         ushort? hopTableId = configuration.HopTableId;
-        if (hopTableId is null && capabilities?.HopTables is { Count: > 0 } hopTables)
+        if (txIndex is not null)
         {
-            hopTableId = hopTables[0].HopTableId;
+            // RFTransmitter is a complete LLRP tuple. Even when a hopping region ignores
+            // ChannelIndex, the SDK requires TransmitPower, HopTableID, and ChannelIndex
+            // to be supplied together. Channel 1 is therefore the neutral structural
+            // value for hopping readers; a future standard fixed-frequency editor will
+            // replace it with the selected FixedFrequencyTable index.
+            hopTableId ??= capabilities?.HopTables is { Count: > 0 } hopTables
+                ? hopTables[0].HopTableId
+                : (ushort)0;
+            channelIndex ??= 1;
         }
 
         return configuration with

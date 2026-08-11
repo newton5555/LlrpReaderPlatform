@@ -272,6 +272,15 @@ public sealed class StandardSettingsCompilerTests
                 {
                     Configuration = new ReaderConfiguration
                     {
+                        Antennas =
+                        [
+                            new AntennaConfigurationSettings
+                            {
+                                AntennaId = 1,
+                                TransmitPowerIndex = 5,
+                                ChannelIndex = 1,
+                            },
+                        ],
                         Events = new EventNotificationConfiguration
                         {
                             AntennaEventEnabled = true,
@@ -295,6 +304,7 @@ public sealed class StandardSettingsCompilerTests
         Assert.True(compiled.Configuration.Events.GpiEventEnabled);
         Assert.True(compiled.Configuration.Events.AntennaEventEnabled);
         Assert.True(compiled.Configuration.Events.ReaderExceptionEventEnabled);
+        Assert.Empty(compiled.Configuration.Antennas);
     }
 
     [Fact]
@@ -331,6 +341,40 @@ public sealed class StandardSettingsCompilerTests
         InventoryAntennaConfiguration configuration = Assert.Single(inventory.AntennaConfigurations);
         Assert.Equal((ushort)5, configuration.TransmitPowerIndex);
         Assert.Equal((ushort)7, configuration.ReceiverSensitivityIndex);
+    }
+
+    [Fact]
+    public void CompileSdk_completes_rf_transmitter_tuple_when_channel_is_missing()
+    {
+        var compiler = new StandardSettingsCompiler();
+        ReaderRuntimeSnapshot snapshot = Snapshot(new ReaderAntennaInfo { AntennaId = 1, Name = "A1" });
+        var managedInventory = new InventorySettings
+        {
+            AntennaIds = [1],
+            AntennaConfigurations =
+            [
+                new InventoryAntennaConfiguration
+                {
+                    AntennaId = 0,
+                    TransmitPowerIndex = 5,
+                    HopTableId = 1,
+                },
+            ],
+        };
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(new ReaderSettings(), new ManagedRoSpecSnapshot(
+                managedInventory, InventoryRuntimeState.Disabled)),
+            Capabilities: null);
+        EffectiveSettingsLayout layout = compiler.BuildLayout(snapshot, runtime);
+        var draft = new SettingsDraft { ReaderId = ReaderId, CapabilityRevision = 7 };
+        draft.Values[SettingsKeys.Session] = 0;
+
+        ReaderSettings compiled = compiler.CompileSdk(draft, layout, runtime, snapshot);
+
+        InventoryAntennaConfiguration configuration = Assert.Single(compiled.Inventory!.AntennaConfigurations);
+        Assert.Equal((ushort)5, configuration.TransmitPowerIndex);
+        Assert.Equal((ushort)1, configuration.HopTableId);
+        Assert.Equal((ushort)1, configuration.ChannelIndex);
     }
 
     [Fact]

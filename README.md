@@ -49,8 +49,8 @@ LlrpReaderPlatform.slnx
 - WPF 组合根已按旧项目拆分应用日志与 SDK/LLRP 日志，分别写入 `%LocalAppData%\\LlrpReaderPlatform\\logs\\platform-*.log` 和 `sdk-*.log`，按天/50 MB 滚动并保留 14 个文件；
 - 平台为更多设备类型适配做准备：厂商无关 Contracts、单 Session/Gate、Inventory 长连接租约、能力分级和可插拔扩展模块；
 - Reader 连接故障或短连接释放不可靠时，服务层会回收旧 Session，下一次激活/寻卡/短操作创建干净 Session，不复用故障连接；
-- `dotnet build LlrpReaderPlatform.slnx`：0 警告 0 错误；`dotnet test`：309 项全绿；
-- 真机 `192.168.41.134` 已完成标准 Probe/Settings Query、Impinj 扩展连接、有界 Inventory Start/Stop/Disconnect，以及 WPF Tab1 Settings Apply、Tab2 GPO、GPI 状态查询和 Impinj GPI debounce 回写；2026-08-11 又确认设备列表状态刷新不会取消在途设置查询，WPF 设置页稳定显示 `Loaded from Reader`、Save 和 62 个回读值；随后用真实标签验证了新平台 ReaderManager 的 TagReport 聚合（10 秒、1533 条事件、8 个唯一 EPC）、TID 读取、User Bank 写入恢复和 FastID/Phase 扩展字段，详见[设备矩阵](docs/compatibility/device-matrix.md)与[总体规划](docs/llrp-framework-vision.md)。
+- `dotnet build LlrpReaderPlatform.slnx`：0 警告 0 错误；`dotnet test`：312 项全绿；
+- Impinj R420 当前登记端点为 `192.168.40.87:5084`；历史完整验收曾在 `192.168.41.134:5084` 完成标准 Probe/Settings Query、Impinj 扩展连接、有界 Inventory Start/Stop/Disconnect，以及 WPF Tab1 Settings Apply、Tab2 GPO、GPI 状态查询和 Impinj GPI debounce 回写；2026-08-11 又确认设备列表状态刷新不会取消在途设置查询，WPF 设置页稳定显示 `Loaded from Reader`、Save 和 62 个回读值；随后用真实标签验证了新平台 ReaderManager 的 TagReport 聚合（10 秒、1533 条事件、8 个唯一 EPC）、TID 读取、User Bank 写入恢复和 FastID/Phase 扩展字段，详见[设备矩阵](docs/compatibility/device-matrix.md)与[总体规划](docs/llrp-framework-vision.md)。
 
 ## 构建、发布与运行
 

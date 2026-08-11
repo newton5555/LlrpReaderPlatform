@@ -18,19 +18,23 @@ namespace LlrpReaderPlatform.App.Wpf.ViewModels;
 /// </summary>
 public partial class InventoryViewModel : ObservableObject, IDisposable
 {
-    private const int MaxPendingTags = 20_000;
-    private const int MaxDisplayedTagObservations = 10_000;
+    private const int MaxPendingTags = 2_000;
+    private const int MaxDisplayedTags = 1_000;
+    private const int MaxTrackedTagObservations = 2_000;
+    private const int MaxDrainPerTick = 25;
     private readonly IInventoryService inventory;
     private readonly ITagListStore? tagListStore;
     private readonly IReaderManager? readerManager;
     private IReadOnlyDictionary<string, string> tagLabels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<Guid, byte> activeReaderIds = new();
-    private readonly Queue<PendingTag> pendingTags = new();
+    private readonly Dictionary<(Guid ReaderId, string Epc), PendingTag> pendingTags = [];
+    private readonly Queue<(Guid ReaderId, string Epc)> pendingTagOrder = [];
     private readonly object pendingTagsGate = new();
     // UI-thread-only latest aggregate per Reader/EPC. Services emit a cumulative
     // per-reader observation, so the WPF layer must replace that component before
     // merging multiple Readers; summing every event would double-count reads.
     private readonly Dictionary<(Guid ReaderId, string Epc), TagObservation> latestObservations = [];
+    private readonly Dictionary<string, TagRowViewModel> tagRows = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dispatcher dispatcher;
     private readonly bool hasWpfApplication;
     private readonly DispatcherTimer refreshTimer;
@@ -125,7 +129,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         hasWpfApplication = System.Windows.Application.Current is not null;
         dispatcher = System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
         lifetimeToken = lifetimeCts.Token;
-        refreshTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(50), DispatcherPriority.Background, OnRefreshTimerTick, dispatcher);
+        refreshTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, OnRefreshTimerTick, dispatcher);
         inventory.TagObserved += OnTagObserved;
         inventory.LifecycleChanged += OnInventoryLifecycleChanged;
     }
@@ -178,6 +182,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         {
             ClearPendingTags();
             latestObservations.Clear();
+            tagRows.Clear();
             Tags.Clear();
             Refresh();
         }
@@ -587,8 +592,11 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
             return;
         }
 
+        ClearPendingTags();
         latestObservations.Clear();
+        tagRows.Clear();
         Tags.Clear();
+        Interlocked.Exchange(ref reportedTagCount, 0);
         foreach (Guid id in ids)
         {
             foreach (TagObservation tag in inventory.GetTags(id))
@@ -614,6 +622,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         ClearPendingTags();
 
         latestObservations.Clear();
+        tagRows.Clear();
         Tags.Clear();
         UniqueTagCount = 0;
         Interlocked.Exchange(ref reportedTagCount, 0);
@@ -640,16 +649,26 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
 
         if (activeReaderIds.ContainsKey(args.ReaderId))
         {
-            Interlocked.Increment(ref reportedTagCount);
+            (Guid ReaderId, string Epc) key = (args.ReaderId, NormalizeEpc(args.Tag.Epc));
             lock (pendingTagsGate)
             {
-                if (pendingTags.Count >= MaxPendingTags)
+                if (!pendingTags.ContainsKey(key))
                 {
-                    pendingTags.Dequeue();
-                    Interlocked.Increment(ref droppedUiTagCount);
+                    while (pendingTags.Count >= MaxPendingTags && pendingTagOrder.Count > 0)
+                    {
+                        if (pendingTags.Remove(pendingTagOrder.Dequeue()))
+                        {
+                            Interlocked.Increment(ref droppedUiTagCount);
+                        }
+                    }
+
+                    pendingTagOrder.Enqueue(key);
                 }
 
-                pendingTags.Enqueue(new PendingTag(args.ReaderId, args.Tag));
+                // Keep only the newest cumulative observation for this Reader/EPC.
+                // Intermediate reports add no display information and must not create
+                // a Dispatcher backlog during a high-rate inventory.
+                pendingTags[key] = new PendingTag(args.ReaderId, args.Tag);
             }
         }
     }
@@ -760,22 +779,29 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         }
 
         // 服务层已经按 EPC 聚合；UI 只消费有界批次，避免高频 TagReport 阻塞 Dispatcher。
-        int drained = 0;
-        while (drained++ < 500)
+        var batch = new List<PendingTag>(MaxDrainPerTick);
+        lock (pendingTagsGate)
         {
-            PendingTag pending;
-            lock (pendingTagsGate)
+            while (batch.Count < MaxDrainPerTick && pendingTagOrder.Count > 0)
             {
-                if (pendingTags.Count == 0)
+                (Guid ReaderId, string Epc) key = pendingTagOrder.Dequeue();
+                if (pendingTags.Remove(key, out PendingTag pending))
                 {
-                    break;
+                    batch.Add(pending);
                 }
-
-                pending = pendingTags.Dequeue();
             }
+        }
 
+        var changedEpcs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (PendingTag pending in batch)
+        {
             StoreObservation(pending.ReaderId, pending.Tag);
-            RefreshMergedRow(pending.Tag.Epc);
+            changedEpcs.Add(pending.Tag.Epc);
+        }
+
+        foreach (string epc in changedEpcs)
+        {
+            RefreshMergedRow(epc);
         }
 
         UniqueTagCount = Tags.Count;
@@ -906,6 +932,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         }
 
         latestObservations.Clear();
+        tagRows.Clear();
         Tags.Clear();
         UniqueTagCount = 0;
         Interlocked.Exchange(ref reportedTagCount, 0);
@@ -970,15 +997,24 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
     private void StoreObservation(Guid id, TagObservation tag)
     {
         (Guid ReaderId, string Epc) key = (id, NormalizeEpc(tag.Epc));
+        latestObservations.TryGetValue(key, out TagObservation? previous);
         if (!latestObservations.ContainsKey(key)
-            && latestObservations.Count >= MaxDisplayedTagObservations)
+            && latestObservations.Count >= MaxTrackedTagObservations)
         {
             (Guid ReaderId, string Epc) oldest = latestObservations.Keys.First();
             latestObservations.Remove(oldest);
+            if (!latestObservations.Keys.Any(key =>
+                    string.Equals(key.Epc, oldest.Epc, StringComparison.OrdinalIgnoreCase))
+                && tagRows.Remove(oldest.Epc, out TagRowViewModel? removedRow))
+            {
+                Tags.Remove(removedRow);
+            }
             Interlocked.Increment(ref droppedUiTagCount);
         }
 
         latestObservations[key] = tag;
+        long delta = previous is null ? tag.ReadCount : Math.Max(0, tag.ReadCount - previous.ReadCount);
+        Interlocked.Add(ref reportedTagCount, delta);
     }
 
     private void ClearPendingTags()
@@ -986,6 +1022,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         lock (pendingTagsGate)
         {
             pendingTags.Clear();
+            pendingTagOrder.Clear();
         }
     }
 
@@ -999,17 +1036,21 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
 
     private void RebuildRows()
     {
+        tagRows.Clear();
         Tags.Clear();
         int index = 0;
         foreach (IGrouping<string, KeyValuePair<(Guid ReaderId, string Epc), TagObservation>> group in
             latestObservations.GroupBy(static item => item.Key.Epc, StringComparer.OrdinalIgnoreCase))
         {
-            if (Tags.Count >= 10_000)
+            if (Tags.Count >= MaxDisplayedTags)
             {
                 break;
             }
 
-            Tags.Add(CreateMergedRow(group.Key, group) with { Index = ++index });
+            TagRowViewModel row = CreateMergedRow(group.Key, group);
+            row.Index = ++index;
+            tagRows.Add(group.Key, row);
+            Tags.Add(row);
         }
     }
 
@@ -1026,32 +1067,40 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
             return;
         }
 
-        int index = -1;
-        for (int i = 0; i < Tags.Count; i++)
+        MergedTagProjection projection = CreateMergedProjection(normalizedEpc, group);
+        if (tagRows.TryGetValue(normalizedEpc, out TagRowViewModel? existing))
         {
-            if (string.Equals(Tags[i].Epc, normalizedEpc, StringComparison.OrdinalIgnoreCase))
+            existing.Update(projection.ReaderName, projection.Tag, projection.TagListName);
+            return;
+        }
+
+        if (Tags.Count >= MaxDisplayedTags)
+        {
+            TagRowViewModel removed = Tags[0];
+            Tags.RemoveAt(0);
+            tagRows.Remove(removed.Epc);
+        }
+
+        if (Tags.Count < MaxDisplayedTags)
+        {
+            var row = new TagRowViewModel(Guid.Empty, projection.ReaderName, projection.Tag, projection.TagListName)
             {
-                index = i;
-                break;
-            }
-        }
-
-        TagRowViewModel row = CreateMergedRow(normalizedEpc, group) with
-        {
-            Index = index >= 0 ? Tags[index].Index : Tags.Count + 1,
-        };
-
-        if (index >= 0)
-        {
-            Tags[index] = row;
-        }
-        else if (Tags.Count < 10_000)
-        {
+                Index = Tags.Count + 1,
+            };
+            tagRows.Add(normalizedEpc, row);
             Tags.Add(row);
         }
     }
 
     private TagRowViewModel CreateMergedRow(
+        string epc,
+        IEnumerable<KeyValuePair<(Guid ReaderId, string Epc), TagObservation>> observations)
+    {
+        MergedTagProjection projection = CreateMergedProjection(epc, observations);
+        return new TagRowViewModel(Guid.Empty, projection.ReaderName, projection.Tag, projection.TagListName);
+    }
+
+    private MergedTagProjection CreateMergedProjection(
         string epc,
         IEnumerable<KeyValuePair<(Guid ReaderId, string Epc), TagObservation>> observations)
     {
@@ -1061,7 +1110,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
             .Select(value => ResolveReaderName(value.Key.ReaderId))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(static name => name, StringComparer.OrdinalIgnoreCase));
-        return new TagRowViewModel(Guid.Empty, readers, merged, ResolveTagLabel(epc));
+        return new MergedTagProjection(readers, merged, ResolveTagLabel(epc));
     }
 
     private static TagObservation MergeObservations(string epc, IEnumerable<TagObservation> observations)
@@ -1097,4 +1146,8 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
     }
 
     private readonly record struct PendingTag(Guid ReaderId, TagObservation Tag);
+    private readonly record struct MergedTagProjection(
+        string ReaderName,
+        TagObservation Tag,
+        string TagListName);
 }

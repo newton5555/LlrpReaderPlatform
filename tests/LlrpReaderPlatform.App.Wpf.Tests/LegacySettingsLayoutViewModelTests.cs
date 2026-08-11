@@ -79,6 +79,25 @@ public sealed class LegacySettingsLayoutViewModelTests
     }
 
     [Fact]
+    public async Task Save_converts_numeric_choice_display_back_to_its_semantic_value()
+    {
+        Guid readerId = Guid.NewGuid();
+        var service = new StubSettingsService(readerId, BuildModelWithNumericTxPowerOption(readerId));
+        var vm = new ReaderSettingsViewModel(service);
+
+        await vm.LoadCommand.ExecuteAsync(readerId);
+
+        SettingsEntryRowViewModel row = Find(vm, SettingsKeys.AntennaTxPowerDbm(1));
+        row.ValueText = "Index 33: 33 dBm";
+
+        await vm.SaveCommand.ExecuteAsync(null);
+
+        Assert.NotNull(service.LastDraft);
+        Assert.Equal(33m, service.LastDraft!.Values[SettingsKeys.AntennaTxPowerDbm(1)]);
+        Assert.DoesNotContain("值无效", vm.Status, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Settings_become_read_only_when_the_selected_reader_snapshot_is_stale()
     {
         Guid readerId = Guid.NewGuid();
@@ -278,8 +297,8 @@ public sealed class LegacySettingsLayoutViewModelTests
         Assert.Equal(2, vm.AntennaSettings.Count);
         Assert.Equal("2", vm.ReportEveryRow!.ValueText);
         Assert.Equal("250", vm.TariRow!.ValueText);
-        Assert.True(vm.AntennaSettings[0].HasChannel);
-        Assert.Equal("1", vm.AntennaSettings[0].Channel!.ValueText);
+        Assert.False(vm.AntennaSettings[0].HasChannel);
+        Assert.Null(vm.AntennaSettings[0].Channel);
         Assert.True(vm.IsRfModeEditable);
         Assert.True(vm.IsSearchModeVisible);
         Assert.True(vm.IsFastIdVisible);
@@ -405,6 +424,19 @@ public sealed class LegacySettingsLayoutViewModelTests
 
     private static SettingsEditorModel BuildModel(Guid readerId, long capabilityRevision = 3)
     {
+        return BuildModelCore(readerId, capabilityRevision, includeTxPowerOption: false);
+    }
+
+    private static SettingsEditorModel BuildModelWithNumericTxPowerOption(Guid readerId)
+    {
+        return BuildModelCore(readerId, capabilityRevision: 3, includeTxPowerOption: true);
+    }
+
+    private static SettingsEditorModel BuildModelCore(
+        Guid readerId,
+        long capabilityRevision,
+        bool includeTxPowerOption)
+    {
         SettingsEntry[] entries =
         [
             Boolean(SettingsKeys.StartGpiEnabled, false),
@@ -417,7 +449,10 @@ public sealed class LegacySettingsLayoutViewModelTests
             Integer(ImpinjDebounceKey(1), 20),
             Boolean(SettingsKeys.FilterEnabled(1), false),
             Boolean(SettingsKeys.FilterEnabled(2), false),
-            Decimal(SettingsKeys.AntennaTxPowerDbm(1), 20m),
+            Decimal(
+                SettingsKeys.AntennaTxPowerDbm(1),
+                33m,
+                includeTxPowerOption ? new SettingsOption(33m, "Index 33: 33 dBm") : null),
             Integer(SettingsKeys.AntennaRxSensitivityDb(1), 0),
         ];
 
@@ -524,13 +559,14 @@ public sealed class LegacySettingsLayoutViewModelTests
         CurrentValue = value,
     };
 
-    private static SettingsEntry Decimal(string key, decimal value) => new()
+    private static SettingsEntry Decimal(string key, decimal value, SettingsOption? option = null) => new()
     {
         Key = key,
         Title = key,
         EditorKind = EditorKind.Decimal,
         ValueType = typeof(decimal),
         CurrentValue = value,
+        Options = option is null ? [] : [option],
     };
 
     private sealed class StubSettingsService(Guid readerId, SettingsEditorModel model) : IReaderSettingsService

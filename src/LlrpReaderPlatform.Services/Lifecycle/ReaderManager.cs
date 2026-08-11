@@ -25,7 +25,8 @@ namespace LlrpReaderPlatform.Services.Lifecycle;
 /// </summary>
 public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSettingsRuntime, IAsyncDisposable
 {
-    private const int TagChannelCapacity = 100_000;
+    private const int TagChannelCapacity = 8_192;
+    private const int TagPublishBatchSize = 512;
     private const int TagLogChannelCapacity = 25_000;
 
     private readonly IReaderSessionFactory sessionFactory;
@@ -500,6 +501,7 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
+                await ResetCancelledSessionAsync(handle).ConfigureAwait(false);
                 throw;
             }
             catch (Exception ex)
@@ -523,9 +525,7 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                await TryDisconnectQuietlyAsync(handle, CancellationToken.None).ConfigureAwait(false);
-                handle.Snapshot = handle.Snapshot with { State = ReaderState.Disconnected, Error = null };
-                Publish(handle);
+                await ResetCancelledSessionAsync(handle).ConfigureAwait(false);
                 throw;
             }
             catch (Exception ex)
@@ -553,9 +553,7 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                await TryDisconnectQuietlyAsync(handle, CancellationToken.None).ConfigureAwait(false);
-                handle.Snapshot = handle.Snapshot with { State = ReaderState.Disconnected, Error = null };
-                Publish(handle);
+                await ResetCancelledSessionAsync(handle).ConfigureAwait(false);
                 throw;
             }
             catch (Exception ex)
@@ -1169,7 +1167,10 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                 // before the normal Connect/Query cleanup block is entered, so
                 // converge the registered Session here as well instead of leaving
                 // the handle in Faulted/Connecting with a half-open transport.
-                await CleanupFailedInventoryStartAsync(handle, error: null).ConfigureAwait(false);
+                await CleanupFailedInventoryStartAsync(
+                    handle,
+                    error: null,
+                    recreateSession: true).ConfigureAwait(false);
                 throw;
             }
             catch (Exception ex)
@@ -1195,9 +1196,7 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {
-                    await TryDisconnectQuietlyAsync(handle, CancellationToken.None).ConfigureAwait(false);
-                    handle.Snapshot = handle.Snapshot with { State = ReaderState.Disconnected, Error = null };
-                    Publish(handle);
+                    await ResetCancelledSessionAsync(handle).ConfigureAwait(false);
                     throw;
                 }
                 catch (Exception ex)
@@ -1227,9 +1226,10 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                await TryDisconnectQuietlyAsync(handle, CancellationToken.None).ConfigureAwait(false);
-                handle.Snapshot = handle.Snapshot with { State = ReaderState.Disconnected, Error = null };
-                Publish(handle);
+                await CleanupFailedInventoryStartAsync(
+                    handle,
+                    error: null,
+                    recreateSession: true).ConfigureAwait(false);
                 throw;
             }
             catch (Exception ex)
@@ -1337,7 +1337,10 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                await CleanupFailedInventoryStartAsync(handle, error: null).ConfigureAwait(false);
+                await CleanupFailedInventoryStartAsync(
+                    handle,
+                    error: null,
+                    recreateSession: true).ConfigureAwait(false);
                 throw;
             }
             catch (Exception ex)
@@ -1909,43 +1912,79 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
     {
         try
         {
-            await foreach (TagWorkItem item in tagChannel.Reader.ReadAllAsync(CancellationToken.None).ConfigureAwait(false))
+            await foreach (TagWorkItem first in tagChannel.Reader.ReadAllAsync(CancellationToken.None).ConfigureAwait(false))
             {
+                var batch = new List<TagWorkItem>(TagPublishBatchSize) { first };
+                while (batch.Count < TagPublishBatchSize && tagChannel.Reader.TryRead(out TagWorkItem next))
+                {
+                    batch.Add(next);
+                }
+
                 try
                 {
-                    // REMOVE 已移除的 reader，Session/InventoryRun 已切换：丢弃已入队
-                    // 的旧报告，避免重新 Add 或下一次寻卡时误并入新的生命周期。
-                    if (!readers.ContainsKey(item.Handle.Profile.Id)
-                        || !ReferenceEquals(item.Handle.Session, item.Source)
-                        || !ReferenceEquals(item.Handle.ActiveRun, item.Run))
-                    {
-                        continue;
-                    }
-
-                    TagAggregateStore store = aggregates.GetOrAdd(item.Handle.Profile.Id, static _ => new TagAggregateStore());
-                    ReaderTagReportProjection projection = ProjectTagReport(item.Handle, item.Report);
-                    TagObservation tag = store.Add(item.Report, projection.TidHex, projection.Fields);
-                    if (item.Handle.ActiveRun is InventoryRunRecord run
-                        && run.LogFilePath is not null)
-                    {
-                        await EnqueueTagLogAsync(item.Handle, run, tag).ConfigureAwait(false);
-                    }
-                    PublishTagObserved(item.Handle, tag);
+                    await ProcessTagBatchAsync(batch).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Failed to aggregate a tag report for reader {Name}.",
-                        item.Handle.Profile.Name);
+                    logger.LogError(ex, "Failed to process an inventory report batch.");
                 }
                 finally
                 {
-                    OnTagReportConsumed(item.Handle);
+                    foreach (TagWorkItem item in batch)
+                    {
+                        OnTagReportConsumed(item.Handle);
+                    }
                 }
             }
         }
         catch (OperationCanceledException)
         {
             // Shutdown.
+        }
+    }
+
+    private async Task ProcessTagBatchAsync(IReadOnlyList<TagWorkItem> batch)
+    {
+        var latestByReaderAndEpc = new Dictionary<(Guid ReaderId, string Epc), (ReaderHandle Handle, TagObservation Tag)>();
+        foreach (TagWorkItem item in batch)
+        {
+            // REMOVE 已移除的 reader，Session/InventoryRun 已切换：丢弃已入队
+            // 的旧报告，避免重新 Add 或下一次寻卡时误并入新的生命周期。
+            if (!readers.ContainsKey(item.Handle.Profile.Id)
+                || !ReferenceEquals(item.Handle.Session, item.Source)
+                || !ReferenceEquals(item.Handle.ActiveRun, item.Run))
+            {
+                continue;
+            }
+
+            try
+            {
+                TagAggregateStore store = aggregates.GetOrAdd(item.Handle.Profile.Id, static _ => new TagAggregateStore());
+                ReaderTagReportProjection projection = ProjectTagReport(item.Handle, item.Report);
+                TagObservation tag = store.Add(item.Report, projection.TidHex, projection.Fields);
+                if (item.Handle.ActiveRun is InventoryRunRecord run
+                    && run.LogFilePath is not null)
+                {
+                    await EnqueueTagLogAsync(item.Handle, run, tag).ConfigureAwait(false);
+                }
+
+                // The UI needs the newest cumulative observation for each Reader/EPC,
+                // not one notification for every raw air-protocol read in this batch.
+                latestByReaderAndEpc[(item.Handle.Profile.Id, tag.Epc)] = (item.Handle, tag);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to aggregate a tag report for reader {Name}.",
+                    item.Handle.Profile.Name);
+            }
+        }
+
+        foreach ((ReaderHandle handle, TagObservation tag) in latestByReaderAndEpc.Values)
+        {
+            if (handle.AcceptTagReports && handle.ActiveRun is not null)
+            {
+                PublishTagObserved(handle, tag);
+            }
         }
     }
 
@@ -2026,9 +2065,17 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
     /// </summary>
     private async Task EnsureShortOperationSessionAsync(ReaderHandle handle, CancellationToken ct)
     {
-        await ResolveExtensionsFromProbeAsync(handle, ct).ConfigureAwait(false);
-        await EnsureConnectedAsync(handle, ct).ConfigureAwait(false);
-        await ResolveExtensionsFromConnectedIdentityAsync(handle, ct).ConfigureAwait(false);
+        try
+        {
+            await ResolveExtensionsFromProbeAsync(handle, ct).ConfigureAwait(false);
+            await EnsureConnectedAsync(handle, ct).ConfigureAwait(false);
+            await ResolveExtensionsFromConnectedIdentityAsync(handle, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            await ResetCancelledSessionAsync(handle).ConfigureAwait(false);
+            throw;
+        }
 
         if (handle.Snapshot.IsStale || handle.Snapshot.CapabilityRevision == 0)
         {
@@ -2085,6 +2132,27 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
             State = ReaderState.Faulted,
             IsStale = true,
             Error = error.Message,
+        };
+        Publish(handle);
+    }
+
+    /// <summary>
+    /// 连接建立、标准 Probe 或扩展 Session 替换阶段被取消时，调用方虽然会收到
+    /// OperationCanceledException，但当前 Session 可能已经处于半开或未知状态。
+    /// 取消路径必须像故障路径一样回收并重建一个干净的标准 Session；下一次操作
+    /// 再根据新的 Probe 结果匹配扩展，不能复用这次被取消的传输对象。
+    /// </summary>
+    private async Task ResetCancelledSessionAsync(ReaderHandle handle)
+    {
+        await TryDisconnectQuietlyAsync(handle, CancellationToken.None).ConfigureAwait(false);
+        handle.NeedsExtensionResolution = true;
+        handle.SessionNeedsRecreation = true;
+        await RecreateSessionAfterFaultAsync(handle).ConfigureAwait(false);
+        handle.Snapshot = handle.Snapshot with
+        {
+            State = ReaderState.Disconnected,
+            IsStale = true,
+            Error = null,
         };
         Publish(handle);
     }
@@ -2772,7 +2840,10 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
         }
     }
 
-    private async Task CleanupFailedInventoryStartAsync(ReaderHandle handle, string? error)
+    private async Task CleanupFailedInventoryStartAsync(
+        ReaderHandle handle,
+        string? error,
+        bool recreateSession = false)
     {
         ClearActiveInventoryStopTrigger(handle);
         handle.AcceptTagReports = false;
@@ -2786,7 +2857,7 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
         }
 
         await TryDisconnectQuietlyAsync(handle, CancellationToken.None).ConfigureAwait(false);
-        if (error is not null)
+        if (error is not null || recreateSession)
         {
             handle.NeedsExtensionResolution = true;
             handle.SessionNeedsRecreation = true;
@@ -2795,7 +2866,7 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
         handle.Snapshot = handle.Snapshot with
         {
             State = error is null ? ReaderState.Disconnected : ReaderState.Faulted,
-            IsStale = error is not null || handle.Snapshot.IsStale,
+            IsStale = error is not null || recreateSession || handle.Snapshot.IsStale,
             Error = error,
         };
         Publish(handle);

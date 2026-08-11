@@ -19,11 +19,13 @@
         </Style>
     </UserControl.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="44" MaxWidth="900" HorizontalAlignment="Left">
-            <TextBlock Text="Tag Memory" FontSize="28" FontWeight="Bold" />
+        <StackPanel Margin="36" MaxWidth="820" HorizontalAlignment="Left">
+            <TextBlock Text="Tag Memory" FontSize="28" FontWeight="SemiBold"
+                       Foreground="{DynamicResource MahApps.Brushes.Accent}" />
             <TextBlock Text="Target one exact EPC or TID. Reads and writes use the active LLRP reader."
-                       TextWrapping="Wrap" FontSize="14" LineHeight="22" Margin="0,12,0,24" />
-            <TextBlock TextWrapping="Wrap" Margin="0,0,0,16" FontSize="14">
+                       TextWrapping="Wrap" FontSize="14" LineHeight="22" Margin="0,6,0,24"
+                       Foreground="{DynamicResource MahApps.Brushes.Gray3}" />
+            <TextBlock TextWrapping="Wrap" Margin="0,0,0,12" FontSize="14">
                 <Run Text="Operating reader: " FontWeight="SemiBold" />
                 <Run Text="{Binding ReaderName}" />
             </TextBlock>
@@ -42,7 +44,12 @@
                 </TextBlock.Style>
             </TextBlock>
 
-            <Border BorderThickness="1" Padding="24">
+            <Border BorderThickness="1"
+                    BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                    CornerRadius="4"
+                    Padding="24"
+                    Margin="0,0,0,24"
+                    Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
                 <StackPanel>
                     <TextBlock Text="TAG ACCESS" FontWeight="Bold" FontSize="14" Margin="0,0,0,14" />
                     <ProgressBar Height="4" Margin="0,0,0,14"
@@ -64,7 +71,9 @@
                         <StackPanel Margin="8,0,0,0">
                             <TextBlock Text="Match (hex)" FontWeight="SemiBold" Margin="0,0,0,8" />
                             <TextBox Text="{Binding Epc, UpdateSourceTrigger=PropertyChanged}"
-                                     Padding="10" FontFamily="Consolas, Courier New" FontSize="15" />
+                                     mah:TextBoxHelper.Watermark="EPC or TID in hexadecimal"
+                                     mah:TextBoxHelper.ClearTextButton="True"
+                                     Padding="10" FontFamily="Consolas, Courier New" FontSize="16" FontWeight="SemiBold" />
                         </StackPanel>
                     </UniformGrid>
 
@@ -101,7 +110,7 @@
                     <TextBlock Text="Data (hex words)" FontWeight="SemiBold" Margin="0,0,0,8" />
                     <TextBox Text="{Binding DataHex, UpdateSourceTrigger=PropertyChanged}" Height="140"
                              AcceptsReturn="True" TextWrapping="Wrap"
-                             mah:TextBoxHelper.Watermark="Data read from or written to the tag..."
+                             mah:TextBoxHelper.Watermark="Data read from or to be written to the tag..."
                              Padding="12" Margin="0,0,0,24"
                              FontFamily="Consolas, Courier New" FontSize="14" />
 

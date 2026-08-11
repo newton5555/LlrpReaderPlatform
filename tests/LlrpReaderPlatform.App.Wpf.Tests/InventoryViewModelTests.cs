@@ -570,7 +570,7 @@ public sealed class InventoryViewModelTests
         vm.RefreshCommand.Execute(null);
 
         Assert.True(vm.DroppedTagReportCount >= 500);
-        Assert.True(vm.Tags.Count <= 10_000);
+        Assert.True(vm.Tags.Count <= 1_000);
         await vm.StopCommand.ExecuteAsync(readerId);
     }
 

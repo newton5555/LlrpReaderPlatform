@@ -752,12 +752,14 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
         {
             SettingsEntryRowViewModel? tx = FindRow(SettingsKeys.AntennaTxPowerDbm(antennaId));
             SettingsEntryRowViewModel? rx = FindRow(SettingsKeys.AntennaRxSensitivityDb(antennaId));
-            SettingsEntryRowViewModel? channel = FindRow(SettingsKeys.AntennaChannelIndex(antennaId));
+            // ChannelIndex belongs to the complete LLRP RFTransmitter tuple, but it is
+            // not an antenna power setting. Keep it out of the old WPF antenna matrix;
+            // fixed-frequency UI will own the value when that standard path is added.
             AntennaSettings.Add(new LegacyAntennaSettingsRowViewModel(
                 antennaId,
                 tx,
                 rx,
-                channel));
+                channel: null));
         }
 
         ushort gpiRowCount = ResolveGpiRowCount();
@@ -950,6 +952,18 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
 
     private static object ConvertValue(string text, SettingsEntry entry)
     {
+        // Numeric capability ComboBoxes display a human-readable label (for example,
+        // "Index 33: 33 dBm") while their binding source remains the semantic value.
+        // WPF can write that display text back through the editable ComboBox.Text binding;
+        // recover the option value before attempting numeric parsing.
+        SettingsOption? displayedOption = entry.Options.FirstOrDefault(option =>
+            option.Display is not null
+            && string.Equals(option.Display.Trim(), text.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (displayedOption?.Value is not null)
+        {
+            return displayedOption.Value;
+        }
+
         if (entry.ValueType == typeof(bool))
         {
             return bool.Parse(text);
