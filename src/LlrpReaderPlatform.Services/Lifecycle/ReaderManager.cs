@@ -1524,7 +1524,7 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                 throw new ReaderBusyException("Reader busy: inventory is running. Stop inventory first.");
             }
 
-            return await ExecuteShortSessionOperationAsync(
+            IReadOnlyList<GpiPortStatus> statuses = await ExecuteShortSessionOperationAsync(
                 handle,
                 ct,
                 () =>
@@ -1532,6 +1532,8 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                     ValidateGpiStatusCapability(handle);
                     return handle.Session.GetGpiStatusAsync(ct);
                 }).ConfigureAwait(false);
+            MergeObservedGpioCounts(handle, gpiStatuses: statuses);
+            return statuses;
         }
         finally
         {
@@ -1558,7 +1560,7 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                 throw new ReaderBusyException("Reader busy: inventory is running. Stop inventory first.");
             }
 
-            return await ExecuteShortSessionOperationAsync(
+            IReadOnlyList<GpoPortStatus> statuses = await ExecuteShortSessionOperationAsync(
                 handle,
                 ct,
                 () =>
@@ -1566,6 +1568,8 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                     ValidateGpoStatusCapability(handle);
                     return handle.Session.GetGpoStatusAsync(ct);
                 }).ConfigureAwait(false);
+            MergeObservedGpioCounts(handle, gpoStatuses: statuses);
+            return statuses;
         }
         finally
         {
@@ -1592,7 +1596,7 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                 throw new ReaderBusyException("Reader busy: inventory is running. Stop inventory first.");
             }
 
-            return await ExecuteShortSessionOperationAsync(
+            GpioStatusSnapshot statuses = await ExecuteShortSessionOperationAsync(
                 handle,
                 ct,
                 () =>
@@ -1600,6 +1604,8 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                     ValidateGpioStatusCapability(handle);
                     return handle.Session.GetGpioStatusAsync(ct);
                 }).ConfigureAwait(false);
+            MergeObservedGpioCounts(handle, statuses.Gpis, statuses.Gpos);
+            return statuses;
         }
         finally
         {
@@ -2306,6 +2312,66 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
             Error = null,
         };
         return capture;
+    }
+
+    /// <summary>
+    /// 某些标准 Reader 的 General Device Capabilities 不包含 GPIO 数量，
+    /// 但 GET/查询状态会返回带端口号的实际配置。未知能力只在成功收到状态后
+    /// 补充运行时快照；明确声明为 0 的能力不被查询结果覆盖。
+    /// </summary>
+    private void MergeObservedGpioCounts(
+        ReaderHandle handle,
+        IReadOnlyList<GpiPortStatus>? gpiStatuses = null,
+        IReadOnlyList<GpoPortStatus>? gpoStatuses = null)
+    {
+        ushort? gpiCount = MergeObservedPortCount(handle.Snapshot.GpiCount, gpiStatuses);
+        ushort? gpoCount = MergeObservedPortCount(handle.Snapshot.GpoCount, gpoStatuses);
+        if (gpiCount == handle.Snapshot.GpiCount && gpoCount == handle.Snapshot.GpoCount)
+        {
+            return;
+        }
+
+        if (handle.CapabilityCapture is { } capture)
+        {
+            handle.CapabilityCapture = capture with
+            {
+                GpiCount = gpiCount,
+                GpoCount = gpoCount,
+            };
+        }
+
+        handle.Snapshot = handle.Snapshot with
+        {
+            GpiCount = gpiCount,
+            GpoCount = gpoCount,
+        };
+        Publish(handle);
+    }
+
+    private static ushort? MergeObservedPortCount(
+        ushort? currentCount,
+        IReadOnlyList<GpiPortStatus>? statuses)
+    {
+        if (currentCount is not null || statuses is null || statuses.Count == 0)
+        {
+            return currentCount;
+        }
+
+        ushort maxPort = statuses.Max(static status => status.PortNumber);
+        return maxPort == 0 ? currentCount : maxPort;
+    }
+
+    private static ushort? MergeObservedPortCount(
+        ushort? currentCount,
+        IReadOnlyList<GpoPortStatus>? statuses)
+    {
+        if (currentCount is not null || statuses is null || statuses.Count == 0)
+        {
+            return currentCount;
+        }
+
+        ushort maxPort = statuses.Max(static status => status.PortNumber);
+        return maxPort == 0 ? currentCount : maxPort;
     }
 
     private ReaderFeatureCatalog BuildFeatureCatalog(ReaderHandle handle)

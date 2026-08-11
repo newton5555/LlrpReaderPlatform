@@ -363,10 +363,18 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
 
         IsInventoryRunning = activeReaderIds.Count > 0;
         int successfulStarts = results.Count(static item => item.Result.Succeeded);
-        if (!IsInventoryRunning && successfulStarts == 0)
+        if (!IsInventoryRunning)
         {
             StopRunUi();
-            Status = $"没有 Reader 能够启动盘存；失败设备：{FormatStartFailures(results)}";
+            if (successfulStarts == 0)
+            {
+                Status = $"没有 Reader 能够启动盘存；失败设备：{FormatStartFailures(results)}";
+            }
+
+            // A Reader can publish a terminal lifecycle event while another
+            // StartAll operation is still completing. The event has already
+            // converged the final reason and drained the UI queue; do not
+            // restart the stopwatch/timer after that run has ended.
             return;
         }
 

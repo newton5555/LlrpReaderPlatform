@@ -1,6 +1,7 @@
 # LlrpReaderPlatform 交接文档（Handoff）
 
-> 状态：基础中间层与首个 WPF 消费者首版代码已完成；能力目录已接入运行时快照和设置布局，并按型号、固件和 SDK 能力画像限定 Impinj L4 能力；自动化测试 304 项全绿，真机已完成标准 Probe/Settings Query、WPF 设置/GPO/GPI 状态查询、Impinj debounce/FastID/Phase/Search/Low Duty/固定频率回写、真实 TagReport 聚合、EPC/TID/User/Reserved 四个 Memory Bank 读取、User Bank 写入恢复和 FastID/Phase 扩展 TagReport，R420 Doppler 已按 SDK 能力隐藏；代码已补齐统一 `LifecycleChanged` 事件；平台通知订阅者异常不会中断生命周期收尾，TagReport/GPI/定时停止任务绑定来源 Session 与 InventoryRun，旧事件不会跨 Run 污染新数据；手动 Stop、GPI Stop、定时结束、连接 Faulted、ReaderException、设备主动关闭都会由平台事件驱动 WPF 收尾；GPI 启停触发器保存时，标准设置编译器会同步开启 `Configuration.Events.GpiEventEnabled`；GPI 平台事件保留 Reader 事件时间戳并记录端口/状态/触发匹配日志，便于 WPF 状态和真机记录对齐；设备列表刷新期间保持选中 Reader，避免取消在途设置查询的竞态；设备列表已提供 Faulted Reader 的重新连接/能力刷新入口；标准 Tag Access 按 Reader 能力声明降级，明确不支持的设备不会在服务或 Tag Memory 页显示为可用；标准 GPIO 端口数量来自 General Device Capabilities，明确无端口时 Tab1/Tab2 对应操作降级，部分 GPO 设备只启用实际端口；WPF 设置保存、Tag Memory 和寻卡启动按稳定 `PlatformErrorCode` 投影忙碌/不支持/设备错误等状态；Contracts 的 `PlatformOperationException` 让 Settings Query/GPI/GPO 在 ReaderBusy 时保留同一错误码，明确无 GPO 能力时返回 Unsupported；SQLite 只维护新平台数据，早期 schema 变化允许清空数据库重建；Settings Preset 以版本化语义 JSON 同时保存设置和 Inventory 字段，不考虑旧库导入；短连接断开失败时设置布局转为只读并要求重新激活，Reader 能力快照过期时设置页同步禁用编辑和保存；能力解析循环使用整数索引，避免 `ushort` 最大值回绕；Inventory 服务入口拒绝无效时长、重复天线和混合全部天线/指定天线参数；寻卡页已恢复旧 WPF 的 ELAPSED TIME 顶部布局、列头右键菜单列选择和 Peak RSSI 命名，同时保留平台 Tag List 附加列与原生 ProgressBar；添加数据源页加入 Host/Port 校验、发现记录归一化与 IPv6 端点展示，并在 Probe、发现、提交期间锁定端点及发现条目选择；离开页面会取消在途操作；其它 WPF 页面退出时会取消未完成的 Reader 操作和数据库操作；设备状态、GPI 事件和运行记录的 WPF Dispatcher 投影在页面销毁或应用 Dispatcher 关闭竞态下会静默收口；应用设置页会显示 JSONL TagLog 的默认目录；GPI 物理事件/触发、其它 Memory Bank 写入、多 Reader、断网/重启现场恢复及其它现场证据仍在验收。
+> 状态：基础中间层与首个 WPF 消费者首版代码已完成；能力目录已接入运行时快照和设置布局，并按型号、固件和 SDK 能力画像限定 Impinj L4 能力；自动化测试 307 项全绿，真机已完成标准 Probe/Settings Query、WPF 设置/GPO/GPI 状态查询、Impinj debounce/FastID/Phase/Search/Low Duty/固定频率回写、真实 TagReport 聚合、EPC/TID/User/Reserved 四个 Memory Bank 读取、User Bank 写入恢复和 FastID/Phase 扩展 TagReport，R420 Doppler 已按 SDK 能力隐藏；代码已补齐统一 `LifecycleChanged` 事件；平台通知订阅者异常不会中断生命周期收尾，TagReport/GPI/定时停止任务绑定来源 Session 与 InventoryRun，旧事件不会跨 Run 污染新数据；手动 Stop、GPI Stop、定时结束、连接 Faulted、ReaderException、设备主动关闭都会由平台事件驱动 WPF 收尾；GPI 启停触发器保存时，标准设置编译器会同步开启 `Configuration.Events.GpiEventEnabled`；GPI 平台事件保留 Reader 事件时间戳并记录端口/状态/触发匹配日志，便于 WPF 状态和真机记录对齐；设备列表刷新期间保持选中 Reader，避免取消在途设置查询的竞态；设备列表已提供 Faulted Reader 的重新连接/能力刷新入口；标准 Tag Access 按 Reader 能力声明降级，明确不支持的设备不会在服务或 Tag Memory 页显示为可用；标准 GPIO 端口数量优先来自 General Device Capabilities，若能力响应未声明端口数量则在成功状态查询后按返回端口补充当前运行时快照，但不把状态查询当作物理接线验收；明确无端口时 Tab1/Tab2 对应操作降级，部分 GPO 设备只启用实际端口；WPF 设置保存、Tag Memory 和寻卡启动按稳定 `PlatformErrorCode` 投影忙碌/不支持/设备错误等状态；Contracts 的 `PlatformOperationException` 让 Settings Query/GPI/GPO 在 ReaderBusy 时保留同一错误码，明确无 GPO 能力时返回 Unsupported；SQLite 只维护新平台数据，早期 schema 变化允许清空数据库重建；Settings Preset 以版本化语义 JSON 同时保存设置和 Inventory 字段，不考虑旧库导入；短连接断开失败时设置布局转为只读并要求重新激活，Reader 能力快照过期时设置页同步禁用编辑和保存；能力解析循环使用整数索引，避免 `ushort` 最大值回绕；Inventory 服务入口拒绝无效时长、重复天线和混合全部天线/指定天线参数；寻卡页已恢复旧 WPF 的 ELAPSED TIME 顶部布局、列头右键菜单列选择和 Peak RSSI 命名，同时保留平台 Tag List 附加列与原生 ProgressBar；添加数据源页加入 Host/Port 校验、发现记录归一化与 IPv6 端点展示，并在 Probe、发现、提交期间锁定端点及发现条目选择；离开页面会取消在途操作；其它 WPF 页面退出时会取消未完成的 Reader 操作和数据库操作；设备状态、GPI 事件和运行记录的 WPF Dispatcher 投影在页面销毁或应用 Dispatcher 关闭竞态下会静默收口；应用设置页会显示 JSONL TagLog 的默认目录；GPI 物理事件/触发、其它 Memory Bank 写入、多 Reader、断网/重启现场恢复及其它现场证据仍在验收。
+> 最新自动化基线：307 项全绿（Contracts 5、Services 159、Infrastructure 7、App.Wpf 116、Architecture 7、Extensions.Impinj 13）。标准 Reader 未声明 GPIO 数量时，成功状态查询会将返回端口合并到运行时快照；这不替代 GPI 物理事件/触发验收。
 > 生成日期：以提交时为准。
 > 本文档供接手的开发者在短时间内了解项目现状、关键设计、已知边界与下一步。
 
@@ -38,6 +39,12 @@
 
 2026-08-11 补充连接生命周期可见性：设备列表和设置页现在把短操作完成后的正常状态显示为“能力已同步，短连接已释放”，寻卡期间显示 LLRP 长连接已建立；这只增加 WPF 状态解释，不改变每个 Reader 单 Session/Gate 和寻卡长租约的架构。
 
+2026-08-11 追加标准 GPIO 能力回退实现：部分标准 Reader 的 General Device Capabilities 不声明 GPI/GPO 数量，但短连接状态查询会返回带端口号的实际配置。ReaderManager 现在只在成功查询且原能力数量未知时，将返回端口的最大编号合并到运行时快照并通知 WPF 重新投影；明确声明为 0 的设备不会被覆盖，且该状态查询不替代物理 GPI 事件/触发验收。新增 Services 回归测试，当前基线为 307 项（Services 159、App.Wpf 116）。
+
+2026-08-11 追加全局寻卡启动竞态修复：如果某个 Reader 在 `StartAll` 尚未返回前已经通过 GPI、定时或设备事件结束，WPF 不再在启动结果汇总后重新启动已停止运行的计时器；终止原因和尾部队列继续由 `LifecycleChanged` 收敛。新增 App.Wpf 回归测试，当前自动化基线为 307 项（App.Wpf 116）。
+
+2026-08-11 追加 Tag Memory 页面覆盖回归：WPF 页面可将写入请求分别投影到 EPC、TID、User、Reserved 四个标准 Memory Bank，服务层仍负责长度、密码、Busy 和设备能力校验；这确认其它 Bank 的软件链路已接通，但不替代现场标签写入验收。新增 App.Wpf 回归测试，当前自动化基线为 307 项（App.Wpf 116）。
+
 ## 1. 项目定位
 
 LLRP Reader Platform 是一个**厂商无关的 LLRP 应用框架 + 首个 WPF 消费者**：
@@ -51,10 +58,10 @@ LLRP Reader Platform 是一个**厂商无关的 LLRP 应用框架 + 首个 WPF �
 
 ```text
 dotnet build LlrpReaderPlatform.slnx   # 0 警告 0 错误
-dotnet test  LlrpReaderPlatform.slnx --no-build   # 304 项全绿
+dotnet test  LlrpReaderPlatform.slnx --no-build   # 307 项全绿
 ```
 
-测试分布：Contracts.Tests 5、Services.Tests 158、Infrastructure.Tests 7、App.Wpf.Tests 114、Architecture.Tests 7、Extensions.Impinj.Tests 13。
+测试分布：Contracts.Tests 5、Services.Tests 159、Infrastructure.Tests 7、App.Wpf.Tests 116、Architecture.Tests 7、Extensions.Impinj.Tests 13。
 
 WPF 发布：`dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj -c Release -r win-x64 --self-contained false -o artifacts/publish/win-x64`，然后运行 `artifacts/publish/win-x64/App.Wpf.exe`；发布目录已加入 `.gitignore`。
 

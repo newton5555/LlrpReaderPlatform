@@ -44,7 +44,10 @@ public sealed record ReaderRuntimeSnapshot
     /// <summary>标准天线能力（激活时填充；用于能力驱动设置布局）。</summary>
     public IReadOnlyList<ReaderAntennaInfo> Antennas { get; init; } = [];
 
-    /// <summary>标准 GPIO 数量；null 表示设备未返回可识别的 GPIO 能力参数。</summary>
+    /// <summary>
+    /// 标准 GPIO 数量；优先来自设备能力参数，若能力参数未声明，成功的 GPIO
+    /// 状态查询也可以补充当前运行时观察到的最大端口号。
+    /// </summary>
     public ushort? GpiCount { get; init; }
     public ushort? GpoCount { get; init; }
 

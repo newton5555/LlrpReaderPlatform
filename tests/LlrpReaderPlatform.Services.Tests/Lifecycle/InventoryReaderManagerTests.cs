@@ -923,7 +923,10 @@ public sealed class InventoryReaderManagerTests
 
         Assert.Empty(statuses.Gpis);
         Assert.True(Assert.Single(statuses.Gpos).State);
-        Assert.Equal(ReaderState.Disconnected, h.Manager.GetSnapshot(h.Profile.Id).State);
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.Equal((ushort)0, snapshot.GpiCount);
+        Assert.Equal((ushort)1, snapshot.GpoCount);
+        Assert.Equal(ReaderState.Disconnected, snapshot.State);
         Assert.False(session.IsConnected);
         await h.Manager.DisposeAsync();
     }
@@ -1019,6 +1022,43 @@ public sealed class InventoryReaderManagerTests
         Assert.True(Assert.Single(statuses.Gpos).State);
         Assert.Equal(1, session.ConnectCount);
         Assert.Equal(1, session.DisconnectCount);
+        Assert.False(session.IsConnected);
+    }
+
+    [Fact]
+    public async Task Gpio_status_query_enriches_unknown_gpio_counts_from_observed_ports()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        session.SettingsSnapshot = session.SettingsSnapshot with
+        {
+            Settings = new ReaderSettings
+            {
+                Configuration = new ReaderConfiguration
+                {
+                    Gpis =
+                    [
+                        new GpiStatus { GpiPortNumber = 1, Configured = true },
+                        new GpiStatus { GpiPortNumber = 4, Configured = true },
+                    ],
+                    Gpos =
+                    [
+                        new GpoConfiguration { GpoPortNumber = 2 },
+                        new GpoConfiguration { GpoPortNumber = 4 },
+                    ],
+                },
+            },
+        };
+
+        Tagging.GpioStatusSnapshot statuses = await h.Manager.GetGpioStatusAsync(h.Profile.Id);
+
+        Assert.Equal(4, statuses.Gpis.Max(static status => status.PortNumber));
+        Assert.Equal(4, statuses.Gpos.Max(static status => status.PortNumber));
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.Equal((ushort)4, snapshot.GpiCount);
+        Assert.Equal((ushort)4, snapshot.GpoCount);
+        Assert.False(snapshot.IsStale);
+        Assert.Equal(ReaderState.Disconnected, snapshot.State);
         Assert.False(session.IsConnected);
     }
 

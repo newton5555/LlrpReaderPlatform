@@ -140,6 +140,30 @@ public sealed class TagMemoryViewModelTests
     }
 
     [Fact]
+    public async Task Write_forwards_each_supported_memory_bank_from_the_wpf_page()
+    {
+        var h = new Harness();
+        FakeSession session = new() { TagAccessResult = new TagAccessResult(Succeeded: true) };
+        h.Register(new FakeSession(), session);
+        var vm = new TagMemoryViewModel(h.Manager)
+        {
+            Epc = "3001",
+            DataHex = "0102",
+        };
+
+        foreach (TagMemoryBank bank in vm.MemoryBanks)
+        {
+            vm.MemoryBank = bank;
+            await vm.WriteCommand.ExecuteAsync(h.Profile.Id);
+
+            Assert.Equal("写入成功。", vm.Result);
+            Assert.Equal(bank, session.LastTagWriteRequest?.MemoryBank);
+        }
+
+        Assert.Equal(vm.MemoryBanks.Count, session.WriteTagMemoryCount);
+    }
+
+    [Fact]
     public async Task Read_device_failure_is_projected_to_result()
     {
         var h = new Harness();

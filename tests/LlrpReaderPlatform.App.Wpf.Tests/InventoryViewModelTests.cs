@@ -353,6 +353,36 @@ public sealed class InventoryViewModelTests
     }
 
     [Fact]
+    public async Task Global_inventory_does_not_restart_ui_clock_after_all_readers_stop_during_start()
+    {
+        var factory = new FakeSessionFactory();
+        await using var readerManager = new ReaderManager(factory, new FakeProfileStore());
+        var profile = new ReaderProfile
+        {
+            Id = Guid.NewGuid(),
+            Host = "192.0.2.54",
+            Name = "Reader immediate stop",
+            IsEnabled = true,
+        };
+        factory.Queue.Enqueue(new FakeSession());
+        factory.Queue.Enqueue(new FakeSession());
+        Assert.True((await readerManager.AddAsync(profile, enableAfterAdding: false)).Succeeded);
+        await readerManager.SetEnabledAsync(profile.Id, enabled: true);
+
+        using var vm = new InventoryViewModel(
+            new BurstInventoryService { StopBeforeStartReturns = true },
+            readerManager: readerManager);
+
+        await vm.StartAllCommand.ExecuteAsync(null);
+        await Task.Delay(1_100);
+        vm.RefreshCommand.Execute(null);
+
+        Assert.False(vm.IsInventoryRunning);
+        Assert.Contains("GPI 触发", vm.Status);
+        Assert.Equal("00:00", vm.Elapsed);
+    }
+
+    [Fact]
     public async Task Global_inventory_keeps_other_reader_running_when_one_reader_closes()
     {
         var factory = new FakeSessionFactory();
