@@ -218,7 +218,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         TagMemory.UpdateAvailableReaders(Readers, SelectedReader?.ReaderId);
-        logger.LogDebug("WPF reader list refreshed: {ReaderCount}, selected {ReaderId}.", Readers.Count, SelectedReader?.ReaderId);
+        logger.LogTrace("WPF reader list refreshed: {ReaderCount}, selected {ReaderId}.", Readers.Count, SelectedReader?.ReaderId);
 
         // Apply the final item once, after the ListBox's transient null selection
         // has been suppressed. This keeps settings/inventory/tag-memory context

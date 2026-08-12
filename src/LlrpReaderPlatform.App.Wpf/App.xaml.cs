@@ -16,7 +16,6 @@ namespace LlrpReaderPlatform.App.Wpf;
 public partial class App : Application
 {
     private ServiceProvider? services;
-    private ILoggerFactory? sdkLoggerFactory;
     private ILogger<App>? logger;
 
     private const string LogOutputTemplate =
@@ -59,39 +58,14 @@ public partial class App : Application
             "logs");
         Directory.CreateDirectory(logDirectory);
 
+        Serilog.ILogger applicationLogger = CreateApplicationLogger(logDirectory);
         services.AddLogging(builder =>
         {
-            builder.SetMinimumLevel(LogLevel.Debug);
-            // EF Core SQL/parameter diagnostics are implementation noise for the
-            // application log. Keep migration, locking and provider failures at
-            // Warning+ while preserving platform/service diagnostics.
-            builder.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
-            builder.AddDebug();
-            builder.AddSerilog(CreateRollingLogger(
-                logDirectory,
-                "platform-.log",
-                static logEvent => !IsSdkLogEvent(logEvent) && !IsUiLogEvent(logEvent)),
-                dispose: true);
-            builder.AddSerilog(CreateRollingLogger(
-                logDirectory,
-                "ui-.log",
-                static logEvent => IsUiLogEvent(logEvent)),
-                dispose: true);
-        });
-
-        sdkLoggerFactory = LoggerFactory.Create(builder =>
-        {
-            // Keep SDK lifecycle/protocol errors and useful informational events, but do not
-            // send one Debug line for every RO_ACCESS_REPORT through the Debug provider. The
-            // transport Debug stream is a second bottleneck under ReportEveryNTags=1 and can
-            // make Visual Studio's output listener starve the WPF dispatcher.
-            builder.SetMinimumLevel(LogLevel.Information);
-            builder.AddDebug();
-            builder.AddSerilog(CreateRollingLogger(
-                logDirectory,
-                "sdk-.log",
-                static logEvent => IsSdkLogEvent(logEvent)),
-                dispose: true);
+            // Serilog is the sole logging provider. Its category-level overrides below are
+            // also the effective source of truth for the rolling files, so no event can
+            // bypass the configured SDK and EF Core thresholds after provider filtering.
+            builder.ClearProviders();
+            builder.AddSerilog(applicationLogger, dispose: true);
         });
 
         // 组合根：显式注册共享服务层、基础设施与已启用的厂商扩展。
@@ -99,29 +73,51 @@ public partial class App : Application
         services.AddLlrpInfrastructure();
         services.AddImpinjExtension();
 
-        // SDK / LLRP wire logs use a dedicated rolling file. The platform logger above
-        // keeps service and UI diagnostics separate from protocol traffic.
-        services.AddSingleton<IReaderSessionFactory>(_ =>
-            new LlrpReaderSessionFactory(sdkLoggerFactory
-                ?? throw new InvalidOperationException("SDK logger factory is not initialized.")));
+        // The reader stack receives the same application logger factory as every other
+        // component. Serilog then routes SDK categories to sdk-*.log.
+        services.AddSingleton<IReaderSessionFactory>(provider =>
+            new LlrpReaderSessionFactory(provider.GetRequiredService<ILoggerFactory>()));
 
         services.AddLlrpReaderPlatformWpf();
     }
 
-    private static Serilog.ILogger CreateRollingLogger(
-        string logDirectory,
-        string fileName,
-        Func<LogEvent, bool> includeEvent) =>
+    private static Serilog.ILogger CreateApplicationLogger(string logDirectory) =>
         new LoggerConfiguration()
             .MinimumLevel.Is(DefaultLogLevel)
-            .Filter.ByIncludingOnly(includeEvent)
-            .WriteTo.Async(configuration => configuration.File(
-                Path.Combine(logDirectory, fileName),
-                outputTemplate: LogOutputTemplate,
-                fileSizeLimitBytes: LogFileSizeLimitBytes,
-                rollOnFileSizeLimit: true,
-                rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 14))
+            // These category overrides must live in Serilog rather than only in the
+            // Microsoft.Extensions.Logging builder: Serilog is the file writer and the
+            // provider consults this logger when deciding whether Debug is enabled.
+            .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+            .MinimumLevel.Override("LlrpSdk", LogEventLevel.Information)
+            .MinimumLevel.Override("LlrpNet", LogEventLevel.Information)
+            .MinimumLevel.Override("LlrpReaderPlatform.Services.Sdk", LogEventLevel.Information)
+            .WriteTo.Async(configuration => configuration.Logger(logger => logger
+                .Filter.ByIncludingOnly(static logEvent => IsUiLogEvent(logEvent))
+                .WriteTo.File(
+                    Path.Combine(logDirectory, "ui-.log"),
+                    outputTemplate: LogOutputTemplate,
+                    fileSizeLimitBytes: LogFileSizeLimitBytes,
+                    rollOnFileSizeLimit: true,
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 14)))
+            .WriteTo.Async(configuration => configuration.Logger(logger => logger
+                .Filter.ByIncludingOnly(static logEvent => IsSdkLogEvent(logEvent))
+                .WriteTo.File(
+                    Path.Combine(logDirectory, "sdk-.log"),
+                    outputTemplate: LogOutputTemplate,
+                    fileSizeLimitBytes: LogFileSizeLimitBytes,
+                    rollOnFileSizeLimit: true,
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 14)))
+            .WriteTo.Async(configuration => configuration.Logger(logger => logger
+                .Filter.ByExcluding(static logEvent => IsSdkLogEvent(logEvent) || IsUiLogEvent(logEvent))
+                .WriteTo.File(
+                    Path.Combine(logDirectory, "platform-.log"),
+                    outputTemplate: LogOutputTemplate,
+                    fileSizeLimitBytes: LogFileSizeLimitBytes,
+                    rollOnFileSizeLimit: true,
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 14)))
             .CreateLogger();
 
     private static bool IsSdkLogEvent(LogEvent logEvent)
@@ -173,14 +169,7 @@ public partial class App : Application
         }
         finally
         {
-            try
-            {
-                sdkLoggerFactory?.Dispose();
-            }
-            finally
-            {
-                base.OnExit(e);
-            }
+            base.OnExit(e);
         }
     }
 
