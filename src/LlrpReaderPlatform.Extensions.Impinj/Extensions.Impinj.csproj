@@ -5,19 +5,13 @@
     <RootNamespace>LlrpReaderPlatform.Extensions.Impinj</RootNamespace>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+  <ItemGroup>
     <ProjectReference Include="..\LlrpReaderPlatform.Contracts\Contracts.csproj" />
     <ProjectReference Include="..\LlrpReaderPlatform.Services\Services.csproj" />
     <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpSdk.Extensions.Impinj\LlrpSdk.Extensions.Impinj.csproj" />
     <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpSdk.Extensions.Abstractions\LlrpSdk.Extensions.Abstractions.csproj" />
     <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpNet\LlrpNet.Core\LlrpNet.Core.csproj" />
     <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpNet\LlrpNet.Protocol.Impinj\LlrpNet.Protocol.Impinj.csproj" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
-    <ProjectReference Include="..\LlrpReaderPlatform.Contracts\Contracts.csproj" />
-    <ProjectReference Include="..\LlrpReaderPlatform.Services\Services.csproj" />
-    <PackageReference Include="LlrpSdk.Extensions.Impinj" />
   </ItemGroup>
 
 </Project>

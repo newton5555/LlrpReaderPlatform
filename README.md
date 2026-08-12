@@ -18,7 +18,8 @@ LLRP Reader Platform 是面向多种 LLRP Reader 的应用框架：厂商无关�
 6. [旧 WPF 功能迁移矩阵](docs/development/legacy-feature-matrix.md)
 7. [真机验收运行手册](docs/development/hardware-validation-runbook.md)
 8. [WPF 用户操作与故障排查](docs/development/wpf-user-and-troubleshooting.md)
-9. [ADR 索引](docs/decisions/README.md)
+9. [发布规范与 NuGet SDK 切换](docs/development/release.md)
+10. [ADR 索引](docs/decisions/README.md)
 
 ## 项目结构
 

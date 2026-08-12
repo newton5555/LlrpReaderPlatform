@@ -5,16 +5,11 @@
     <RootNamespace>LlrpReaderPlatform.Services</RootNamespace>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+  <ItemGroup>
     <ProjectReference Include="..\LlrpReaderPlatform.Contracts\Contracts.csproj" />
     <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpSdk\LlrpSdk.csproj" />
     <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpNet\LlrpNet.Core\LlrpNet.Core.csproj" />
     <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpNet\LlrpNet.Protocol\LlrpNet.Protocol.csproj" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
-    <ProjectReference Include="..\LlrpReaderPlatform.Contracts\Contracts.csproj" />
-    <PackageReference Include="LlrpSdk" />
   </ItemGroup>
 
   <ItemGroup>

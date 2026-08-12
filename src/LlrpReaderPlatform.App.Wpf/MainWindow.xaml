@@ -1,14 +1,21 @@
-<mah:MetroWindow x:Class="LlrpReaderPlatform.App.Wpf.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
-        xmlns:fa="clr-namespace:FontAwesome.Sharp;assembly=FontAwesome.Sharp"
-        xmlns:vm="clr-namespace:LlrpReaderPlatform.App.Wpf.ViewModels"
-        xmlns:views="clr-namespace:LlrpReaderPlatform.App.Wpf.Views"
-        Title="LLRP Reader Studio"
-        Height="780" Width="1240" MinHeight="650" MinWidth="1000"
-        WindowStartupLocation="CenterScreen"
-        GlowBrush="{DynamicResource MahApps.Brushes.Accent}">
+<mah:MetroWindow
+    x:Class="LlrpReaderPlatform.App.Wpf.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:fa="clr-namespace:FontAwesome.Sharp;assembly=FontAwesome.Sharp"
+    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+    xmlns:views="clr-namespace:LlrpReaderPlatform.App.Wpf.Views"
+    xmlns:vm="clr-namespace:LlrpReaderPlatform.App.Wpf.ViewModels"
+    Title="LLRP Reader Studio"
+    Width="1240"
+    Height="780"
+    MinWidth="1000"
+    MinHeight="650"
+    GlowBrush="{DynamicResource MahApps.Brushes.Accent}"
+    WindowStartupLocation="CenterScreen"
+    mc:Ignorable="d">
 
     <mah:MetroWindow.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
@@ -24,11 +31,12 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Root"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="14">
+                        <Border
+                            x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="14">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -53,11 +61,12 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Root"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="13">
+                        <Border
+                            x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="13">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -71,8 +80,10 @@
             </Setter>
         </Style>
 
-        <Style x:Key="NavigationButtonStyle" TargetType="Button"
-               BasedOn="{StaticResource FlatActionButtonStyle}">
+        <Style
+            x:Key="NavigationButtonStyle"
+            BasedOn="{StaticResource FlatActionButtonStyle}"
+            TargetType="Button">
             <Setter Property="Margin" Value="12,2" />
             <Setter Property="Padding" Value="12,8" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
@@ -115,208 +126,360 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="0" Grid.Column="0"
-                BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
-                BorderThickness="0,0,1,0">
+        <Border
+            Grid.Row="0"
+            Grid.Column="0"
+            BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
+            BorderThickness="0,0,1,0">
             <Grid>
                 <DockPanel Margin="0,16,0,12">
-                <StackPanel DockPanel.Dock="Bottom" Margin="16,8,16,4">
-                    <TextBlock Text="{Binding Status}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6" />
-                    <Button Command="{Binding NavigateCommand}" CommandParameter="AppSettings"
+                    <StackPanel Margin="16,8,16,4" DockPanel.Dock="Bottom">
+                        <TextBlock
+                            Margin="0,0,0,6"
+                            FontSize="11"
+                            Text="{Binding Status}"
+                            TextWrapping="Wrap" />
+                        <Button
+                            Command="{Binding NavigateCommand}"
+                            CommandParameter="AppSettings"
                             Style="{StaticResource NavigationButtonStyle}">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <fa:IconBlock Icon="Gear" IconFont="Solid" Width="20" FontSize="16"
-                                          Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                                          Margin="0,0,10,0" VerticalAlignment="Center" />
-                            <TextBlock Text="Software Settings" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Command="{Binding NavigateCommand}" CommandParameter="About"
-                            Style="{StaticResource NavigationButtonStyle}">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <fa:IconBlock Icon="InfoCircle" IconFont="Solid" Width="20" FontSize="16"
-                                          Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                                          Margin="0,0,10,0" VerticalAlignment="Center" />
-                            <TextBlock Text="About Studio" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-
-                <StackPanel>
-                    <Border Padding="16,14" Margin="12,0,12,20"
-                            BorderBrush="{DynamicResource MahApps.Brushes.Accent}" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="LLRP" FontSize="24" FontWeight="Bold"
-                                       Foreground="{DynamicResource MahApps.Brushes.Accent}" />
-                            <TextBlock Text="READER STUDIO" FontSize="11" FontWeight="Bold" Margin="0,2,0,0" />
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Text="SHOWCASES" FontSize="11" FontWeight="Bold" Margin="16,0,0,8" />
-                    <Button Command="{Binding NavigateCommand}" CommandParameter="Inventory"
-                            Style="{StaticResource NavigationButtonStyle}">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <fa:IconBlock Icon="SatelliteDish" IconFont="Solid" Width="20" FontSize="16"
-                                          Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                                          Margin="0,0,10,0" VerticalAlignment="Center" />
-                            <TextBlock Text="寻卡 / Inventory" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Command="{Binding NavigateCommand}" CommandParameter="TagMemory"
-                            Style="{StaticResource NavigationButtonStyle}">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <fa:IconBlock Icon="Microchip" IconFont="Solid" Width="20" FontSize="16"
-                                          Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                                          Margin="0,0,10,0" VerticalAlignment="Center" />
-                            <TextBlock Text="Tag Memory" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Command="{Binding NavigateCommand}" CommandParameter="TagLists"
-                            Style="{StaticResource NavigationButtonStyle}">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <fa:IconBlock Icon="Tags" IconFont="Solid" Width="20" FontSize="16"
-                                          Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                                          Margin="0,0,10,0" VerticalAlignment="Center" />
-                            <TextBlock Text="TOI" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Command="{Binding NavigateCommand}" CommandParameter="InventoryRuns"
-                            Style="{StaticResource NavigationButtonStyle}">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <fa:IconBlock Icon="History" IconFont="Solid" Width="20" FontSize="16"
-                                          Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                                          Margin="0,0,10,0" VerticalAlignment="Center" />
-                            <TextBlock Text="Inventory Runs" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-
-                    <DockPanel Margin="16,24,16,8">
-                        <Button Command="{Binding NavigateCommand}" CommandParameter="AddDataSource"
-                                DockPanel.Dock="Right" FontWeight="Bold" ToolTip="Add Data Source"
-                                Style="{StaticResource FlatCircleButtonStyle}">
-                            <TextBlock Text="+" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" />
+                            <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                                <fa:IconBlock
+                                    Width="20"
+                                    Margin="0,0,10,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="16"
+                                    Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                    Icon="Gear"
+                                    IconFont="Solid" />
+                                <TextBlock VerticalAlignment="Center" Text="Software Settings" />
+                            </StackPanel>
                         </Button>
-                        <TextBlock Text="DATA SOURCES" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" />
-                    </DockPanel>
+                        <Button
+                            Command="{Binding NavigateCommand}"
+                            CommandParameter="About"
+                            Style="{StaticResource NavigationButtonStyle}">
+                            <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                                <fa:IconBlock
+                                    Width="20"
+                                    Margin="0,0,10,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="16"
+                                    Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                    Icon="InfoCircle"
+                                    IconFont="Solid" />
+                                <TextBlock VerticalAlignment="Center" Text="About Studio" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
 
-                    <Grid Margin="12,0">
-                        <ListBox ItemsSource="{Binding Readers}" SelectedItem="{Binding SelectedReader}"
-                                 BorderThickness="0" MaxHeight="220"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                            <ListBox.ItemContainerStyle>
-                                <Style TargetType="ListBoxItem">
-                                    <Setter Property="Padding" Value="0" />
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="ListBoxItem">
-                                                <Border x:Name="ItemBorder" Background="Transparent"
-                                                        BorderBrush="Transparent" BorderThickness="1"
-                                                        CornerRadius="2" Margin="0,1">
-                                                    <ContentPresenter />
-                                                </Border>
-                                                <ControlTemplate.Triggers>
-                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="ItemBorder" Property="BorderBrush"
-                                                                Value="{DynamicResource MahApps.Brushes.Accent}" />
-                                                    </Trigger>
-                                                    <Trigger Property="IsSelected" Value="True">
-                                                        <Setter TargetName="ItemBorder" Property="BorderBrush"
-                                                                Value="{DynamicResource MahApps.Brushes.Accent}" />
-                                                    </Trigger>
-                                                </ControlTemplate.Triggers>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </ListBox.ItemContainerStyle>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate DataType="{x:Type vm:ReaderItemViewModel}">
-                                    <Border Padding="4,3" MinHeight="38">
-                                        <Grid>
+                    <StackPanel>
+                        <Border
+                            Margin="12,0,12,20"
+                            Padding="16,14"
+                            BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
+                            BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock
+                                    FontSize="24"
+                                    FontWeight="Bold"
+                                    Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                    Text="LLRP" />
+                                <TextBlock
+                                    Margin="0,2,0,0"
+                                    FontSize="11"
+                                    FontWeight="Bold"
+                                    Text="READER STUDIO" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock
+                            Margin="16,0,0,8"
+                            FontSize="11"
+                            FontWeight="Bold"
+                            Text="SHOWCASES" />
+                        <Button
+                            Command="{Binding NavigateCommand}"
+                            CommandParameter="Inventory"
+                            Style="{StaticResource NavigationButtonStyle}">
+                            <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                                <fa:IconBlock
+                                    Width="20"
+                                    Margin="0,0,10,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="16"
+                                    Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                    Icon="SatelliteDish"
+                                    IconFont="Solid" />
+                                <TextBlock VerticalAlignment="Center" Text="寻卡 / Inventory" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            Command="{Binding NavigateCommand}"
+                            CommandParameter="TagMemory"
+                            Style="{StaticResource NavigationButtonStyle}">
+                            <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                                <fa:IconBlock
+                                    Width="20"
+                                    Margin="0,0,10,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="16"
+                                    Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                    Icon="Microchip"
+                                    IconFont="Solid" />
+                                <TextBlock VerticalAlignment="Center" Text="Tag Memory" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            Command="{Binding NavigateCommand}"
+                            CommandParameter="TagLists"
+                            Style="{StaticResource NavigationButtonStyle}">
+                            <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                                <fa:IconBlock
+                                    Width="20"
+                                    Margin="0,0,10,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="16"
+                                    Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                    Icon="Tags"
+                                    IconFont="Solid" />
+                                <TextBlock VerticalAlignment="Center" Text="TOI" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            Command="{Binding NavigateCommand}"
+                            CommandParameter="InventoryRuns"
+                            Style="{StaticResource NavigationButtonStyle}">
+                            <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                                <fa:IconBlock
+                                    Width="20"
+                                    Margin="0,0,10,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="16"
+                                    Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                    Icon="History"
+                                    IconFont="Solid" />
+                                <TextBlock VerticalAlignment="Center" Text="Inventory Runs" />
+                            </StackPanel>
+                        </Button>
+
+                        <DockPanel Margin="16,24,16,8">
+                            <Button
+                                Command="{Binding NavigateCommand}"
+                                CommandParameter="AddDataSource"
+                                DockPanel.Dock="Right"
+                                FontWeight="Bold"
+                                Style="{StaticResource FlatCircleButtonStyle}"
+                                ToolTip="Add Data Source">
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    FontSize="16"
+                                    FontWeight="Bold"
+                                    Text="+" />
+                            </Button>
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                FontSize="11"
+                                FontWeight="Bold"
+                                Text="DATA SOURCES" />
+                        </DockPanel>
+
+                        <Grid Margin="12,0">
+                            <ListBox
+                                MaxHeight="220"
+                                BorderThickness="0"
+                                ItemsSource="{Binding Readers}"
+                                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                SelectedItem="{Binding SelectedReader}">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Padding" Value="0" />
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border
+                                                        x:Name="ItemBorder"
+                                                        Margin="0,1"
+                                                        Background="Transparent"
+                                                        BorderBrush="Transparent"
+                                                        BorderThickness="1"
+                                                        CornerRadius="2">
+                                                        <ContentPresenter />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:ReaderItemViewModel}">
+                                        <Border MinHeight="38" Padding="4,3">
+                                            <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="58" />
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
-                                            <mah:ToggleSwitch Grid.Column="0" IsOn="{Binding IsEnabled, Mode=TwoWay}"
-                                                              OnContent="" OffContent=""
-                                                              ToolTip="Enable/Disable reader"
-                                                              VerticalAlignment="Center" HorizontalAlignment="Left"
-                                                              Margin="0,0,8,0" />
-                                            <Button Grid.Column="1"
+                                                <mah:ToggleSwitch
+                                                    Grid.Column="0"
+                                                    Margin="0,0,8,0"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center"
+                                                    IsOn="{Binding IsEnabled, Mode=TwoWay}"
+                                                    OffContent=""
+                                                    OnContent=""
+                                                    ToolTip="Enable/Disable reader" />
+                                                <Button
+                                                    Grid.Column="1"
+                                                    MinHeight="28"
+                                                    Margin="0,0,6,0"
+                                                    Padding="0"
+                                                    HorizontalContentAlignment="Stretch"
+                                                    Background="Transparent"
+                                                    BorderBrush="Transparent"
+                                                    BorderThickness="0"
+                                                    FocusVisualStyle="{x:Null}"
                                                     Command="{Binding DataContext.OpenReaderSettingsCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                    CommandParameter="{Binding}" Background="Transparent"
-                                                    BorderThickness="0" HorizontalContentAlignment="Stretch"
-                                                    Padding="0" Margin="0,0,6,0" MinHeight="28">
-                                                <Grid VerticalAlignment="Center">
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto" />
-                                                        <RowDefinition Height="Auto" />
-                                                        <RowDefinition Height="Auto" />
-                                                        <RowDefinition Height="Auto" />
-                                                    </Grid.RowDefinitions>
-                                                    <TextBlock Grid.Row="0" Text="{Binding Name}" FontSize="12"
-                                                               FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Grid.Row="1" Text="{Binding Endpoint}" FontSize="10"
-                                                               Opacity="0.72" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Grid.Row="2" Text="{Binding StatusText}" FontSize="10"
-                                                               Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Grid.Row="3" Text="{Binding Details}" FontSize="9"
-                                                               Opacity="0.62" TextTrimming="CharacterEllipsis" />
-                                                </Grid>
-                                            </Button>
-                                            <Button Grid.Column="2"
+                                                    CommandParameter="{Binding}">
+                                                    <Button.Template>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <ContentPresenter
+                                                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                                Content="{TemplateBinding Content}"
+                                                                ContentTemplate="{TemplateBinding ContentTemplate}" />
+                                                        </ControlTemplate>
+                                                    </Button.Template>
+                                                    <Grid VerticalAlignment="Center">
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <TextBlock
+                                                            Grid.Row="0"
+                                                            FontSize="12"
+                                                            FontWeight="SemiBold"
+                                                            Text="{Binding Name}"
+                                                            TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock
+                                                            Grid.Row="1"
+                                                            FontSize="10"
+                                                            Opacity="0.72"
+                                                            Text="{Binding Endpoint}"
+                                                            TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock
+                                                            Grid.Row="2"
+                                                            FontSize="10"
+                                                            Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                                            Text="{Binding StatusText}"
+                                                            TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock
+                                                            Grid.Row="3"
+                                                            FontSize="9"
+                                                            Opacity="0.62"
+                                                            Text="{Binding Details}"
+                                                            TextTrimming="CharacterEllipsis" />
+                                                    </Grid>
+                                                </Button>
+                                                <Button
+                                                    Grid.Column="2"
+                                                    VerticalAlignment="Center"
                                                     Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                    CommandParameter="{Binding ReaderId}" ToolTip="Remove data source"
-                                                    VerticalAlignment="Center" Style="{StaticResource FlatMiniButtonStyle}">
-                                                <TextBlock Text="×" FontSize="14" FontWeight="Bold"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Center" />
-                                            </Button>
-                                            <Button Grid.Column="3"
+                                                    CommandParameter="{Binding ReaderId}"
+                                                    Style="{StaticResource FlatMiniButtonStyle}"
+                                                    ToolTip="Remove data source">
+                                                    <TextBlock
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        FontSize="14"
+                                                        FontWeight="Bold"
+                                                        Text="×" />
+                                                </Button>
+                                                <Button
+                                                    Grid.Column="3"
+                                                    Margin="2,0,0,0"
+                                                    VerticalAlignment="Center"
                                                     Command="{Binding DataContext.ActivateCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                    CommandParameter="{Binding}" ToolTip="Reconnect and refresh capabilities"
-                                                    VerticalAlignment="Center" Style="{StaticResource FlatMiniButtonStyle}"
-                                                    Margin="2,0,0,0">
-                                                <TextBlock Text="↻" FontSize="14" FontWeight="Bold"
-                                                           VerticalAlignment="Center" HorizontalAlignment="Center" />
-                                            </Button>
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource FlatMiniButtonStyle}"
+                                                    ToolTip="Reconnect and refresh capabilities">
+                                                    <TextBlock
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        FontSize="14"
+                                                        FontWeight="Bold"
+                                                        Text="↻" />
+                                                </Button>
 
-                                            <Border Grid.ColumnSpan="4" Panel.ZIndex="5"
-                                                    Visibility="{Binding IsOperationBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                <Border
+                                                    Grid.ColumnSpan="4"
+                                                    Panel.ZIndex="5"
                                                     Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
-                                                    Opacity="0.94" CornerRadius="2">
-                                                <StackPanel Orientation="Horizontal"
-                                                            HorizontalAlignment="Center"
-                                                            VerticalAlignment="Center">
-                                                    <mah:ProgressRing Width="22" Height="22" IsActive="True"
-                                                                      Foreground="{DynamicResource MahApps.Brushes.Accent}" />
-                                                    <TextBlock Text="{Binding OperationStatus}" Margin="8,0,0,0"
-                                                               FontSize="11" FontWeight="SemiBold"
-                                                               VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </Border>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </Grid>
-                </StackPanel>
+                                                    CornerRadius="2"
+                                                    Opacity="0.94"
+                                                    Visibility="{Binding IsOperationBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <StackPanel
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Orientation="Horizontal">
+                                                        <mah:ProgressRing
+                                                            Width="22"
+                                                            Height="22"
+                                                            Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                                            IsActive="True" />
+                                                        <TextBlock
+                                                            Margin="8,0,0,0"
+                                                            VerticalAlignment="Center"
+                                                            FontSize="11"
+                                                            FontWeight="SemiBold"
+                                                            Text="{Binding OperationStatus}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </StackPanel>
                 </DockPanel>
 
-                <Grid Visibility="{Binding IsSidebarBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
-                      Panel.ZIndex="10">
+                <Grid
+                    Panel.ZIndex="10"
+                    d:Visibility="Collapsed"
+                    Visibility="{Binding IsSidebarBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Border Background="{DynamicResource MahApps.Brushes.ThemeBackground}" Opacity="0.92" />
-                    <StackPanel Width="210" HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <mah:ProgressRing Width="52" Height="52" IsLarge="True" IsActive="True"
-                                          Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                                          HorizontalAlignment="Center" />
-                        <TextBlock Text="{Binding BusyMessage}" FontSize="13" FontWeight="SemiBold"
-                                   HorizontalAlignment="Center" TextAlignment="Center"
-                                   TextWrapping="Wrap" Margin="0,14,0,0" />
+                    <StackPanel
+                        Width="210"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                        <mah:ProgressRing
+                            Width="52"
+                            Height="52"
+                            HorizontalAlignment="Center"
+                            Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                            IsActive="True"
+                            IsLarge="True" />
+                        <TextBlock
+                            Margin="0,14,0,0"
+                            HorizontalAlignment="Center"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Text="{Binding BusyMessage}"
+                            TextAlignment="Center"
+                            TextWrapping="Wrap" />
                     </StackPanel>
                 </Grid>
             </Grid>
@@ -325,47 +488,92 @@
         <Grid Grid.Row="0" Grid.Column="1">
             <ContentControl Content="{Binding CurrentPage}" />
 
-            <Grid Visibility="{Binding IsContentBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
-                  Panel.ZIndex="10">
+            <Grid Panel.ZIndex="10" Visibility="{Binding IsContentBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Border Background="{DynamicResource MahApps.Brushes.ThemeBackground}" Opacity="0.92" />
-                <StackPanel Width="280" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <mah:ProgressRing Width="56" Height="56" IsLarge="True" IsActive="True"
-                                      Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                                      HorizontalAlignment="Center" />
-                    <TextBlock Text="{Binding ContentBusyMessage}" FontSize="15" FontWeight="SemiBold"
-                               HorizontalAlignment="Center" TextAlignment="Center"
-                               TextWrapping="Wrap" Margin="0,14,0,0" />
+                <StackPanel
+                    Width="280"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                    <mah:ProgressRing
+                        Width="56"
+                        Height="56"
+                        HorizontalAlignment="Center"
+                        Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                        IsActive="True"
+                        IsLarge="True" />
+                    <TextBlock
+                        Margin="0,14,0,0"
+                        HorizontalAlignment="Center"
+                        FontSize="15"
+                        FontWeight="SemiBold"
+                        Text="{Binding ContentBusyMessage}"
+                        TextAlignment="Center"
+                        TextWrapping="Wrap" />
                 </StackPanel>
             </Grid>
         </Grid>
 
-        <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                BorderBrush="{DynamicResource MahApps.Brushes.Accent}" BorderThickness="0,1,0,0"
-                Padding="20,0">
+        <Border
+            Grid.Row="1"
+            Grid.Column="0"
+            Grid.ColumnSpan="2"
+            Padding="20,0"
+            BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
+            BorderThickness="0,1,0,0">
             <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Inventory.DurationModeText}"
-                               FontSize="12" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding Inventory.Status}"
-                               FontSize="12"
-                               Foreground="{DynamicResource MahApps.Brushes.Gray3}"
-                               TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center"
-                               Margin="18,0,12,0" />
+                <StackPanel
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal">
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Text="{Binding Inventory.DurationModeText}" />
+                    <TextBlock
+                        Margin="18,0,12,0"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                        Text="{Binding Inventory.Status}"
+                        TextTrimming="CharacterEllipsis" />
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Unique Tags: " FontSize="12" />
-                    <TextBlock Text="{Binding Inventory.UniqueTagCount}" FontSize="12" FontWeight="Bold" />
-                    <TextBlock Text="  |  Read Rate: " FontSize="12" Margin="16,0,0,0" />
-                    <TextBlock Text="{Binding Inventory.TagRate}" FontSize="12" FontWeight="Bold" />
-                    <TextBlock Text="  |  Dropped: " FontSize="12" Margin="16,0,0,0" />
-                    <TextBlock Text="{Binding Inventory.DroppedTagReportCount}" FontSize="12" FontWeight="Bold" />
-                    <TextBlock Text="  |  Selected: " FontSize="12" Margin="16,0,0,0" />
-                    <TextBlock Text="{Binding SelectedReader.Name}" FontSize="12" FontWeight="Bold" />
+                <StackPanel
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal">
+                    <TextBlock FontSize="12" Text="Unique Tags: " />
+                    <TextBlock
+                        FontSize="12"
+                        FontWeight="Bold"
+                        Text="{Binding Inventory.UniqueTagCount}" />
+                    <TextBlock
+                        Margin="16,0,0,0"
+                        FontSize="12"
+                        Text="  |  Read Rate: " />
+                    <TextBlock
+                        FontSize="12"
+                        FontWeight="Bold"
+                        Text="{Binding Inventory.TagRate}" />
+                    <TextBlock
+                        Margin="16,0,0,0"
+                        FontSize="12"
+                        Text="  |  Dropped: " />
+                    <TextBlock
+                        FontSize="12"
+                        FontWeight="Bold"
+                        Text="{Binding Inventory.DroppedTagReportCount}" />
+                    <TextBlock
+                        Margin="16,0,0,0"
+                        FontSize="12"
+                        Text="  |  Selected: " />
+                    <TextBlock
+                        FontSize="12"
+                        FontWeight="Bold"
+                        Text="{Binding SelectedReader.Name}" />
                 </StackPanel>
             </Grid>
         </Border>

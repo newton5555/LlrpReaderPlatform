@@ -27,6 +27,7 @@
     <File Path="docs/development/legacy-feature-matrix.md" />
     <File Path="docs/development/hardware-validation-runbook.md" />
     <File Path="docs/development/wpf-user-and-troubleshooting.md" />
+    <File Path="docs/development/release.md" />
   </Folder>
   <Folder Name="/docs/decisions/">
     <File Path="docs/decisions/README.md" />

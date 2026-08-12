@@ -29,6 +29,7 @@
 - [旧 WPF 功能迁移矩阵](development/legacy-feature-matrix.md)
 - [真机验收运行手册](development/hardware-validation-runbook.md)
 - [WPF 用户操作与故障排查](development/wpf-user-and-troubleshooting.md)
+- [发布规范与 NuGet SDK 切换](development/release.md)
 
 ### 5. 决策记录
 
