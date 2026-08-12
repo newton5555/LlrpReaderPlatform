@@ -34,6 +34,7 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
     private readonly IReaderProfileStore profileStore;
     private readonly IInventoryRunStore? runStore;
     private readonly IInventoryTagLog tagLog;
+    private readonly IInventorySnapshotStore snapshotStore;
     private readonly ILogger<ReaderManager> logger;
     private readonly IReadOnlyList<LlrpReaderPlatform.Services.Extensions.IReaderExtensionModule> extensionModules;
     private readonly ConcurrentDictionary<Guid, ReaderHandle> readers = new();
@@ -55,12 +56,14 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
         ILogger<ReaderManager>? logger = null,
         IEnumerable<LlrpReaderPlatform.Services.Extensions.IReaderExtensionModule>? extensions = null,
         IInventoryRunStore? runStore = null,
-        IInventoryTagLog? tagLog = null)
+        IInventoryTagLog? tagLog = null,
+        IInventorySnapshotStore? snapshotStore = null)
     {
         this.sessionFactory = sessionFactory;
         this.profileStore = profileStore ?? new InMemoryProfileStore();
         this.runStore = runStore;
         this.tagLog = tagLog ?? new NullInventoryTagLog();
+        this.snapshotStore = snapshotStore ?? new NullInventorySnapshotStore();
         this.logger = logger ?? NullLogger<ReaderManager>.Instance;
         this.extensionModules = extensions?.ToArray() ?? [];
 
@@ -1051,13 +1054,33 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
         IReadOnlyList<TagObservation> tags = GetTags(handle.Profile.Id);
         await DrainTagLogsAsync(handle).ConfigureAwait(false);
         await CompleteTagLogQuietlyAsync(active).ConfigureAwait(false);
-        await SaveRunQuietlyAsync(active with
+        InventoryRunRecord completedRun = active with
         {
             EndedAtUtc = DateTimeOffset.UtcNow,
             StopReason = reason,
             UniqueTagCount = tags.Count,
             TotalReadCount = tags.Sum(static x => x.ReadCount),
-        }).ConfigureAwait(false);
+        };
+        string? snapshotPath = await SaveSnapshotQuietlyAsync(
+            new InventoryRunSnapshot
+            {
+                Run = completedRun,
+                Tags = tags,
+            }).ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(snapshotPath))
+        {
+            completedRun = completedRun with { SnapshotFilePath = snapshotPath };
+        }
+
+        await SaveRunQuietlyAsync(completedRun).ConfigureAwait(false);
+        logger.LogInformation(
+            "Inventory run {RunId} completed for reader {ReaderId}: {StopReason}, {TotalReadCount} reads, {UniqueTagCount} unique tags, snapshot {SnapshotFilePath}.",
+            completedRun.Id,
+            completedRun.ReaderId,
+            completedRun.StopReason,
+            completedRun.TotalReadCount,
+            completedRun.UniqueTagCount,
+            completedRun.SnapshotFilePath ?? "none");
     }
 
     private async Task CompleteRunAfterDrainAsync(ReaderHandle handle, string reason)
@@ -1216,6 +1239,11 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                 return new StartInventoryResult(false, InventoryError.ReaderBusy, "Inventory is already running.")
                 { ErrorCode = PlatformErrorCode.ReaderBusy };
             }
+
+            // StartInventory is a complete connect -> inventory lease operation. Publish
+            // the per-Reader transition before probe/connect so consumers can indicate
+            // progress for this Reader without blocking unrelated Readers or the page.
+            TransitionState(handle, ReaderState.Connecting);
 
             // 启动恢复时可能只注册了无厂商扩展的标准 Session。若用户直接从寻卡页
             // 开始盘存，也必须先完成标准 Probe -> 扩展匹配 -> 会话替换，不能依赖用户
@@ -1733,11 +1761,17 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                         }
 
                         return await handle.Session.ReadTagMemoryAsync(request, ct).ConfigureAwait(false);
-                    }).ConfigureAwait(false);
+                    },
+                    static exception => exception is TimeoutException).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
                 throw;
+            }
+            catch (TimeoutException)
+            {
+                return new Tagging.TagAccessResult(false, "未找到匹配标签，操作超时。")
+                { ErrorCode = PlatformErrorCode.NotFound };
             }
             catch (ReaderBusyException ex)
             {
@@ -1803,11 +1837,17 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                         }
 
                         return await handle.Session.WriteTagMemoryAsync(request, ct).ConfigureAwait(false);
-                    }).ConfigureAwait(false);
+                    },
+                    static exception => exception is TimeoutException).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
                 throw;
+            }
+            catch (TimeoutException)
+            {
+                return new Tagging.TagAccessResult(false, "未找到匹配标签，操作超时。")
+                { ErrorCode = PlatformErrorCode.NotFound };
             }
             catch (ReaderBusyException ex)
             {
@@ -2005,6 +2045,19 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
         }
     }
 
+    private async Task<string?> SaveSnapshotQuietlyAsync(InventoryRunSnapshot snapshot)
+    {
+        try
+        {
+            return await snapshotStore.SaveAsync(snapshot, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to persist final inventory snapshot for run {RunId}.", snapshot.Run.Id);
+            return null;
+        }
+    }
+
     private async Task ProcessTagBatchAsync(IReadOnlyList<TagWorkItem> batch)
     {
         var latestByReaderAndEpc = new Dictionary<
@@ -2171,7 +2224,8 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
     private async Task<T> ExecuteShortSessionOperationAsync<T>(
         ReaderHandle handle,
         CancellationToken ct,
-        Func<Task<T>> operation)
+        Func<Task<T>> operation,
+        Func<Exception, bool>? isExpectedFailure = null)
     {
         try
         {
@@ -2190,6 +2244,12 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
         {
             // 明确的能力/平台边界错误不代表 TCP Session 已损坏；保留稳定错误码，
             // 让调用方看到 Unsupported/InvalidSettings，而不是错误地进入 Faulted。
+            throw;
+        }
+        catch (Exception ex) when (isExpectedFailure?.Invoke(ex) == true)
+        {
+            // Tag Access 未找到目标时由 SDK 以 TimeoutException 结束。这是一次正常的
+            // 业务失败，不代表 TCP Session 或 Reader 能力已经损坏。
             throw;
         }
         catch (Exception ex)

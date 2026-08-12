@@ -86,6 +86,7 @@ public sealed class InventoryViewModelTests
         {
             Id = Guid.NewGuid(),
             Name = "Doors",
+            ColorHex = "#123456",
             Entries =
             [
                 new TagListEntry
@@ -94,13 +95,15 @@ public sealed class InventoryViewModelTests
                     TagListId = Guid.NewGuid(),
                     EpcHex = "3001",
                     DisplayName = "Door 1",
+                    ColorHex = "#ABCDEF",
                 },
             ],
         });
 
         await vm.RefreshTagLabelsAsync();
 
-        Assert.Equal("Doors: Door 1", Assert.Single(vm.Tags).TagListName);
+        Assert.Equal("Door 1", Assert.Single(vm.Tags).TagListName);
+        Assert.Equal("#ABCDEF", Assert.Single(vm.Tags).TagColorHex);
         Assert.Equal(0, service.StartCount);
         Assert.Equal(0, service.StopCount);
     }
@@ -484,6 +487,33 @@ public sealed class InventoryViewModelTests
     }
 
     [Fact]
+    public async Task Global_inventory_becomes_stoppable_after_first_reader_starts()
+    {
+        Guid firstReaderId = Guid.NewGuid();
+        Guid delayedReaderId = Guid.NewGuid();
+        var readerManager = new StaticReaderManager(
+        [
+            CreateSnapshot(firstReaderId, "Fast Reader"),
+            CreateSnapshot(delayedReaderId, "Delayed Reader"),
+        ]);
+        var service = new DelayedSecondInventoryService(firstReaderId, delayedReaderId);
+        using var vm = new InventoryViewModel(service, readerManager: readerManager);
+
+        Task startAll = vm.StartAllCommand.ExecuteAsync(null);
+        await service.DelayedStartEntered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.True(vm.IsInventoryRunning);
+        Assert.True(vm.IsInventoryStarting);
+
+        await vm.ToggleAllCommand.ExecuteAsync(null);
+        await startAll;
+
+        Assert.False(vm.IsInventoryRunning);
+        Assert.False(vm.IsInventoryStarting);
+        Assert.Equal(new[] { firstReaderId }, service.StoppedReaderIds);
+    }
+
+    [Fact]
     public async Task Start_exception_clears_active_state_and_reports_failure()
     {
         var service = new ThrowingInventoryService { ThrowOnStart = true };
@@ -652,6 +682,105 @@ public sealed class InventoryViewModelTests
             Task.FromResult(new TagAccessResult(true));
         public Task SetGpoAsync(Guid readerId, GpioCommand command, CancellationToken ct = default) =>
             Task.CompletedTask;
+    }
+
+    private static ReaderRuntimeSnapshot CreateSnapshot(Guid id, string name) => new()
+    {
+        ReaderId = id,
+        Profile = new ReaderProfile
+        {
+            Id = id,
+            Name = name,
+            Host = "192.0.2.1",
+            IsEnabled = true,
+        },
+        State = ReaderState.Disconnected,
+        IsEnabled = true,
+    };
+
+    private sealed class StaticReaderManager(IReadOnlyList<ReaderRuntimeSnapshot> readers) : IReaderManager
+    {
+        public IReadOnlyList<ReaderRuntimeSnapshot> Readers { get; } = readers;
+        public event EventHandler<ReaderStateChangedEventArgs>? StateChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public Task InitializeAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task<ReaderAddResult> AddAsync(ReaderProfile profile, bool enableAfterAdding, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+        public Task<ReaderProbeResult> ProbeAsync(ReaderProfile profile, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+        public Task RemoveAsync(Guid readerId, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task SetEnabledAsync(Guid readerId, bool enabled, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+        public Task<ReaderActivationResult> ActivateAsync(Guid readerId, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+        public Task DeactivateAsync(Guid readerId, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+        public ReaderRuntimeSnapshot GetSnapshot(Guid readerId) => Readers.Single(x => x.ReaderId == readerId);
+    }
+
+    private sealed class DelayedSecondInventoryService(Guid firstReaderId, Guid delayedReaderId) : IInventoryService
+    {
+        public TaskCompletionSource DelayedStartEntered { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public List<Guid> StoppedReaderIds { get; } = [];
+        public long DroppedTagReportCount => 0;
+        public event EventHandler<InventoryLifecycleChangedEventArgs>? LifecycleChanged;
+        public event EventHandler<TagObservedEventArgs>? TagObserved
+        {
+            add { }
+            remove { }
+        }
+        public event EventHandler<GpiObservedEventArgs>? GpiChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public async Task<StartInventoryResult> StartInventoryAsync(
+            Guid readerId,
+            InventorySpec spec,
+            CancellationToken ct = default)
+        {
+            if (readerId == delayedReaderId)
+            {
+                DelayedStartEntered.TrySetResult();
+                await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+            }
+
+            Assert.Equal(firstReaderId, readerId);
+            LifecycleChanged?.Invoke(this, new InventoryLifecycleChangedEventArgs(
+                readerId,
+                InventoryLifecycleState.Started));
+            return new StartInventoryResult(true);
+        }
+
+        public Task StopInventoryAsync(Guid readerId, CancellationToken ct = default)
+        {
+            StoppedReaderIds.Add(readerId);
+            LifecycleChanged?.Invoke(this, new InventoryLifecycleChangedEventArgs(
+                readerId,
+                InventoryLifecycleState.Stopped,
+                InventoryStopReason.Manual));
+            return Task.CompletedTask;
+        }
+
+        public IReadOnlyList<TagObservation> GetTags(Guid readerId) => [];
+        public void ClearTags(Guid readerId) { }
+        public Task<IReadOnlyList<GpiPortStatus>> GetGpiStatusAsync(Guid readerId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<GpiPortStatus>>([]);
+        public Task<IReadOnlyList<GpoPortStatus>> GetGpoStatusAsync(Guid readerId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<GpoPortStatus>>([]);
+        public Task<GpioStatusSnapshot> GetGpioStatusAsync(Guid readerId, CancellationToken ct = default) =>
+            Task.FromResult(new GpioStatusSnapshot { Gpis = [], Gpos = [] });
+        public Task<TagAccessResult> ReadTagMemoryAsync(Guid readerId, TagReadRequest request, CancellationToken ct = default) =>
+            Task.FromResult(new TagAccessResult(true));
+        public Task<TagAccessResult> WriteTagMemoryAsync(Guid readerId, TagWriteRequest request, CancellationToken ct = default) =>
+            Task.FromResult(new TagAccessResult(true));
+        public Task SetGpoAsync(Guid readerId, GpioCommand command, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class BurstInventoryService : IInventoryService

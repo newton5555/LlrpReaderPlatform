@@ -177,7 +177,7 @@
                             <fa:IconBlock Icon="Tags" IconFont="Solid" Width="20" FontSize="16"
                                           Foreground="{DynamicResource MahApps.Brushes.Accent}"
                                           Margin="0,0,10,0" VerticalAlignment="Center" />
-                            <TextBlock Text="Tag Lists" VerticalAlignment="Center" />
+                            <TextBlock Text="TOI" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
                     <Button Command="{Binding NavigateCommand}" CommandParameter="InventoryRuns"
@@ -233,7 +233,7 @@
                             <ListBox.ItemTemplate>
                                 <DataTemplate DataType="{x:Type vm:ReaderItemViewModel}">
                                     <Border Padding="4,3" MinHeight="38">
-                                            <Grid>
+                                        <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="58" />
                                                     <ColumnDefinition Width="*" />
@@ -283,6 +283,21 @@
                                                 <TextBlock Text="↻" FontSize="14" FontWeight="Bold"
                                                            VerticalAlignment="Center" HorizontalAlignment="Center" />
                                             </Button>
+
+                                            <Border Grid.ColumnSpan="4" Panel.ZIndex="5"
+                                                    Visibility="{Binding IsOperationBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                                                    Opacity="0.94" CornerRadius="2">
+                                                <StackPanel Orientation="Horizontal"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center">
+                                                    <mah:ProgressRing Width="22" Height="22" IsActive="True"
+                                                                      Foreground="{DynamicResource MahApps.Brushes.Accent}" />
+                                                    <TextBlock Text="{Binding OperationStatus}" Margin="8,0,0,0"
+                                                               FontSize="11" FontWeight="SemiBold"
+                                                               VerticalAlignment="Center" />
+                                                </StackPanel>
+                                            </Border>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>

@@ -135,8 +135,8 @@ public sealed class MainViewModelSmokeTests
         var item = Assert.Single(vm.Readers);
         Assert.Equal(profile.Id, item.ReaderId);
         Assert.Same(item, vm.SelectedReader);
-        Assert.Equal(item.ReaderId, vm.TagMemory.ReaderId);
-        Assert.Equal(item.Name, vm.TagMemory.ReaderName);
+        Assert.Null(vm.TagMemory.ReaderId);
+        Assert.Empty(vm.TagMemory.AvailableReaders);
         Assert.False(vm.IsBusy);
         Assert.Contains("已就绪", vm.Status);
     }

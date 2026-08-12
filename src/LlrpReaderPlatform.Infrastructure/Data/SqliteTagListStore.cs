@@ -28,7 +28,10 @@ public sealed class SqliteTagListStore(IDbContextFactory<PlatformDbContext> cont
         ArgumentNullException.ThrowIfNull(tagList);
         await PlatformDbSchema.EnsureMigratedAsync(contextFactory, ct).ConfigureAwait(false);
         await using PlatformDbContext db = await contextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-        TagListEntity? entity = await db.TagLists.Include(x => x.Entries)
+        // Do not Include the old entries here. Loading them into the change tracker,
+        // deleting them and then adding new objects with the same keys causes EF Core
+        // to track two instances of the same TagListEntry during TOI edits.
+        TagListEntity? entity = await db.TagLists
             .SingleOrDefaultAsync(x => x.Id == tagList.Id, ct).ConfigureAwait(false);
         if (entity is null)
         {
@@ -37,13 +40,18 @@ public sealed class SqliteTagListStore(IDbContextFactory<PlatformDbContext> cont
         }
         else
         {
-            db.TagListEntries.RemoveRange(entity.Entries);
+            // ExecuteDelete bypasses the change tracker and is safe because this
+            // context intentionally did not load the previous child entities.
+            await db.TagListEntries
+                .Where(x => x.TagListId == tagList.Id)
+                .ExecuteDeleteAsync(ct)
+                .ConfigureAwait(false);
         }
 
         entity.Name = tagList.Name;
         entity.IsEnabled = tagList.IsEnabled;
         entity.ColorHex = tagList.ColorHex;
-        entity.Entries = tagList.Entries.Select(x => new TagListEntryEntity
+        List<TagListEntryEntity> entries = tagList.Entries.Select(x => new TagListEntryEntity
         {
             Id = x.Id,
             TagListId = tagList.Id,
@@ -51,6 +59,7 @@ public sealed class SqliteTagListStore(IDbContextFactory<PlatformDbContext> cont
             DisplayName = x.DisplayName,
             ColorHex = x.ColorHex,
         }).ToList();
+        db.TagListEntries.AddRange(entries);
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
     }
 

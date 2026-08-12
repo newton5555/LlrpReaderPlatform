@@ -41,6 +41,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITagListStore, SqliteTagListStore>();
         services.AddSingleton<IInventoryRunStore, SqliteInventoryRunStore>();
         services.AddSingleton<IInventoryTagLog, JsonLinesInventoryTagLog>();
+        services.AddSingleton<IInventorySnapshotStore, JsonInventorySnapshotStore>();
         return services;
     }
 }

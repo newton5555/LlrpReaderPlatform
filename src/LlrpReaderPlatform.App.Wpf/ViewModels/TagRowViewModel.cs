@@ -9,14 +9,20 @@ public sealed class TagRowViewModel : ObservableObject
     private int index;
     private string readerName = string.Empty;
     private string tagListName = string.Empty;
+    private string tagColorHex = string.Empty;
     private TagObservation tag;
 
-    public TagRowViewModel(TagObservation tag, string? tagListName = null)
-        : this(Guid.Empty, string.Empty, tag, tagListName)
+    public TagRowViewModel(TagObservation tag, string? tagListName = null, string? tagColorHex = null)
+        : this(Guid.Empty, string.Empty, tag, tagListName, tagColorHex)
     {
     }
 
-    public TagRowViewModel(Guid readerId, string readerName, TagObservation tag, string? tagListName = null)
+    public TagRowViewModel(
+        Guid readerId,
+        string readerName,
+        TagObservation tag,
+        string? tagListName = null,
+        string? tagColorHex = null)
     {
         ArgumentNullException.ThrowIfNull(tag);
         ReaderId = readerId;
@@ -24,6 +30,7 @@ public sealed class TagRowViewModel : ObservableObject
         this.tag = tag;
         this.readerName = readerName;
         this.tagListName = tagListName ?? string.Empty;
+        this.tagColorHex = tagColorHex ?? string.Empty;
     }
 
     public Guid ReaderId { get; }
@@ -38,7 +45,9 @@ public sealed class TagRowViewModel : ObservableObject
 
     public string ReaderName => readerName;
     public string TagListName => tagListName;
+    public string TagColorHex => tagColorHex;
     public string Tid => tag.Tid;
+    public bool HasTid => !string.IsNullOrWhiteSpace(tag.Tid);
     public string? PcBitsHex => tag.PcBitsHex;
     public long ReadCount => tag.ReadCount;
     public string FirstSeen => tag.FirstSeen.ToString("HH:mm:ss");
@@ -49,7 +58,11 @@ public sealed class TagRowViewModel : ObservableObject
     public ushort? LastAntenna => tag.LastAntenna;
     public ushort? LastChannelIndex => tag.LastChannelIndex;
 
-    public void Update(string nextReaderName, TagObservation nextTag, string nextTagListName)
+    public void Update(
+        string nextReaderName,
+        TagObservation nextTag,
+        string nextTagListName,
+        string nextTagColorHex = "")
     {
         ArgumentNullException.ThrowIfNull(nextTag);
         if (!string.Equals(Epc, nextTag.Epc, StringComparison.OrdinalIgnoreCase))
@@ -60,9 +73,11 @@ public sealed class TagRowViewModel : ObservableObject
         TagObservation previous = tag;
         string previousReaderName = readerName;
         string previousTagListName = tagListName;
+        string previousTagColorHex = tagColorHex;
         tag = nextTag;
         readerName = nextReaderName;
         tagListName = nextTagListName;
+        tagColorHex = nextTagColorHex;
 
         if (!ReferenceEquals(previous, nextTag))
         {
@@ -76,9 +91,14 @@ public sealed class TagRowViewModel : ObservableObject
         {
             OnPropertyChanged(nameof(TagListName));
         }
+        if (!string.Equals(previousTagColorHex, nextTagColorHex, StringComparison.OrdinalIgnoreCase))
+        {
+            OnPropertyChanged(nameof(TagColorHex));
+        }
         if (!string.Equals(previous.Tid, nextTag.Tid, StringComparison.Ordinal))
         {
             OnPropertyChanged(nameof(Tid));
+            OnPropertyChanged(nameof(HasTid));
         }
         if (!string.Equals(previous.PcBitsHex, nextTag.PcBitsHex, StringComparison.Ordinal))
         {

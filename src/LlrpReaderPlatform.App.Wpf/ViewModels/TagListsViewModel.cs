@@ -3,47 +3,46 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LlrpReaderPlatform.Contracts.Errors;
 using LlrpReaderPlatform.Contracts.Persistence;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LlrpReaderPlatform.App.Wpf.ViewModels;
 
 /// <summary>
-/// Tag List 管理页。列表、条目和保存全部通过 Contracts store 完成，WPF 不接触 EF/SQLite。
+/// 标签映射维护页。UI 只呈现 EPC、标签名称和颜色；底层 TagListDefinition
+/// 仅作为现有 SQLite/Contracts 的兼容存储容器，不再暴露多个 List 的概念。
 /// </summary>
 public partial class TagListsViewModel : ObservableObject, IPageOperationOwner, IDisposable
 {
+    private static readonly Guid SystemTagListId = Guid.Parse("7DE7A792-6233-4DF7-A874-1E2213091868");
+    private const string SystemTagListName = "Tags of Interest";
+    private const string DefaultColor = "#5EEAD4";
+
     private readonly ITagListStore store;
+    private readonly ILogger<TagListsViewModel> logger;
     private readonly CancellationTokenSource lifetimeCts = new();
     private readonly CancellationToken lifetimeToken;
     private CancellationTokenSource? activeOperationCts;
-    private bool loading;
+    private IReadOnlyList<Guid> loadedListIds = [];
     private bool disposed;
+    private int operationInFlight;
 
-    public TagListsViewModel(ITagListStore store)
+    public TagListsViewModel(
+        ITagListStore store,
+        ILogger<TagListsViewModel>? logger = null)
     {
         this.store = store;
+        this.logger = logger ?? NullLogger<TagListsViewModel>.Instance;
         lifetimeToken = lifetimeCts.Token;
     }
 
-    public ObservableCollection<TagListEditorItem> Lists { get; } = [];
     public ObservableCollection<TagListEntryEditorItem> Entries { get; } = [];
 
-    /// <summary>Tag List 成功保存或删除后通知其它 WPF 页面刷新自己的投影。</summary>
+    /// <summary>标签映射保存后通知寻卡页立即重新投影现有行。</summary>
     public event EventHandler? Changed;
 
     [ObservableProperty]
-    private TagListEditorItem? selectedList;
-
-    [ObservableProperty]
     private TagListEntryEditorItem? selectedEntry;
-
-    [ObservableProperty]
-    private string listName = string.Empty;
-
-    [ObservableProperty]
-    private string listColor = "#5EEAD4";
-
-    [ObservableProperty]
-    private bool listEnabled = true;
 
     [ObservableProperty]
     private string entryEpc = string.Empty;
@@ -52,221 +51,223 @@ public partial class TagListsViewModel : ObservableObject, IPageOperationOwner, 
     private string entryDisplayName = string.Empty;
 
     [ObservableProperty]
+    private string entryColor = DefaultColor;
+
+    [ObservableProperty]
     private string? status;
 
     [ObservableProperty]
     private bool isBusy;
 
-    private int operationInFlight;
-
-    partial void OnSelectedListChanged(TagListEditorItem? value)
-    {
-        if (value is null || loading)
-        {
-            return;
-        }
-
-        ListName = value.Name;
-        ListColor = value.ColorHex;
-        ListEnabled = value.IsEnabled;
-        Entries.Clear();
-        foreach (TagListEntry entry in value.Entries)
-        {
-            Entries.Add(new TagListEntryEditorItem(entry));
-        }
-    }
+    public int EntryCount => Entries.Count;
 
     [RelayCommand]
     private async Task LoadAsync()
     {
-        if (disposed)
+        if (disposed || !TryBeginOperation())
         {
-            return;
-        }
+            if (!disposed)
+            {
+                Status = "标签操作进行中，请稍候。";
+            }
 
-        if (!TryBeginOperation())
-        {
-            Status = "Tag List 操作进行中，请稍候。";
             return;
         }
 
         CancellationTokenSource operationCts = BeginOperation();
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation("WPF operation {Operation} started: {OperationId}.", "LoadTagLists", operationId);
         try
         {
-            await LoadCoreAsync(operationCts.Token);
-        }
-        finally
-        {
-            EndOperation(operationCts);
-        }
-    }
-
-    private async Task LoadCoreAsync(CancellationToken ct)
-    {
-        try
-        {
-            Guid? selectedId = SelectedList?.Id;
-            loading = true;
-            IReadOnlyList<TagListDefinition> definitions = await store.GetAllAsync(ct);
-            if (disposed || ct.IsCancellationRequested)
+            IReadOnlyList<TagListDefinition> definitions = await store.GetAllAsync(operationCts.Token);
+            if (disposed || operationCts.IsCancellationRequested)
             {
                 return;
             }
 
-            Lists.Clear();
-            foreach (TagListDefinition definition in definitions)
+            loadedListIds = definitions.Select(static list => list.Id).Distinct().ToArray();
+            Entries.Clear();
+
+            // 兼容之前已经创建的多个列表：读取时展开成一张标签映射表。相同 EPC
+            // 优先使用启用列表中的第一条；下次保存时收敛为唯一系统容器。
+            IEnumerable<(TagListDefinition List, TagListEntry Entry)> flattened = definitions
+                .OrderByDescending(static list => list.IsEnabled)
+                .SelectMany(static list => list.Entries.Select(entry => (list, entry)));
+            foreach ((TagListDefinition list, TagListEntry entry) in flattened
+                         .GroupBy(static item => NormalizeHex(item.Entry.EpcHex), StringComparer.OrdinalIgnoreCase)
+                         .Where(static group => !string.IsNullOrWhiteSpace(group.Key))
+                         .Select(static group => group.First()))
             {
-                Lists.Add(new TagListEditorItem(definition));
+                Entries.Add(new TagListEntryEditorItem(new TagListEntry
+                {
+                    Id = entry.Id,
+                    TagListId = SystemTagListId,
+                    EpcHex = NormalizeHex(entry.EpcHex),
+                    DisplayName = entry.DisplayName,
+                    ColorHex = NormalizeColor(entry.ColorHex ?? list.ColorHex),
+                }));
             }
 
-            Status = $"已加载 {Lists.Count} 个 Tag List。";
-
-            // 选择变更回调在 loading 期间被抑制；在列表完成重建后重新选择，
-            // 确保 Entries 不会继续显示上一个 Tag List 的条目。
-            loading = false;
-            if (selectedId is { } id)
-            {
-                SelectedList = Lists.FirstOrDefault(x => x.Id == id);
-            }
+            SelectedEntry = Entries.FirstOrDefault();
+            NotifyEntryCountChanged();
+            Status = $"已加载 {Entries.Count} 个标签。";
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, entries {EntryCount}.",
+                "LoadTagLists",
+                operationId,
+                Entries.Count);
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        catch (OperationCanceledException) when (operationCts.IsCancellationRequested)
         {
-            // 页面销毁时取消数据库读取。
+            // 页面切换或应用退出。
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}.", "LoadTagLists", operationId);
             if (!disposed)
             {
-                Status = PlatformErrorDisplay.Failure("读取 Tag List", PlatformErrorCode.PersistenceFailed, ex.Message);
+                Status = PlatformErrorDisplay.Failure("读取标签", PlatformErrorCode.PersistenceFailed, ex.Message);
             }
         }
         finally
         {
-            loading = false;
+            EndOperation(operationCts);
         }
     }
 
     [RelayCommand]
     private void New()
     {
-        SelectedList = null;
-        ListName = "New Tag List";
-        ListColor = "#5EEAD4";
-        ListEnabled = true;
-        Entries.Clear();
+        SelectedEntry = null;
         EntryEpc = string.Empty;
         EntryDisplayName = string.Empty;
-        Status = "已创建未保存的 Tag List。";
+        EntryColor = DefaultColor;
+        Status = "请输入 EPC、标签名称和颜色。";
     }
 
     [RelayCommand]
     private void AddEntry()
     {
         string epc = NormalizeHex(EntryEpc);
-        if (epc.Length == 0 || epc.Length % 4 != 0 || !IsHex(epc))
+        if (!TryValidateEntry(epc, EntryDisplayName, EntryColor, out string color, out string? error))
         {
-            Status = "EPC 必须是非空、偶数个 16-bit word 的十六进制字符串。";
+            Status = error;
             return;
         }
 
-        if (Entries.Any(x => string.Equals(x.EpcHex, epc, StringComparison.OrdinalIgnoreCase)))
+        if (Entries.Any(item => string.Equals(item.EpcHex, epc, StringComparison.OrdinalIgnoreCase)))
         {
-            Status = "该 EPC 已在当前 Tag List 中。";
+            Status = "该 EPC 已存在，可以直接在表格中修改名称或颜色。";
             return;
         }
 
-        Entries.Add(new TagListEntryEditorItem(new TagListEntry
+        var item = new TagListEntryEditorItem(new TagListEntry
         {
             Id = Guid.NewGuid(),
-            TagListId = SelectedList?.Id ?? Guid.Empty,
+            TagListId = SystemTagListId,
             EpcHex = epc,
             DisplayName = EntryDisplayName.Trim(),
-        }));
-        EntryEpc = string.Empty;
-        EntryDisplayName = string.Empty;
+            ColorHex = color,
+        });
+        Entries.Add(item);
+        SelectedEntry = item;
+        NotifyEntryCountChanged();
+        New();
+        SelectedEntry = item;
+        Status = "标签已添加；点击 SAVE CHANGES 写入数据库。";
     }
 
     [RelayCommand]
     private void RemoveEntry(TagListEntryEditorItem? item)
     {
-        if (item is not null)
+        if (item is null || !Entries.Remove(item))
         {
-            Entries.Remove(item);
+            return;
         }
+
+        SelectedEntry = Entries.FirstOrDefault();
+        NotifyEntryCountChanged();
+        Status = "标签已移除；点击 SAVE CHANGES 写入数据库。";
     }
 
     [RelayCommand]
     private async Task SaveAsync()
     {
-        if (disposed)
+        if (disposed || !TryBeginOperation())
         {
+            if (!disposed)
+            {
+                Status = "标签操作进行中，请稍候。";
+            }
+
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(ListName))
-        {
-            Status = "Tag List 名称不能为空。";
-            return;
-        }
-
-        if (!TryBeginOperation())
-        {
-            Status = "Tag List 操作进行中，请稍候。";
-            return;
-        }
-
-        Guid listId = SelectedList?.Id ?? Guid.NewGuid();
         CancellationTokenSource operationCts = BeginOperation();
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation("WPF operation {Operation} started: {OperationId}.", "SaveTagLists", operationId);
         try
         {
             var normalizedEntries = new List<TagListEntry>(Entries.Count);
             var seenEpcs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (TagListEntryEditorItem item in Entries)
             {
-                string normalizedEpc = NormalizeHex(item.EpcHex);
-                if (normalizedEpc.Length == 0 || normalizedEpc.Length % 4 != 0 || !IsHex(normalizedEpc))
+                string epc = NormalizeHex(item.EpcHex);
+                if (!TryValidateEntry(epc, item.DisplayName, item.ColorHex, out string color, out string? error))
                 {
-                    Status = $"EPC '{item.EpcHex}' 必须是非空、完整 16-bit word 的十六进制字符串。";
+                    Status = error;
                     return;
                 }
 
-                if (!seenEpcs.Add(normalizedEpc))
+                if (!seenEpcs.Add(epc))
                 {
-                    Status = $"EPC '{normalizedEpc}' 在当前 Tag List 中重复。";
+                    Status = $"EPC '{epc}' 重复。";
                     return;
                 }
 
-                normalizedEntries.Add(item.ToRecord(listId) with { EpcHex = normalizedEpc });
+                normalizedEntries.Add(new TagListEntry
+                {
+                    Id = item.Id,
+                    TagListId = SystemTagListId,
+                    EpcHex = epc,
+                    DisplayName = item.DisplayName.Trim(),
+                    ColorHex = color,
+                });
             }
 
-            var definition = new TagListDefinition
+            await store.SaveAsync(new TagListDefinition
             {
-                Id = listId,
-                Name = ListName.Trim(),
-                ColorHex = string.IsNullOrWhiteSpace(ListColor) ? "#5EEAD4" : ListColor.Trim(),
-                IsEnabled = ListEnabled,
+                Id = SystemTagListId,
+                Name = SystemTagListName,
+                IsEnabled = true,
+                ColorHex = DefaultColor,
                 Entries = normalizedEntries,
-            };
-            await store.SaveAsync(definition, operationCts.Token);
-            await LoadCoreAsync(operationCts.Token);
-            if (disposed || operationCts.IsCancellationRequested)
+            }, operationCts.Token);
+
+            foreach (Guid obsoleteListId in loadedListIds.Where(static id => id != SystemTagListId))
             {
-                return;
+                await store.DeleteAsync(obsoleteListId, operationCts.Token);
             }
 
-            SelectedList = Lists.FirstOrDefault(x => x.Id == listId);
-            Status = $"Tag List “{definition.Name}” 已保存。";
+            loadedListIds = [SystemTagListId];
+            Status = $"已保存 {normalizedEntries.Count} 个标签。";
             Changed?.Invoke(this, EventArgs.Empty);
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, entries {EntryCount}.",
+                "SaveTagLists",
+                operationId,
+                normalizedEntries.Count);
         }
         catch (OperationCanceledException) when (operationCts.IsCancellationRequested)
         {
-            // 页面销毁时取消数据库保存。
+            // 页面切换或应用退出。
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}.", "SaveTagLists", operationId);
             if (!disposed)
             {
-                Status = PlatformErrorDisplay.Failure("保存 Tag List", PlatformErrorCode.PersistenceFailed, ex.Message);
+                Status = PlatformErrorDisplay.Failure("保存标签", PlatformErrorCode.PersistenceFailed, ex.Message);
             }
         }
         finally
@@ -275,58 +276,37 @@ public partial class TagListsViewModel : ObservableObject, IPageOperationOwner, 
         }
     }
 
-    [RelayCommand]
-    private async Task DeleteAsync()
+    private static bool TryValidateEntry(
+        string epc,
+        string displayName,
+        string colorValue,
+        out string color,
+        out string? error)
     {
-        if (disposed)
+        color = NormalizeColor(colorValue);
+        if (epc.Length == 0 || epc.Length % 4 != 0 || !IsHex(epc))
         {
-            return;
+            error = "EPC 必须是非空、完整 16-bit word 的十六进制字符串。";
+            return false;
         }
 
-        if (SelectedList is null)
+        if (string.IsNullOrWhiteSpace(displayName))
         {
-            Status = "请先选择 Tag List。";
-            return;
+            error = $"EPC '{epc}' 的 Tag Name 不能为空。";
+            return false;
         }
 
-        if (!TryBeginOperation())
+        if (!IsColorHex(color))
         {
-            Status = "Tag List 操作进行中，请稍候。";
-            return;
+            error = $"EPC '{epc}' 的颜色必须是 #RRGGBB 或 #AARRGGBB。";
+            return false;
         }
 
-        Guid id = SelectedList.Id;
-        CancellationTokenSource operationCts = BeginOperation();
-        try
-        {
-            await store.DeleteAsync(id, operationCts.Token);
-            SelectedList = null;
-            Entries.Clear();
-            await LoadCoreAsync(operationCts.Token);
-            if (disposed || operationCts.IsCancellationRequested)
-            {
-                return;
-            }
-
-            Status = "Tag List 已删除。";
-            Changed?.Invoke(this, EventArgs.Empty);
-        }
-        catch (OperationCanceledException) when (operationCts.IsCancellationRequested)
-        {
-            // 页面销毁时取消数据库删除。
-        }
-        catch (Exception ex)
-        {
-            if (!disposed)
-            {
-                Status = PlatformErrorDisplay.Failure("删除 Tag List", PlatformErrorCode.PersistenceFailed, ex.Message);
-            }
-        }
-        finally
-        {
-            EndOperation(operationCts);
-        }
+        error = null;
+        return true;
     }
+
+    private void NotifyEntryCountChanged() => OnPropertyChanged(nameof(EntryCount));
 
     private bool TryBeginOperation() =>
         Interlocked.CompareExchange(ref operationInFlight, 1, 0) == 0
@@ -338,15 +318,11 @@ public partial class TagListsViewModel : ObservableObject, IPageOperationOwner, 
         return true;
     }
 
-    public void CancelPendingOperations() => CancelActiveOperation();
-
     private CancellationTokenSource BeginOperation()
     {
         CancellationTokenSource operationCts =
             CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
-        CancellationTokenSource? previous = Interlocked.Exchange(
-            ref activeOperationCts,
-            operationCts);
+        CancellationTokenSource? previous = Interlocked.Exchange(ref activeOperationCts, operationCts);
         CancelAndDispose(previous);
         return operationCts;
     }
@@ -359,16 +335,15 @@ public partial class TagListsViewModel : ObservableObject, IPageOperationOwner, 
         Volatile.Write(ref operationInFlight, 0);
     }
 
-    private void CancelActiveOperation()
+    public void CancelPendingOperations()
     {
-        CancellationTokenSource? operationCts = Volatile.Read(ref activeOperationCts);
         try
         {
-            operationCts?.Cancel();
+            Volatile.Read(ref activeOperationCts)?.Cancel();
         }
         catch (ObjectDisposedException)
         {
-            // 页面切换与操作完成的释放可能并发发生。
+            // 操作完成和页面切换可能并发。
         }
     }
 
@@ -399,12 +374,12 @@ public partial class TagListsViewModel : ObservableObject, IPageOperationOwner, 
         }
 
         disposed = true;
-        CancelActiveOperation();
+        CancelPendingOperations();
         lifetimeCts.Cancel();
         lifetimeCts.Dispose();
     }
 
-    private static string NormalizeHex(string value) => value.Trim()
+    private static string NormalizeHex(string? value) => (value ?? string.Empty).Trim()
         .Replace("0x", string.Empty, StringComparison.OrdinalIgnoreCase)
         .Replace(" ", string.Empty, StringComparison.Ordinal)
         .Replace("-", string.Empty, StringComparison.Ordinal)
@@ -414,34 +389,27 @@ public partial class TagListsViewModel : ObservableObject, IPageOperationOwner, 
     private static bool IsHex(string value) => value.All(static character =>
         character is >= '0' and <= '9'
             or >= 'A' and <= 'F');
-}
 
-public sealed partial class TagListEditorItem : ObservableObject
-{
-    public TagListEditorItem(TagListDefinition definition)
+    private static string NormalizeColor(string? value)
     {
-        Id = definition.Id;
-        Name = definition.Name;
-        IsEnabled = definition.IsEnabled;
-        ColorHex = definition.ColorHex;
-        Entries = definition.Entries;
+        string normalized = string.IsNullOrWhiteSpace(value) ? DefaultColor : value.Trim().ToUpperInvariant();
+        return normalized.StartsWith('#') ? normalized : $"#{normalized}";
     }
 
-    public Guid Id { get; }
-    public string Name { get; }
-    public bool IsEnabled { get; }
-    public string ColorHex { get; }
-    public IReadOnlyList<TagListEntry> Entries { get; }
+    private static bool IsColorHex(string value) =>
+        value.Length is 7 or 9
+        && value[0] == '#'
+        && IsHex(value[1..]);
 }
 
 public sealed partial class TagListEntryEditorItem : ObservableObject
 {
-    public TagListEntryEditorItem(TagListEntry entry)
+    public TagListEntryEditorItem(TagListEntry entry, string inheritedColorHex = "#5EEAD4")
     {
         Id = entry.Id;
         EpcHex = entry.EpcHex;
         DisplayName = entry.DisplayName;
-        ColorHex = entry.ColorHex ?? string.Empty;
+        ColorHex = string.IsNullOrWhiteSpace(entry.ColorHex) ? inheritedColorHex : entry.ColorHex;
     }
 
     public Guid Id { get; }
@@ -454,13 +422,4 @@ public sealed partial class TagListEntryEditorItem : ObservableObject
 
     [ObservableProperty]
     private string colorHex;
-
-    public TagListEntry ToRecord(Guid listId) => new()
-    {
-        Id = Id,
-        TagListId = listId,
-        EpcHex = EpcHex,
-        DisplayName = DisplayName,
-        ColorHex = string.IsNullOrWhiteSpace(ColorHex) ? null : ColorHex,
-    };
 }

@@ -4,8 +4,12 @@
              xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
         <Style x:Key="TagAccessActionStyle" TargetType="Button"
                BasedOn="{StaticResource FlatActionButtonStyle}">
+            <Setter Property="MinWidth" Value="132" />
+            <Setter Property="Padding" Value="16,9" />
+            <Setter Property="FontWeight" Value="SemiBold" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsBusy}" Value="True">
                     <Setter Property="IsEnabled" Value="False" />
@@ -18,122 +22,292 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+
+        <Style x:Key="TagAccessSectionStyle" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
+        </Style>
+
+        <Style x:Key="TagAccessSectionHeaderStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
+            <Setter Property="Padding" Value="10,5" />
+        </Style>
+
+        <Style x:Key="TagAccessSectionHeaderTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style x:Key="TagAccessFieldLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+
+        <Style x:Key="TagAccessHintStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Gray3}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
     </UserControl.Resources>
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="36" MaxWidth="820" HorizontalAlignment="Left">
-            <TextBlock Text="Tag Memory" FontSize="28" FontWeight="SemiBold"
-                       Foreground="{DynamicResource MahApps.Brushes.Accent}" />
-            <TextBlock Text="Target one exact EPC or TID. Reads and writes use the active LLRP reader."
-                       TextWrapping="Wrap" FontSize="14" LineHeight="22" Margin="0,6,0,24"
-                       Foreground="{DynamicResource MahApps.Brushes.Gray3}" />
-            <TextBlock TextWrapping="Wrap" Margin="0,0,0,12" FontSize="14">
-                <Run Text="Operating reader: " FontWeight="SemiBold" />
-                <Run Text="{Binding ReaderName}" />
-            </TextBlock>
-            <TextBlock Text="当前 Reader 未声明标准 Tag Access 能力，读写操作不可用。"
-                       TextWrapping="Wrap" Margin="0,0,0,16"
-                       Foreground="{DynamicResource MahApps.Brushes.Gray3}">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
-                        <Setter Property="Visibility" Value="Collapsed" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsTagAccessAvailable}" Value="False">
-                                <Setter Property="Visibility" Value="Visible" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-            </TextBlock>
 
-            <Border BorderThickness="1"
-                    BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
-                    CornerRadius="4"
-                    Padding="24"
-                    Margin="0,0,0,24"
-                    Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
+    <Grid Margin="28,24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" MaxWidth="1080" HorizontalAlignment="Stretch">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel>
+                <TextBlock Text="Tag Memory" FontSize="28" FontWeight="SemiBold"
+                           Foreground="{DynamicResource MahApps.Brushes.Accent}" />
+                <TextBlock Text="Read or write one exact EPC or TID target through the selected Reader."
+                           Style="{StaticResource TagAccessHintStyle}"
+                           FontSize="13" Margin="0,5,0,0" />
+            </StackPanel>
+
+            <Border Grid.Column="1" Margin="24,2,0,0" Padding="12,8"
+                    BorderThickness="1" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                    CornerRadius="3" VerticalAlignment="Top">
                 <StackPanel>
-                    <TextBlock Text="TAG ACCESS" FontWeight="Bold" FontSize="14" Margin="0,0,0,14" />
-                    <ProgressBar Height="4" Margin="0,0,0,14"
-                                 IsIndeterminate="True"
-                                 Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
-
-                    <UniformGrid Columns="2" Margin="0,0,0,20">
-                        <StackPanel Margin="0,0,8,0">
-                            <TextBlock Text="Target type" FontWeight="SemiBold" Margin="0,0,0,8" />
-                            <ComboBox ItemsSource="{Binding SelectionBanks}" SelectedItem="{Binding SelectionBank}"
-                                      Padding="8">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Converter={StaticResource TagMemoryBankDisplayConverter}}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                        </StackPanel>
-                        <StackPanel Margin="8,0,0,0">
-                            <TextBlock Text="Match (hex)" FontWeight="SemiBold" Margin="0,0,0,8" />
-                            <TextBox Text="{Binding Epc, UpdateSourceTrigger=PropertyChanged}"
-                                     mah:TextBoxHelper.Watermark="EPC or TID in hexadecimal"
-                                     mah:TextBoxHelper.ClearTextButton="True"
-                                     Padding="10" FontFamily="Consolas, Courier New" FontSize="16" FontWeight="SemiBold" />
-                        </StackPanel>
-                    </UniformGrid>
-
-                    <UniformGrid Columns="4" Margin="0,0,0,20">
-                        <StackPanel Margin="0,0,8,0">
-                            <TextBlock Text="Memory bank" FontWeight="SemiBold" Margin="0,0,0,8" />
-                            <ComboBox ItemsSource="{Binding MemoryBanks}" SelectedItem="{Binding MemoryBank}"
-                                      Padding="8">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Converter={StaticResource TagMemoryBankDisplayConverter}}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                        </StackPanel>
-                        <StackPanel Margin="4,0,4,0">
-                            <TextBlock Text="Word pointer" FontWeight="SemiBold" Margin="0,0,0,8" />
-                            <TextBox Text="{Binding WordPointer, UpdateSourceTrigger=PropertyChanged}"
-                                     Padding="8" mah:TextBoxHelper.Watermark="Offset" />
-                        </StackPanel>
-                        <StackPanel Margin="4,0,4,0">
-                            <TextBlock Text="Word count" FontWeight="SemiBold" Margin="0,0,0,8" />
-                            <TextBox Text="{Binding WordCount, UpdateSourceTrigger=PropertyChanged}"
-                                     Padding="8" mah:TextBoxHelper.Watermark="Length" />
-                        </StackPanel>
-                        <StackPanel Margin="8,0,0,0">
-                            <TextBlock Text="Access password" FontWeight="SemiBold" Margin="0,0,0,8" />
-                            <TextBox Text="{Binding AccessPassword, UpdateSourceTrigger=PropertyChanged}"
-                                     Padding="8" mah:TextBoxHelper.Watermark="00000000"
-                                     FontFamily="Consolas, Courier New" />
-                        </StackPanel>
-                    </UniformGrid>
-
-                    <TextBlock Text="Data (hex words)" FontWeight="SemiBold" Margin="0,0,0,8" />
-                    <TextBox Text="{Binding DataHex, UpdateSourceTrigger=PropertyChanged}" Height="140"
-                             AcceptsReturn="True" TextWrapping="Wrap"
-                             mah:TextBoxHelper.Watermark="Data read from or to be written to the tag..."
-                             Padding="12" Margin="0,0,0,24"
-                             FontFamily="Consolas, Courier New" FontSize="14" />
-
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="READ MEMORY" Command="{Binding ReadCommand}"
-                                CommandParameter="{Binding ReaderId}"
-                                Style="{StaticResource TagAccessActionStyle}"
-                                MinWidth="140" Padding="16,10" FontWeight="SemiBold" />
-                        <Button Content="WRITE MEMORY" Command="{Binding WriteCommand}"
-                                CommandParameter="{Binding ReaderId}"
-                                Style="{StaticResource TagAccessActionStyle}"
-                                Margin="16,0,0,0" MinWidth="140" Padding="16,10" FontWeight="SemiBold" />
-                    </StackPanel>
-
-                    <Border BorderThickness="1" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
-                            CornerRadius="4" Padding="12" Margin="0,20,0,0"
-                            Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
-                        <TextBlock Text="{Binding Result, Mode=OneWay}" TextWrapping="Wrap"
-                                   FontFamily="Consolas, Courier New" FontSize="14" />
-                    </Border>
+                    <TextBlock Text="OPERATING READER" FontSize="10" FontWeight="Bold"
+                               Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                               Margin="0,0,0,5" />
+                    <ComboBox ItemsSource="{Binding AvailableReaders}"
+                              SelectedItem="{Binding SelectedAccessReader, Mode=TwoWay}"
+                              MinWidth="260" MaxWidth="320" Padding="7,4"
+                              IsEnabled="{Binding CanSelectReader}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid MinWidth="230" ToolTip="{Binding Endpoint}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" Margin="0,0,14,0" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Host}"
+                                               FontFamily="Consolas, Courier New" FontSize="11"
+                                               Foreground="{DynamicResource MahApps.Brushes.Gray3}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </StackPanel>
             </Border>
-        </StackPanel>
-    </ScrollViewer>
+        </Grid>
+
+        <Border Grid.Row="1" MaxWidth="1080" HorizontalAlignment="Stretch"
+                Margin="0,16,0,0" Padding="12,9"
+                BorderThickness="1" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsTagAccessAvailable}" Value="False">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <TextBlock Text="当前 Reader 未声明标准 Tag Access 能力，读写操作不可用。"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource MahApps.Brushes.Gray3}" />
+        </Border>
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <Grid MaxWidth="1080" HorizontalAlignment="Stretch" Margin="0,16,0,24">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Style="{StaticResource TagAccessSectionStyle}"
+                        Margin="0,0,0,14">
+                    <DockPanel LastChildFill="True">
+                        <Border DockPanel.Dock="Top" Style="{StaticResource TagAccessSectionHeaderStyle}">
+                            <TextBlock Text="TARGET TAG"
+                                       Style="{StaticResource TagAccessSectionHeaderTextStyle}" />
+                        </Border>
+                        <Grid Margin="18,16,18,18">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="210" />
+                                <ColumnDefinition Width="20" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Target type"
+                                           Style="{StaticResource TagAccessFieldLabelStyle}" />
+                                <ComboBox ItemsSource="{Binding SelectionBanks}"
+                                          SelectedItem="{Binding SelectionBank}"
+                                          Padding="8">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Converter={StaticResource TagMemoryBankDisplayConverter}}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Exact match (hex)"
+                                           Style="{StaticResource TagAccessFieldLabelStyle}" />
+                                <ComboBox ItemsSource="{Binding TargetMatches}"
+                                          Text="{Binding Epc, UpdateSourceTrigger=PropertyChanged}"
+                                          IsEditable="True" IsTextSearchEnabled="False"
+                                          StaysOpenOnEdit="True"
+                                          mah:TextBoxHelper.Watermark="Select a discovered value or enter hexadecimal"
+                                          mah:TextBoxHelper.ClearTextButton="True"
+                                          Padding="10" FontFamily="Consolas, Courier New"
+                                          FontSize="16" FontWeight="SemiBold">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}" FontFamily="Consolas, Courier New" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBlock Text="Values come from this Reader's inventory results; manual hexadecimal input is also supported."
+                                           Style="{StaticResource TagAccessHintStyle}"
+                                           Margin="0,6,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="330" />
+                        <ColumnDefinition Width="14" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Style="{StaticResource TagAccessSectionStyle}">
+                        <DockPanel LastChildFill="True">
+                            <Border DockPanel.Dock="Top" Style="{StaticResource TagAccessSectionHeaderStyle}">
+                                <TextBlock Text="MEMORY RANGE"
+                                           Style="{StaticResource TagAccessSectionHeaderTextStyle}" />
+                            </Border>
+                            <StackPanel Margin="18,16,18,18">
+                                <TextBlock Text="Memory bank"
+                                           Style="{StaticResource TagAccessFieldLabelStyle}" />
+                                <ComboBox ItemsSource="{Binding MemoryBanks}"
+                                          SelectedItem="{Binding MemoryBank}"
+                                          Padding="8" Margin="0,0,0,16">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Converter={StaticResource TagMemoryBankDisplayConverter}}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="12" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Word pointer"
+                                                   Style="{StaticResource TagAccessFieldLabelStyle}" />
+                                        <TextBox Text="{Binding WordPointer, UpdateSourceTrigger=PropertyChanged}"
+                                                 Padding="8" mah:TextBoxHelper.Watermark="Offset" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Word count"
+                                                   Style="{StaticResource TagAccessFieldLabelStyle}" />
+                                        <TextBox Text="{Binding WordCount, UpdateSourceTrigger=PropertyChanged}"
+                                                 Padding="8" mah:TextBoxHelper.Watermark="Length" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <TextBlock Text="Access password"
+                                           Style="{StaticResource TagAccessFieldLabelStyle}" />
+                                <TextBox Text="{Binding AccessPassword, UpdateSourceTrigger=PropertyChanged}"
+                                         Padding="8" mah:TextBoxHelper.Watermark="00000000"
+                                         FontFamily="Consolas, Courier New" />
+                                <TextBlock Text="8 hexadecimal digits; use 00000000 when no password is configured."
+                                           Style="{StaticResource TagAccessHintStyle}"
+                                           Margin="0,6,0,0" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <Border Grid.Column="2" Style="{StaticResource TagAccessSectionStyle}">
+                        <DockPanel LastChildFill="True">
+                            <Border DockPanel.Dock="Top" Style="{StaticResource TagAccessSectionHeaderStyle}">
+                                <TextBlock Text="DATA AND OPERATION"
+                                           Style="{StaticResource TagAccessSectionHeaderTextStyle}" />
+                            </Border>
+                            <Grid Margin="18,16,18,18">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="Data (hex words)"
+                                           Style="{StaticResource TagAccessFieldLabelStyle}" />
+                                <TextBox Grid.Row="1"
+                                         Text="{Binding DataHex, UpdateSourceTrigger=PropertyChanged}"
+                                         MinHeight="146" AcceptsReturn="True"
+                                         VerticalScrollBarVisibility="Auto" TextWrapping="Wrap"
+                                         mah:TextBoxHelper.Watermark="Data read from or to be written to the tag..."
+                                         Padding="12" FontFamily="Consolas, Courier New" FontSize="14" />
+
+                                <ProgressBar Grid.Row="2" Height="4" Margin="0,12,0,0"
+                                             IsIndeterminate="True"
+                                             Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                                <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,16,0,0">
+                                    <Button Content="READ MEMORY" Command="{Binding ReadCommand}"
+                                            CommandParameter="{Binding ReaderId}"
+                                            Style="{StaticResource TagAccessActionStyle}" />
+                                    <Button Content="WRITE MEMORY" Command="{Binding WriteCommand}"
+                                            CommandParameter="{Binding ReaderId}"
+                                            Style="{StaticResource TagAccessActionStyle}"
+                                            Margin="12,0,0,0" />
+                                </StackPanel>
+
+                                <Border Grid.Row="4" BorderThickness="1"
+                                        BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                                        Padding="12" Margin="0,16,0,0" MinHeight="48"
+                                        Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
+                                    <Grid>
+                                        <TextBlock Text="Operation result will appear here."
+                                                   VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock"
+                                                       BasedOn="{StaticResource TagAccessHintStyle}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Result}" Value="{x:Null}">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding Result, Mode=OneWay}" TextWrapping="Wrap"
+                                                   FontFamily="Consolas, Courier New" FontSize="13"
+                                                   VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </DockPanel>
+                    </Border>
+                </Grid>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
 </UserControl>

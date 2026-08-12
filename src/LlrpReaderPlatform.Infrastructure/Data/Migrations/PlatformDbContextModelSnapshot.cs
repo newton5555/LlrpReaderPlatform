@@ -41,6 +41,10 @@ namespace LlrpReaderPlatform.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset?>("EndedAtUtc")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SnapshotFilePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("LogFilePath")
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");

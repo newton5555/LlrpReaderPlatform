@@ -137,6 +137,35 @@ public sealed class SqliteReaderProfileStoreTests
         Assert.Equal("Door tags", loaded?.Name);
         Assert.Single(loaded?.Entries ?? []);
 
+        // TOI edits must replace existing entries without EF tracking the old and
+        // new instances with the same primary key in one DbContext.
+        Guid entryId = loaded!.Entries[0].Id;
+        await tagStore.SaveAsync(loaded with
+        {
+            Name = "Tags of Interest",
+            Entries =
+            [
+                loaded.Entries[0] with
+                {
+                    Id = entryId,
+                    DisplayName = "Box 1 updated",
+                    ColorHex = "#123456",
+                },
+                new TagListEntry
+                {
+                    Id = Guid.NewGuid(),
+                    TagListId = listId,
+                    EpcHex = "300833B2DDD9014000000002",
+                    DisplayName = "Box 2",
+                    ColorHex = "#ABCDEF",
+                },
+            ],
+        });
+        TagListDefinition updatedTagList = (await tagStore.GetAsync(listId))!;
+        Assert.Equal("Tags of Interest", updatedTagList.Name);
+        Assert.Equal(2, updatedTagList.Entries.Count);
+        Assert.Equal("Box 1 updated", updatedTagList.Entries[0].DisplayName);
+
         var run = new InventoryRunRecord
         {
             Id = Guid.NewGuid(),
@@ -183,6 +212,54 @@ public sealed class SqliteReaderProfileStoreTests
 
             string content = await File.ReadAllTextAsync(path!);
             Assert.Contains("3008", content);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Json_inventory_snapshot_writes_final_aggregate_only()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"llrp-inventory-snapshot-{Guid.NewGuid():N}");
+        try
+        {
+            var writer = new JsonInventorySnapshotStore(root);
+            var run = new InventoryRunRecord
+            {
+                Id = Guid.NewGuid(),
+                ReaderId = Guid.NewGuid(),
+                StartedAtUtc = DateTimeOffset.UtcNow.AddSeconds(-3),
+                EndedAtUtc = DateTimeOffset.UtcNow,
+                StopReason = "Manual",
+                TotalReadCount = 3,
+                UniqueTagCount = 1,
+            };
+
+            string? path = await writer.SaveAsync(new InventoryRunSnapshot
+            {
+                Run = run,
+                Tags =
+                [
+                    new Tagging.TagObservation
+                    {
+                        Epc = "3008",
+                        ReadCount = 3,
+                        FirstSeen = run.StartedAtUtc,
+                        LastSeen = run.EndedAtUtc.Value,
+                    },
+                ],
+            });
+
+            Assert.NotNull(path);
+            Assert.True(File.Exists(path));
+            string json = await File.ReadAllTextAsync(path!);
+            Assert.Contains("3008", json);
+            Assert.DoesNotContain(".tmp", json);
         }
         finally
         {

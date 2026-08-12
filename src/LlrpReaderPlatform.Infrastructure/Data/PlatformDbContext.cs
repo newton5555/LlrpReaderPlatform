@@ -54,6 +54,7 @@ public sealed class PlatformDbContext(DbContextOptions<PlatformDbContext> option
         {
             entity.HasKey(x => x.Id);
             entity.Property(x => x.StopReason).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.SnapshotFilePath).HasMaxLength(500);
             entity.Property(x => x.LogFilePath).HasMaxLength(500);
             entity.HasIndex(x => new { x.ReaderId, x.StartedAtUtc });
         });
@@ -112,5 +113,6 @@ public sealed class InventoryRunEntity
     public string StopReason { get; set; } = "Manual";
     public long TotalReadCount { get; set; }
     public int UniqueTagCount { get; set; }
+    public string? SnapshotFilePath { get; set; }
     public string? LogFilePath { get; set; }
 }

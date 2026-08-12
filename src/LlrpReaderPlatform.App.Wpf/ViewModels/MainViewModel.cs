@@ -8,6 +8,8 @@ using LlrpReaderPlatform.Contracts.Persistence;
 using LlrpReaderPlatform.Contracts.Readers;
 using LlrpReaderPlatform.Contracts.Settings;
 using LlrpReaderPlatform.Contracts.Tagging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Windows.Threading;
 
 namespace LlrpReaderPlatform.App.Wpf.ViewModels;
@@ -20,6 +22,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly IReaderManager readerManager;
     private readonly IReaderDiscoveryService discovery;
+    private readonly ILogger<MainViewModel> logger;
     private readonly Dispatcher dispatcher;
     private readonly CancellationTokenSource discoveryCts = new();
     private readonly CancellationToken lifetimeToken;
@@ -55,10 +58,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
         AppSettingsViewModel appSettings,
         TagListsViewModel tagLists,
         InventoryRunsViewModel inventoryRuns,
-        AddDataSourceViewModel addDataSource)
+        AddDataSourceViewModel addDataSource,
+        ILogger<MainViewModel>? logger = null)
     {
         this.readerManager = readerManager;
         this.discovery = discovery;
+        this.logger = logger ?? NullLogger<MainViewModel>.Instance;
         dispatcher = System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
         lifetimeToken = discoveryCts.Token;
         readerManager.StateChanged += OnReaderStateChanged;
@@ -111,15 +116,20 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ApplySelectedReaderContext(value);
     }
 
-    private void ApplySelectedReaderContext(ReaderItemViewModel? value)
+    private void ApplySelectedReaderContext(
+        ReaderItemViewModel? value,
+        bool updateTagMemorySelection = true)
     {
         Inventory.SetReaderContext(value);
-        TagMemory.SetReaderContext(value);
+        if (updateTagMemorySelection)
+        {
+            TagMemory.SelectReaderFromSidebar(value);
+        }
         Settings.SetReaderContext(value);
         if (ReferenceEquals(CurrentPage, InventoryRuns)
             && InventoryRuns.ReaderId != value?.ReaderId)
         {
-            InventoryRuns.SelectReader(value?.ReaderId);
+            InventoryRuns.SelectReader(value?.ReaderId, value?.Name);
         }
     }
 
@@ -146,6 +156,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         SetBusy("正在初始化 Reader 平台...");
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation("WPF operation {Operation} started: {OperationId}.", "InitializePlatform", operationId);
         try
         {
             using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetimeToken);
@@ -153,6 +165,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
             await AppSettings.LoadAsync(linked.Token);
             Refresh();
             Status = Readers.Count == 0 ? "平台已就绪，请添加 Reader。" : $"平台已就绪，已加载 {Readers.Count} 个 Reader。";
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, readers {ReaderCount}.",
+                "InitializePlatform",
+                operationId,
+                Readers.Count);
         }
         catch (OperationCanceledException) when (discoveryCts.IsCancellationRequested)
         {
@@ -160,6 +177,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}.", "InitializePlatform", operationId);
             Status = PlatformErrorDisplay.Failure("平台初始化", ex);
             throw;
         }
@@ -199,10 +217,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
             refreshingReaderList = false;
         }
 
+        TagMemory.UpdateAvailableReaders(Readers, SelectedReader?.ReaderId);
+        logger.LogDebug("WPF reader list refreshed: {ReaderCount}, selected {ReaderId}.", Readers.Count, SelectedReader?.ReaderId);
+
         // Apply the final item once, after the ListBox's transient null selection
         // has been suppressed. This keeps settings/inventory/tag-memory context
         // aligned with the rebuilt ReaderItemViewModel instance.
-        ApplySelectedReaderContext(SelectedReader);
+        ApplySelectedReaderContext(SelectedReader, updateTagMemorySelection: false);
     }
 
     [RelayCommand]
@@ -222,6 +243,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
             IsEnabled = true,
         };
         SetBusy($"正在添加 Reader「{profile.Name}」...");
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation(
+            "WPF operation {Operation} started: {OperationId}, reader {ReaderId}, host {Host}, port {Port}.",
+            "AddReaderFromShell",
+            operationId,
+            profile.Id,
+            profile.Host,
+            profile.Port);
 
         try
         {
@@ -232,6 +261,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Status = result.Succeeded
                 ? $"已添加 {actualName} 并同步 {profile.Host}:{profile.Port}"
                 : PlatformErrorDisplay.Failure("添加", result.ErrorCode, result.Error);
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, reader {ReaderId}, succeeded {Succeeded}, error code {ErrorCode}.",
+                "AddReaderFromShell",
+                operationId,
+                profile.Id,
+                result.Succeeded,
+                result.ErrorCode);
         }
         catch (OperationCanceledException) when (discoveryCts.IsCancellationRequested)
         {
@@ -239,6 +275,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}, reader {ReaderId}.", "AddReaderFromShell", operationId, profile.Id);
             if (!disposed)
             {
                 Status = PlatformErrorDisplay.Failure("添加", ex);
@@ -261,6 +298,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         string readerName = Readers.FirstOrDefault(reader => reader.ReaderId == readerId)?.Name ?? "Reader";
         SetBusy($"正在删除 Reader「{readerName}」...");
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation("WPF operation {Operation} started: {OperationId}, reader {ReaderId}.", "RemoveReader", operationId, readerId);
         try
         {
             bool removedSettingsReader = Settings.ReaderId == readerId;
@@ -272,6 +311,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
 
             Status = "已移除";
+            logger.LogInformation("WPF operation {Operation} completed: {OperationId}, reader {ReaderId}.", "RemoveReader", operationId, readerId);
         }
         catch (OperationCanceledException) when (discoveryCts.IsCancellationRequested)
         {
@@ -279,6 +319,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}, reader {ReaderId}.", "RemoveReader", operationId, readerId);
             if (!disposed)
             {
                 Status = PlatformErrorDisplay.Failure("移除", ex);
@@ -306,12 +347,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         SetBusy($"正在激活 Reader「{item.Name}」...");
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation("WPF operation {Operation} started: {OperationId}, reader {ReaderId}.", "ActivateReader", operationId, item.ReaderId);
         try
         {
             ReaderActivationResult result = await readerManager.ActivateAsync(item.ReaderId, lifetimeToken);
             Status = result.Succeeded
                 ? "激活成功"
                 : PlatformErrorDisplay.Failure("激活", result.ErrorCode, result.Error);
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, reader {ReaderId}, succeeded {Succeeded}, error code {ErrorCode}.",
+                "ActivateReader",
+                operationId,
+                item.ReaderId,
+                result.Succeeded,
+                result.ErrorCode);
         }
         catch (OperationCanceledException) when (discoveryCts.IsCancellationRequested)
         {
@@ -319,6 +369,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}, reader {ReaderId}.", "ActivateReader", operationId, item.ReaderId);
             if (!disposed)
             {
                 Status = PlatformErrorDisplay.Failure("激活", ex);
@@ -340,6 +391,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         SetBusy("正在扫描 _llrp._tcp...");
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation("WPF operation {Operation} started: {OperationId}.", "DiscoverReadersFromShell", operationId);
         try
         {
             IReadOnlyList<DiscoveredReader> found = await discovery.DiscoverAsync(TimeSpan.FromSeconds(3), lifetimeToken);
@@ -351,6 +404,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
 
             Status = normalized.Count == 0 ? "未发现 LLRP 设备" : $"发现 {normalized.Count} 个设备，可选用后再添加";
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, discovered {Count} readers.",
+                "DiscoverReadersFromShell",
+                operationId,
+                normalized.Count);
         }
         catch (OperationCanceledException) when (discoveryCts.IsCancellationRequested)
         {
@@ -361,6 +419,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}.", "DiscoverReadersFromShell", operationId);
             if (!disposed)
             {
                 Discovered.Clear();
@@ -405,6 +464,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             CancelPendingPageOperations(CurrentPage);
         }
 
+        logger.LogDebug("WPF navigation requested: {Page}.", page);
+
         CurrentPage = nextPage;
 
         if (string.Equals(page, "TagLists", StringComparison.Ordinal))
@@ -413,7 +474,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         else if (string.Equals(page, "InventoryRuns", StringComparison.Ordinal))
         {
-            InventoryRuns.SelectReader(SelectedReader?.ReaderId);
+            InventoryRuns.SelectReader(SelectedReader?.ReaderId, SelectedReader?.Name);
         }
     }
 

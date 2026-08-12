@@ -9,6 +9,8 @@ using LlrpReaderPlatform.Contracts.Lifecycle;
 using LlrpReaderPlatform.Contracts.Persistence;
 using LlrpReaderPlatform.Contracts.Readers;
 using LlrpReaderPlatform.Contracts.Tagging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Windows.Threading;
 
 namespace LlrpReaderPlatform.App.Wpf.ViewModels;
@@ -24,10 +26,16 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
     private const int MaxTrackedTagObservations = 2_000;
     private const int MaxDrainPerTick = 25;
     private readonly IInventoryService inventory;
+    private readonly ILogger<InventoryViewModel> logger;
     private readonly ITagListStore? tagListStore;
     private readonly IReaderManager? readerManager;
-    private IReadOnlyDictionary<string, string> tagLabels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<string, TagLabelMetadata> tagLabels =
+        new Dictionary<string, TagLabelMetadata>(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<Guid, byte> activeReaderIds = new();
+    private readonly ConcurrentDictionary<Guid, byte> startingReaderIds = new();
+    private readonly object startBatchGate = new();
+    private CancellationTokenSource? activeStartBatchCts;
+    private TaskCompletionSource? activeStartBatchCompleted;
     private readonly Dictionary<(Guid ReaderId, string Epc), PendingTag> pendingTags = [];
     private readonly Queue<(Guid ReaderId, string Epc)> pendingTagOrder = [];
     private readonly object pendingTagsGate = new();
@@ -69,6 +77,9 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private bool isInventoryRunning;
+
+    [ObservableProperty]
+    private bool isInventoryStarting;
 
     [ObservableProperty]
     private bool isBusy;
@@ -122,9 +133,11 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
     public InventoryViewModel(
         IInventoryService inventory,
         ITagListStore? tagListStore = null,
-        IReaderManager? readerManager = null)
+        IReaderManager? readerManager = null,
+        ILogger<InventoryViewModel>? logger = null)
     {
         this.inventory = inventory;
+        this.logger = logger ?? NullLogger<InventoryViewModel>.Instance;
         this.tagListStore = tagListStore;
         this.readerManager = readerManager;
         hasWpfApplication = System.Windows.Application.Current is not null;
@@ -199,7 +212,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
 
         try
         {
-            await StartCoreAsync(id);
+            await StartCoreAsync(id, lifetimeToken);
         }
         finally
         {
@@ -207,7 +220,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         }
     }
 
-    private async Task StartCoreAsync(Guid id)
+    private async Task StartCoreAsync(Guid id, CancellationToken operationToken)
     {
         if (disposed)
         {
@@ -222,6 +235,13 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
 
         ReaderId = id;
         Status = $"正在启动 Reader {ResolveReaderName(id)} 的盘存...";
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation(
+            "WPF operation {Operation} started: {OperationId}, reader {ReaderId}, duration {DurationSeconds}.",
+            "StartInventory",
+            operationId,
+            id,
+            DurationSecondsText);
         await LoadTagLabelsAsync();
         if (disposed)
         {
@@ -233,21 +253,22 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
             return;
         }
         ResetForRun([id]);
-        activeReaderIds.TryAdd(id, 0);
+        startingReaderIds.TryAdd(id, 0);
         StartInventoryResult result;
         try
         {
-            result = await inventory.StartInventoryAsync(id, startSpec, lifetimeToken);
+            result = await inventory.StartInventoryAsync(id, startSpec, operationToken);
         }
-        catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)
+        catch (OperationCanceledException) when (operationToken.IsCancellationRequested)
         {
-            activeReaderIds.TryRemove(id, out _);
+            startingReaderIds.TryRemove(id, out _);
             StopRunUi();
             return;
         }
         catch (Exception ex)
         {
-            activeReaderIds.TryRemove(id, out _);
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}, reader {ReaderId}.", "StartInventory", operationId, id);
+            startingReaderIds.TryRemove(id, out _);
             IsInventoryRunning = false;
             StopRunUi();
             if (!disposed)
@@ -258,6 +279,10 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
                     ex.Message);
             }
             return;
+        }
+        finally
+        {
+            startingReaderIds.TryRemove(id, out _);
         }
 
         if (disposed)
@@ -275,6 +300,13 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
             : startIsStillActive
                 ? "盘存已启动"
                 : Status;
+        logger.LogInformation(
+            "WPF operation {Operation} completed: {OperationId}, reader {ReaderId}, succeeded {Succeeded}, error {Error}.",
+            "StartInventory",
+            operationId,
+            id,
+            result.Succeeded,
+            result.Error);
         if (!result.Succeeded)
         {
             activeReaderIds.TryRemove(id, out _);
@@ -284,9 +316,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         IsInventoryRunning = activeReaderIds.Count > 0;
         if (result.Succeeded && IsInventoryRunning)
         {
-            stopwatch.Restart();
-            refreshTimer.Start();
-            Refresh();
+            EnsureRunUiStarted();
         }
     }
 
@@ -297,22 +327,44 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task StartAllAsync()
     {
-        if (!TryBeginLifecycleOperation())
+        CancellationTokenSource batchCts;
+        TaskCompletionSource batchCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        lock (startBatchGate)
         {
-            return;
+            if (activeStartBatchCts is not null)
+            {
+                Status = "Reader 启动操作已在进行中。";
+                return;
+            }
+
+            batchCts = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
+            activeStartBatchCts = batchCts;
+            activeStartBatchCompleted = batchCompleted;
         }
 
+        IsInventoryStarting = true;
         try
         {
-            await StartAllCoreAsync();
+            await StartAllCoreAsync(batchCts.Token);
         }
         finally
         {
-            EndLifecycleOperation();
+            lock (startBatchGate)
+            {
+                if (ReferenceEquals(activeStartBatchCts, batchCts))
+                {
+                    activeStartBatchCts = null;
+                    activeStartBatchCompleted = null;
+                }
+            }
+
+            IsInventoryStarting = false;
+            batchCompleted.TrySetResult();
+            batchCts.Dispose();
         }
     }
 
-    private async Task StartAllCoreAsync()
+    private async Task StartAllCoreAsync(CancellationToken operationToken)
     {
         if (disposed)
         {
@@ -331,7 +383,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         {
             if (ReaderId is { } selected)
             {
-                await StartCoreAsync(selected);
+                await StartCoreAsync(selected, operationToken);
             }
             else
             {
@@ -363,22 +415,26 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         ResetForRun(targets.Select(static reader => reader.ReaderId));
         foreach (ReaderRuntimeSnapshot target in targets)
         {
-            activeReaderIds.TryAdd(target.ReaderId, 0);
+            startingReaderIds.TryAdd(target.ReaderId, 0);
         }
         (ReaderRuntimeSnapshot Target, StartInventoryResult Result)[] results = await Task.WhenAll(
             targets.Select(async target =>
             {
                 try
                 {
-                    return (target, await inventory.StartInventoryAsync(target.ReaderId, startSpec, lifetimeToken));
+                    return (target, await inventory.StartInventoryAsync(target.ReaderId, startSpec, operationToken));
                 }
-                catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)
+                catch (OperationCanceledException) when (operationToken.IsCancellationRequested)
                 {
                     return (target, new StartInventoryResult(false, InventoryError.DeviceFailed, "盘存启动已取消。"));
                 }
                 catch (Exception ex)
                 {
                     return (target, new StartInventoryResult(false, InventoryError.DeviceFailed, ex.Message));
+                }
+                finally
+                {
+                    startingReaderIds.TryRemove(target.ReaderId, out _);
                 }
             }));
 
@@ -412,9 +468,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
             return;
         }
 
-        stopwatch.Restart();
-        refreshTimer.Start();
-        Refresh();
+        EnsureRunUiStarted();
         int failed = results.Length - successfulStarts;
         // If a successful Reader has already published a terminal lifecycle event
         // while StartAll was awaiting the other Readers, keep that event's reason
@@ -455,6 +509,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         try
         {
             Status = $"正在停止 Reader {ResolveReaderName(id)} 的盘存...";
+            logger.LogInformation("WPF operation {Operation} requested: reader {ReaderId}.", "StopInventory", id);
             await inventory.StopInventoryAsync(id, lifetimeToken);
         }
         catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)
@@ -463,6 +518,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: reader {ReaderId}.", "StopInventory", id);
             if (!disposed)
             {
                 Status = PlatformErrorDisplay.Failure(
@@ -499,6 +555,19 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         if (disposed)
         {
             return;
+        }
+
+        Task? startBatch = CancelActiveStartBatch();
+        if (startBatch is not null)
+        {
+            try
+            {
+                await startBatch.WaitAsync(lifetimeToken);
+            }
+            catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)
+            {
+                return;
+            }
         }
 
         Guid[] ids = activeReaderIds.Keys.ToArray();
@@ -573,10 +642,10 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task ToggleAllAsync()
     {
-        if (activeReaderIds.Count > 0)
+        if (activeReaderIds.Count > 0 || IsInventoryStarting)
         {
             await StopAllAsync();
         }
@@ -665,15 +734,26 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
 
             if (args.State == InventoryLifecycleState.Started)
             {
+                startingReaderIds.TryRemove(args.ReaderId, out _);
                 activeReaderIds.TryAdd(args.ReaderId, 0);
-                IsInventoryRunning = true;
+                EnsureRunUiStarted();
                 return;
             }
 
-            if (!activeReaderIds.TryRemove(args.ReaderId, out _))
+            bool wasStarting = startingReaderIds.TryRemove(args.ReaderId, out _);
+            bool wasActive = activeReaderIds.TryRemove(args.ReaderId, out _);
+            if (!wasStarting && !wasActive)
             {
                 return;
             }
+
+            logger.LogInformation(
+                "WPF inventory lifecycle stopped: reader {ReaderId}, reason {StopReason}, error {Error}, displayed tags {DisplayedTagCount}, dropped reports {DroppedTagReportCount}.",
+                args.ReaderId,
+                args.StopReason,
+                args.Error,
+                Tags.Count,
+                DroppedTagReportCount);
 
             if (activeReaderIds.Count == 0)
             {
@@ -818,10 +898,14 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
                 .SelectMany(static list => list.Entries.Select(entry => new
                 {
                     entry.EpcHex,
-                    Label = string.IsNullOrWhiteSpace(entry.DisplayName) ? list.Name : $"{list.Name}: {entry.DisplayName}",
+                    Label = entry.DisplayName,
+                    ColorHex = string.IsNullOrWhiteSpace(entry.ColorHex) ? list.ColorHex : entry.ColorHex!,
                 }))
                 .GroupBy(static x => x.EpcHex, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(static group => group.Key, static group => group.First().Label, StringComparer.OrdinalIgnoreCase);
+                .ToDictionary(
+                    static group => group.Key,
+                    static group => new TagLabelMetadata(group.First().Label, group.First().ColorHex),
+                    StringComparer.OrdinalIgnoreCase);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -836,8 +920,8 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         }
     }
 
-    private string ResolveTagLabel(string epc) =>
-        tagLabels.TryGetValue(epc, out string? label) ? label : string.Empty;
+    private TagLabelMetadata ResolveTagLabel(string epc) =>
+        tagLabels.TryGetValue(epc, out TagLabelMetadata label) ? label : TagLabelMetadata.Empty;
 
     private bool TryBuildStartSpec(out InventorySpec startSpec)
     {
@@ -903,6 +987,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
     {
         runUsedMultipleReaders = ids.Distinct().Skip(1).Any();
         activeReaderIds.Clear();
+        startingReaderIds.Clear();
         ClearPendingTags();
 
         foreach (Guid id in ids.Distinct())
@@ -919,6 +1004,28 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         stopwatch.Reset();
         Elapsed = ZeroElapsedText;
         TagRate = "0 tags/s";
+    }
+
+    private void EnsureRunUiStarted()
+    {
+        IsInventoryRunning = activeReaderIds.Count > 0;
+        if (!IsInventoryRunning || stopwatch.IsRunning)
+        {
+            return;
+        }
+
+        stopwatch.Restart();
+        refreshTimer.Start();
+        Refresh();
+    }
+
+    private Task? CancelActiveStartBatch()
+    {
+        lock (startBatchGate)
+        {
+            activeStartBatchCts?.Cancel();
+            return activeStartBatchCompleted?.Task;
+        }
     }
 
     private void StopRunUi()
@@ -1049,7 +1156,11 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         MergedTagProjection projection = CreateMergedProjection(normalizedEpc, group);
         if (tagRows.TryGetValue(normalizedEpc, out TagRowViewModel? existing))
         {
-            existing.Update(projection.ReaderName, projection.Tag, projection.TagListName);
+            existing.Update(
+                projection.ReaderName,
+                projection.Tag,
+                projection.TagList.Name,
+                projection.TagList.ColorHex);
             return;
         }
 
@@ -1064,7 +1175,12 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
 
         if (Tags.Count < MaxDisplayedTags)
         {
-            var row = new TagRowViewModel(Guid.Empty, projection.ReaderName, projection.Tag, projection.TagListName)
+            var row = new TagRowViewModel(
+                Guid.Empty,
+                projection.ReaderName,
+                projection.Tag,
+                projection.TagList.Name,
+                projection.TagList.ColorHex)
             {
                 Index = Tags.Count + 1,
             };
@@ -1078,7 +1194,12 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         IEnumerable<KeyValuePair<(Guid ReaderId, string Epc), TagObservation>> observations)
     {
         MergedTagProjection projection = CreateMergedProjection(epc, observations);
-        return new TagRowViewModel(Guid.Empty, projection.ReaderName, projection.Tag, projection.TagListName);
+        return new TagRowViewModel(
+            Guid.Empty,
+            projection.ReaderName,
+            projection.Tag,
+            projection.TagList.Name,
+            projection.TagList.ColorHex);
     }
 
     private MergedTagProjection CreateMergedProjection(
@@ -1122,6 +1243,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         inventory.TagObserved -= OnTagObserved;
         inventory.LifecycleChanged -= OnInventoryLifecycleChanged;
         activeReaderIds.Clear();
+        startingReaderIds.Clear();
         refreshTimer.Stop();
         ClearPendingTags();
     }
@@ -1130,5 +1252,10 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
     private readonly record struct MergedTagProjection(
         string ReaderName,
         TagObservation Tag,
-        string TagListName);
+        TagLabelMetadata TagList);
+
+    private readonly record struct TagLabelMetadata(string Name, string ColorHex)
+    {
+        public static TagLabelMetadata Empty { get; } = new(string.Empty, string.Empty);
+    }
 }

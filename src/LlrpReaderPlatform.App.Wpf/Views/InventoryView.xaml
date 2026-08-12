@@ -13,11 +13,6 @@
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsBusy}" Value="True">
-                    <Setter Property="IsEnabled" Value="False" />
-                </DataTrigger>
-            </Style.Triggers>
         </Style>
     </UserControl.Resources>
     <Grid>
@@ -40,6 +35,9 @@
                         <Style TargetType="Button" BasedOn="{StaticResource InventoryLifecycleButtonStyle}">
                             <Setter Property="Content" Value="Start" />
                             <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsInventoryStarting}" Value="True">
+                                    <Setter Property="Content" Value="Cancel" />
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding IsInventoryRunning}" Value="True">
                                     <Setter Property="Content" Value="Stop" />
                                 </DataTrigger>
@@ -74,6 +72,17 @@
                       VirtualizingPanel.IsVirtualizing="True"
                       VirtualizingPanel.VirtualizationMode="Recycling">
             <DataGrid.Resources>
+                <ContextMenu x:Key="TagRowContextMenu"
+                             x:Shared="False"
+                             DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                    <MenuItem Header="复制 EPC"
+                              CommandParameter="{Binding}"
+                              Click="CopyEpcMenuItem_Click" />
+                    <MenuItem Header="复制 TID"
+                              CommandParameter="{Binding}"
+                              Visibility="{Binding HasTid, Converter={StaticResource BooleanToVisibilityConverter}}"
+                              Click="CopyTidMenuItem_Click" />
+                </ContextMenu>
                 <Style x:Key="CenteredCellTextStyle" TargetType="TextBlock">
                     <Setter Property="VerticalAlignment" Value="Center" />
                     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
@@ -117,59 +126,70 @@
                          binding. Override it on the recyclable row container so a detached row
                          does not emit a transient missing-DataGrid binding warning. -->
                     <Setter Property="mah:DataGridHelper.CellPadding" Value="8,4" />
+                    <Setter Property="ContextMenu" Value="{StaticResource TagRowContextMenu}" />
                 </Style>
             </DataGrid.RowStyle>
             <DataGrid.Columns>
-                <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="50"
+                <DataGridTextColumn Header="#" Binding="{Binding Index, Mode=OneWay}" Width="50"
                                     Visibility="{Binding Data.ShowIndexColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredCellTextStyle}" />
-                <DataGridTextColumn Header="EPC" Binding="{Binding Epc}" Width="2.2*"
+                <DataGridTextColumn Header="EPC" Binding="{Binding Epc, Mode=OneWay}" Width="2.2*"
                                     Visibility="{Binding Data.ShowEpcColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredMonoCellTextStyle}" />
-                <DataGridTextColumn Header="TID" Binding="{Binding Tid}" Width="1.8*"
+                <DataGridTextColumn Header="TID" Binding="{Binding Tid, Mode=OneWay}" Width="1.8*"
                                     Visibility="{Binding Data.ShowTidColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredMonoCellTextStyle}" />
-                <DataGridTextColumn Header="Count" Binding="{Binding ReadCount}" Width="80"
+                <DataGridTextColumn Header="Count" Binding="{Binding ReadCount, Mode=OneWay}" Width="80"
                                     Visibility="{Binding Data.ShowCountColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredCellTextStyle}" />
-                <DataGridTextColumn Header="First Seen" Binding="{Binding FirstSeen}" Width="110"
+                <DataGridTextColumn Header="First Seen" Binding="{Binding FirstSeen, Mode=OneWay}" Width="110"
                                     Visibility="{Binding Data.ShowFirstSeenColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredCellTextStyle}" />
-                <DataGridTextColumn Header="Last Seen" Binding="{Binding LastSeen}" Width="110"
+                <DataGridTextColumn Header="Last Seen" Binding="{Binding LastSeen, Mode=OneWay}" Width="110"
                                     Visibility="{Binding Data.ShowLastSeenColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredCellTextStyle}" />
-                <DataGridTextColumn Header="Reader" Binding="{Binding ReaderName}" Width="1.3*"
+                <DataGridTextColumn Header="Reader" Binding="{Binding ReaderName, Mode=OneWay}" Width="1.3*"
                                     Visibility="{Binding Data.ShowReaderColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredCellTextStyle}" />
-                <DataGridTextColumn Header="Antenna" Binding="{Binding LastAntenna}" Width="80"
+                <DataGridTextColumn Header="Antenna" Binding="{Binding LastAntenna, Mode=OneWay}" Width="80"
                                     Visibility="{Binding Data.ShowAntennaColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredCellTextStyle}" />
-                <DataGridTextColumn Header="Peak RSSI" Binding="{Binding PeakRssi}" Width="90"
+                <DataGridTextColumn Header="Peak RSSI" Binding="{Binding PeakRssi, Mode=OneWay}" Width="90"
                                     Visibility="{Binding Data.ShowRssiColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredCellTextStyle}" />
-                <DataGridTextColumn Header="Channel" Binding="{Binding LastChannelIndex}" Width="80"
+                <DataGridTextColumn Header="Channel" Binding="{Binding LastChannelIndex, Mode=OneWay}" Width="80"
                                     Visibility="{Binding Data.ShowChannelColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredCellTextStyle}" />
-                <DataGridTextColumn Header="PC Bits" Binding="{Binding PcBitsHex}" Width="90"
+                <DataGridTextColumn Header="PC Bits" Binding="{Binding PcBitsHex, Mode=OneWay}" Width="90"
                                     Visibility="{Binding Data.ShowPcBitsColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredMonoCellTextStyle}" />
-                <DataGridTextColumn Header="Tag List" Binding="{Binding TagListName}" Width="1.4*"
-                                    ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                <DataGridTemplateColumn Header="TOI" Width="1.4*" IsReadOnly="True">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border Width="14" Height="14" CornerRadius="3" BorderThickness="1"
+                                        BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                                        Background="{Binding TagColorHex, Mode=OneWay, Converter={StaticResource HexColorToBrushConverter}}">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TagListName}" Value="">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                </Border>
+                                <TextBlock Text="{Binding TagListName, Mode=OneWay}" Margin="7,0,0,0"
+                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
             </DataGrid>
 
-            <Grid Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
-                  Panel.ZIndex="10">
-                <Border Background="{DynamicResource MahApps.Brushes.ThemeBackground}" Opacity="0.92" />
-                <StackPanel Width="260" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <mah:ProgressRing Width="52" Height="52" IsLarge="True" IsActive="True"
-                                      Foreground="{DynamicResource MahApps.Brushes.Accent}"
-                                      HorizontalAlignment="Center" />
-                    <TextBlock Text="{Binding Status}" FontSize="15" FontWeight="SemiBold"
-                               HorizontalAlignment="Center" TextAlignment="Center"
-                               TextWrapping="Wrap" Margin="0,14,0,0" />
-                </StackPanel>
-            </Grid>
         </Grid>
     </Grid>
 </UserControl>

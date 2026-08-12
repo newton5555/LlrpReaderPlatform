@@ -19,6 +19,7 @@ public sealed class SqliteInventoryRunStore(IDbContextFactory<PlatformDbContext>
                 StopReason = x.StopReason,
                 TotalReadCount = x.TotalReadCount,
                 UniqueTagCount = x.UniqueTagCount,
+                SnapshotFilePath = x.SnapshotFilePath,
                 LogFilePath = x.LogFilePath,
             }).ToArrayAsync(ct).ConfigureAwait(false);
         return runs.OrderByDescending(x => x.StartedAtUtc).ToArray();
@@ -42,6 +43,7 @@ public sealed class SqliteInventoryRunStore(IDbContextFactory<PlatformDbContext>
         entity.StopReason = run.StopReason;
         entity.TotalReadCount = run.TotalReadCount;
         entity.UniqueTagCount = run.UniqueTagCount;
+        entity.SnapshotFilePath = run.SnapshotFilePath;
         entity.LogFilePath = run.LogFilePath;
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
     }

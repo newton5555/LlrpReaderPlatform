@@ -6,6 +6,8 @@ using LlrpReaderPlatform.Contracts.Lifecycle;
 using LlrpReaderPlatform.Contracts.Discovery;
 using LlrpReaderPlatform.Contracts.Errors;
 using LlrpReaderPlatform.Contracts.Readers;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LlrpReaderPlatform.App.Wpf.ViewModels;
 
@@ -20,6 +22,7 @@ public partial class AddDataSourceViewModel : ObservableObject, IPageOperationOw
 {
     private readonly IReaderManager readerManager;
     private readonly IReaderDiscoveryService discovery;
+    private readonly ILogger<AddDataSourceViewModel> logger;
     private readonly CancellationTokenSource lifetimeCts = new();
     private readonly CancellationToken lifetimeToken;
     private CancellationTokenSource? activeOperationCts;
@@ -64,10 +67,14 @@ public partial class AddDataSourceViewModel : ObservableObject, IPageOperationOw
     /// <summary>Probe、发现或提交期间锁定端点编辑，避免页面修改在途操作的输入。</summary>
     public bool IsInputEnabled => !disposed && !IsProbing && !IsSubmitting && !IsDiscovering;
 
-    public AddDataSourceViewModel(IReaderManager readerManager, IReaderDiscoveryService discovery)
+    public AddDataSourceViewModel(
+        IReaderManager readerManager,
+        IReaderDiscoveryService discovery,
+        ILogger<AddDataSourceViewModel>? logger = null)
     {
         this.readerManager = readerManager;
         this.discovery = discovery;
+        this.logger = logger ?? NullLogger<AddDataSourceViewModel>.Instance;
         lifetimeToken = lifetimeCts.Token;
     }
 
@@ -113,6 +120,14 @@ public partial class AddDataSourceViewModel : ObservableObject, IPageOperationOw
 
         IsProbing = true;
         Status = $"正在 Probe {ReaderEndpointFormatter.Format(profile.Host, profile.Port)}...";
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation(
+            "WPF operation {Operation} started: {OperationId}, host {Host}, port {Port}, protocol {Protocol}.",
+            "ProbeReader",
+            operationId,
+            profile.Host,
+            profile.Port,
+            profile.LlrpVersion);
         using CancellationTokenSource operationCts = BeginOperation();
         try
         {
@@ -132,6 +147,12 @@ public partial class AddDataSourceViewModel : ObservableObject, IPageOperationOw
             Status = result.Succeeded
                 ? "Probe 成功；设备尚未添加到平台。"
                 : PlatformErrorDisplay.Failure("Probe", result.ErrorCode, result.Error);
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, succeeded {Succeeded}, error code {ErrorCode}.",
+                "ProbeReader",
+                operationId,
+                result.Succeeded,
+                result.ErrorCode);
         }
         catch (OperationCanceledException) when (operationCts.IsCancellationRequested)
         {
@@ -142,6 +163,7 @@ public partial class AddDataSourceViewModel : ObservableObject, IPageOperationOw
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}.", "ProbeReader", operationId);
             if (!disposed)
             {
                 HasProbeResult = false;
@@ -171,6 +193,14 @@ public partial class AddDataSourceViewModel : ObservableObject, IPageOperationOw
         }
 
         IsSubmitting = true;
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation(
+            "WPF operation {Operation} started: {OperationId}, host {Host}, port {Port}, protocol {Protocol}.",
+            "AddReader",
+            operationId,
+            profile.Host,
+            profile.Port,
+            profile.LlrpVersion);
         using CancellationTokenSource operationCts = BeginOperation();
 
         try
@@ -203,6 +233,13 @@ public partial class AddDataSourceViewModel : ObservableObject, IPageOperationOw
             {
                 Status = PlatformErrorDisplay.Failure("添加", result.ErrorCode, result.Error);
             }
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, reader {ReaderId}, succeeded {Succeeded}, error code {ErrorCode}.",
+                "AddReader",
+                operationId,
+                profile.Id,
+                result.Succeeded,
+                result.ErrorCode);
         }
         catch (OperationCanceledException) when (operationCts.IsCancellationRequested)
         {
@@ -213,6 +250,7 @@ public partial class AddDataSourceViewModel : ObservableObject, IPageOperationOw
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}.", "AddReader", operationId);
             if (!disposed)
             {
                 Status = PlatformErrorDisplay.Failure("添加", ex);
@@ -236,6 +274,8 @@ public partial class AddDataSourceViewModel : ObservableObject, IPageOperationOw
         IsDiscovering = true;
         IsDiscoveryPanelOpen = true;
         Status = "正在扫描 _llrp._tcp...";
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation("WPF operation {Operation} started: {OperationId}.", "DiscoverReaders", operationId);
         using CancellationTokenSource operationCts = BeginOperation();
         try
         {
@@ -255,6 +295,11 @@ public partial class AddDataSourceViewModel : ObservableObject, IPageOperationOw
             }
 
             Status = normalized.Count == 0 ? "未发现 LLRP 设备" : $"发现 {normalized.Count} 个设备，可选用后提交";
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, discovered {Count} readers.",
+                "DiscoverReaders",
+                operationId,
+                normalized.Count);
         }
         catch (OperationCanceledException) when (operationCts.IsCancellationRequested)
         {
@@ -265,6 +310,7 @@ public partial class AddDataSourceViewModel : ObservableObject, IPageOperationOw
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}.", "DiscoverReaders", operationId);
             if (!disposed)
             {
                 Discovered.Clear();

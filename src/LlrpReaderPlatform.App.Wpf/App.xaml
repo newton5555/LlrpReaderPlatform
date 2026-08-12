@@ -19,6 +19,8 @@
                 <Setter Property="VerticalContentAlignment" Value="Center" />
             </Style>
             <converters:TagMemoryBankDisplayConverter x:Key="TagMemoryBankDisplayConverter" />
+            <converters:HexColorToBrushConverter x:Key="HexColorToBrushConverter" />
+            <converters:HexColorToColorConverter x:Key="HexColorToColorConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

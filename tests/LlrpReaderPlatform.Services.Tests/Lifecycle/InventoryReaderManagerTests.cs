@@ -299,7 +299,7 @@ public sealed class InventoryReaderManagerTests
         Assert.True(result.Succeeded);
         Assert.Equal(new ushort[] { 1 }, session.LastStartedInventorySettings?.AntennaIds);
         Assert.Equal(
-            new ushort[] { 0, 1 },
+            new ushort[] { 1 },
             session.LastStartedInventorySettings?.AntennaConfigurations.Select(static x => x.AntennaId));
         await h.Manager.StopInventoryAsync(h.Profile.Id);
     }
@@ -607,6 +607,26 @@ public sealed class InventoryReaderManagerTests
     }
 
     [Fact]
+    public async Task ReadTagMemory_target_timeout_is_not_a_reader_fault()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        session.BeforeReadTagMemoryAsync = () =>
+            Task.FromException(new TimeoutException("The operation has timed out."));
+
+        Tagging.TagAccessResult result = await h.Manager.ReadTagMemoryAsync(
+            h.Profile.Id,
+            new Tagging.TagReadRequest { Epc = "3001" });
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(PlatformErrorCode.NotFound, result.ErrorCode);
+        Assert.Equal("未找到匹配标签，操作超时。", result.Error);
+        Assert.Equal(ReaderState.Disconnected, h.Manager.GetSnapshot(h.Profile.Id).State);
+        Assert.False(h.Manager.GetSnapshot(h.Profile.Id).IsStale);
+        Assert.Equal(1, session.DisconnectCount);
+    }
+
+    [Fact]
     public async Task ReadTagMemory_returns_explicit_unsupported_error_when_reader_lacks_tag_access()
     {
         var h = new Harness();
@@ -774,12 +794,17 @@ public sealed class InventoryReaderManagerTests
         var factory = new FakeSessionFactory();
         var profileStore = new FakeProfileStore();
         var runStore = new FakeInventoryRunStore();
+        var snapshotStore = new FakeInventorySnapshotStore();
         var probe = new FakeSession();
         var session = new FakeSession();
         session.TagToEmitOnStart = [0x30, 0x08, 0x33, 0xB2];
         factory.Queue.Enqueue(probe);
         factory.Queue.Enqueue(session);
-        await using var manager = new ReaderManager(factory, profileStore, runStore: runStore);
+        await using var manager = new ReaderManager(
+            factory,
+            profileStore,
+            runStore: runStore,
+            snapshotStore: snapshotStore);
         var profile = new ReaderProfile { Id = Guid.NewGuid(), Host = "192.0.2.70" };
 
         await manager.AddAsync(profile, enableAfterAdding: false);
@@ -794,6 +819,11 @@ public sealed class InventoryReaderManagerTests
         Assert.NotNull(completed.EndedAtUtc);
         Assert.Equal("Manual", completed.StopReason);
         Assert.Equal(1, completed.UniqueTagCount);
+        Assert.Equal("test-snapshots/run.json", completed.SnapshotFilePath);
+        InventoryRunSnapshot snapshot = Assert.Single(snapshotStore.Snapshots);
+        Assert.Equal(completed.Id, snapshot.Run.Id);
+        TagObservation snapshotTag = Assert.Single(snapshot.Tags);
+        Assert.Equal("300833B2", snapshotTag.Epc);
         Assert.False(session.IsConnected);
     }
 

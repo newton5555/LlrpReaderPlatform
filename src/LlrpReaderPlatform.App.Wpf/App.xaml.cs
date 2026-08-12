@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Threading;
 using LlrpReaderPlatform.App.Wpf.ViewModels;
 using LlrpReaderPlatform.Extensions.Impinj;
 using LlrpReaderPlatform.Infrastructure;
@@ -16,6 +17,7 @@ public partial class App : Application
 {
     private ServiceProvider? services;
     private ILoggerFactory? sdkLoggerFactory;
+    private ILogger<App>? logger;
 
     private const string LogOutputTemplate =
         "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}";
@@ -39,6 +41,9 @@ public partial class App : Application
         ServiceCollection collection = new();
         ConfigureServices(collection);
         services = collection.BuildServiceProvider();
+        logger = services.GetRequiredService<ILogger<App>>();
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
+        TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
         MainWindow window = services.GetRequiredService<MainWindow>();
         window.Show();
@@ -57,6 +62,10 @@ public partial class App : Application
         services.AddLogging(builder =>
         {
             builder.SetMinimumLevel(LogLevel.Debug);
+            // EF Core SQL/parameter diagnostics are implementation noise for the
+            // application log. Keep migration, locking and provider failures at
+            // Warning+ while preserving platform/service diagnostics.
+            builder.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
             builder.AddDebug();
             builder.AddSerilog(CreateRollingLogger(logDirectory, "platform-.log", excludeSdkCategories: true), dispose: true);
         });
@@ -118,6 +127,8 @@ public partial class App : Application
     {
         try
         {
+            DispatcherUnhandledException -= OnDispatcherUnhandledException;
+            TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
             if (services is not null)
             {
                 try
@@ -146,5 +157,18 @@ public partial class App : Application
                 base.OnExit(e);
             }
         }
+    }
+
+    private void OnDispatcherUnhandledException(
+        object sender,
+        DispatcherUnhandledExceptionEventArgs e)
+    {
+        logger?.LogError(e.Exception, "Unhandled WPF dispatcher exception.");
+    }
+
+    private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+    {
+        logger?.LogError(e.Exception, "Unobserved WPF task exception.");
+        e.SetObserved();
     }
 }

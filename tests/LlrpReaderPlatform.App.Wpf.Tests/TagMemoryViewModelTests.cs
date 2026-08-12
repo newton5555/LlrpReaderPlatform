@@ -178,6 +178,70 @@ public sealed class TagMemoryViewModelTests
     }
 
     [Fact]
+    public async Task Read_target_timeout_shows_explicit_message()
+    {
+        var h = new Harness();
+        FakeSession session = new()
+        {
+            TagAccessResult = new TagAccessResult(false, "未找到匹配标签，操作超时。")
+            {
+                ErrorCode = LlrpReaderPlatform.Contracts.Errors.PlatformErrorCode.NotFound,
+            },
+        };
+        h.Register(new FakeSession(), session);
+        var vm = new TagMemoryViewModel(h.Manager) { Epc = "3001" };
+
+        await vm.ReadCommand.ExecuteAsync(h.Profile.Id);
+
+        Assert.Equal("未找到匹配标签，操作超时。", vm.Result);
+    }
+
+    [Fact]
+    public void Reader_picker_contains_only_enabled_readers_and_displays_their_hosts()
+    {
+        var h = new Harness();
+        var vm = new TagMemoryViewModel(h.Manager);
+        ReaderItemViewModel enabled = CreateReader(
+            Guid.NewGuid(), "Reader A", "192.168.40.88", isEnabled: true);
+        ReaderItemViewModel disabled = CreateReader(
+            Guid.NewGuid(), "Reader B", "192.168.41.148", isEnabled: false);
+
+        vm.UpdateAvailableReaders([disabled, enabled], preferredReaderId: disabled.ReaderId);
+
+        ReaderItemViewModel option = Assert.Single(vm.AvailableReaders);
+        Assert.Equal(enabled.ReaderId, option.ReaderId);
+        Assert.Equal("192.168.40.88", option.Host);
+        Assert.Same(option, vm.SelectedAccessReader);
+        Assert.Equal(enabled.ReaderId, vm.ReaderId);
+    }
+
+    [Fact]
+    public void Target_match_suggestions_follow_reader_inventory_and_target_type()
+    {
+        Guid readerId = Guid.NewGuid();
+        var service = new LateFailureInventoryService
+        {
+            Tags =
+            [
+                new TagObservation { Epc = "3002", Tid = "E202", LastSeen = DateTimeOffset.UtcNow },
+                new TagObservation { Epc = "3001", Tid = "E201", LastSeen = DateTimeOffset.UtcNow.AddSeconds(-1) },
+                new TagObservation { Epc = "3003", Tid = string.Empty, LastSeen = DateTimeOffset.UtcNow.AddSeconds(-2) },
+            ],
+        };
+        using var vm = new TagMemoryViewModel(service);
+
+        vm.SetReaderContext(CreateReader(readerId, "Reader", "192.168.40.88", isEnabled: true));
+
+        Assert.Equal(new[] { "3002", "3001", "3003" }, vm.TargetMatches);
+
+        vm.SelectionBank = TagMemoryBank.Tid;
+
+        Assert.Equal(new[] { "E202", "E201" }, vm.TargetMatches);
+        vm.Epc = "ABCD";
+        Assert.Equal("ABCD", vm.Epc);
+    }
+
+    [Fact]
     public async Task Known_missing_tag_access_capability_disables_ui_operation()
     {
         var h = new Harness();
@@ -272,7 +336,7 @@ public sealed class TagMemoryViewModelTests
     }
 
     [Fact]
-    public async Task Read_result_is_discarded_when_same_reader_capability_changes()
+    public async Task Read_result_survives_same_reader_short_connection_state_refresh()
     {
         var h = new Harness();
         var started = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -310,8 +374,8 @@ public sealed class TagMemoryViewModelTests
         release.TrySetResult(true);
         await read.WaitAsync(TimeSpan.FromSeconds(2));
 
-        Assert.Null(vm.Result);
-        Assert.Empty(vm.DataHex);
+        Assert.Equal("读取成功。", vm.Result);
+        Assert.Equal("0AB0", vm.DataHex);
     }
 
     [Fact]
@@ -335,6 +399,8 @@ public sealed class TagMemoryViewModelTests
 
     private sealed class LateFailureInventoryService : IInventoryService
     {
+        public IReadOnlyList<TagObservation> Tags { get; init; } = [];
+
         public TaskCompletionSource<bool> Started { get; } = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -379,7 +445,7 @@ public sealed class TagMemoryViewModelTests
         public Task StopInventoryAsync(Guid readerId, CancellationToken ct = default) =>
             throw new NotSupportedException();
 
-        public IReadOnlyList<TagObservation> GetTags(Guid readerId) => [];
+        public IReadOnlyList<TagObservation> GetTags(Guid readerId) => Tags;
 
         public void ClearTags(Guid readerId) { }
 
@@ -405,4 +471,23 @@ public sealed class TagMemoryViewModelTests
             GpioCommand command,
             CancellationToken ct = default) => throw new NotSupportedException();
     }
+
+    private static ReaderItemViewModel CreateReader(
+        Guid readerId,
+        string name,
+        string host,
+        bool isEnabled) =>
+        new(new ReaderRuntimeSnapshot
+        {
+            ReaderId = readerId,
+            Profile = new ReaderProfile
+            {
+                Id = readerId,
+                Name = name,
+                Host = host,
+                IsEnabled = isEnabled,
+            },
+            State = ReaderState.Disconnected,
+            IsEnabled = isEnabled,
+        });
 }

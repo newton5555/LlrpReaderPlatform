@@ -3,6 +3,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LlrpReaderPlatform.Contracts.Errors;
 using LlrpReaderPlatform.Contracts.Persistence;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LlrpReaderPlatform.App.Wpf.ViewModels;
 
@@ -15,14 +17,18 @@ public partial class AppSettingsViewModel : ObservableObject, IPageOperationOwne
     private const string TagLoggingEnabledKey = "tag-logging-enabled";
     private const string TagLogDirectoryKey = "tag-log-directory";
     private readonly IAppSettingsStore store;
+    private readonly ILogger<AppSettingsViewModel> logger;
     private readonly CancellationTokenSource lifetimeCts = new();
     private readonly CancellationToken lifetimeToken;
     private CancellationTokenSource? activeOperationCts;
     private bool disposed;
 
-    public AppSettingsViewModel(IAppSettingsStore store)
+    public AppSettingsViewModel(
+        IAppSettingsStore store,
+        ILogger<AppSettingsViewModel>? logger = null)
     {
         this.store = store;
+        this.logger = logger ?? NullLogger<AppSettingsViewModel>.Instance;
         lifetimeToken = lifetimeCts.Token;
     }
 
@@ -40,7 +46,7 @@ public partial class AppSettingsViewModel : ObservableObject, IPageOperationOwne
 
     private int operationInFlight;
 
-    public string ApplicationStatus => "LlrpReaderPlatform.App.Wpf（数据源、设备设置、寻卡、Tag 内存、Tag Lists、运行记录）。";
+    public string ApplicationStatus => "LlrpReaderPlatform.App.Wpf（数据源、设备设置、寻卡、Tag 内存、TOI、运行记录）。";
 
     public async Task LoadAsync(CancellationToken ct = default)
     {
@@ -55,6 +61,8 @@ public partial class AppSettingsViewModel : ObservableObject, IPageOperationOwne
         }
 
         CancellationTokenSource operationCts = BeginOperation(ct);
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation("WPF operation {Operation} started: {OperationId}.", "LoadAppSettings", operationId);
         try
         {
             TagLoggingEnabled = bool.TryParse(
@@ -64,10 +72,20 @@ public partial class AppSettingsViewModel : ObservableObject, IPageOperationOwne
             LogDirectory = string.IsNullOrWhiteSpace(configuredDirectory)
                 ? GetDefaultTagLogDirectory()
                 : configuredDirectory.Trim();
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, tag logging {TagLoggingEnabled}.",
+                "LoadAppSettings",
+                operationId,
+                TagLoggingEnabled);
         }
         catch (OperationCanceledException) when (operationCts.IsCancellationRequested)
         {
             // 页面离开或窗口退出时取消应用设置读取。
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}.", "LoadAppSettings", operationId);
+            throw;
         }
         finally
         {
@@ -89,6 +107,8 @@ public partial class AppSettingsViewModel : ObservableObject, IPageOperationOwne
         }
 
         CancellationTokenSource operationCts = BeginOperation();
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation("WPF operation {Operation} started: {OperationId}.", "SaveAppSettings", operationId);
         try
         {
             CancellationToken token = operationCts.Token;
@@ -98,6 +118,12 @@ public partial class AppSettingsViewModel : ObservableObject, IPageOperationOwne
             await store.SetAsync(TagLoggingEnabledKey, TagLoggingEnabled.ToString(), token);
             await store.SetAsync(TagLogDirectoryKey, LogDirectory, token);
             Status = "应用设置已保存。";
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, tag logging {TagLoggingEnabled}, directory {LogDirectory}.",
+                "SaveAppSettings",
+                operationId,
+                TagLoggingEnabled,
+                LogDirectory);
         }
         catch (OperationCanceledException) when (operationCts.IsCancellationRequested)
         {
@@ -105,6 +131,7 @@ public partial class AppSettingsViewModel : ObservableObject, IPageOperationOwne
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}.", "SaveAppSettings", operationId);
             if (!disposed)
             {
                 Status = PlatformErrorDisplay.Failure("保存应用设置", PlatformErrorCode.PersistenceFailed, ex.Message);

@@ -1,3 +1,5 @@
+using LlrpReaderPlatform.Contracts.Tagging;
+
 namespace LlrpReaderPlatform.Contracts.Persistence;
 
 public sealed record TagListEntry
@@ -35,6 +37,8 @@ public sealed record InventoryRunRecord
     public string StopReason { get; init; } = "Manual";
     public long TotalReadCount { get; init; }
     public int UniqueTagCount { get; init; }
+    /// <summary>停止后最终聚合标签快照的 JSON 文件路径；运行中为空。</summary>
+    public string? SnapshotFilePath { get; init; }
     public string? LogFilePath { get; init; }
 }
 
@@ -42,4 +46,17 @@ public interface IInventoryRunStore
 {
     Task<IReadOnlyList<InventoryRunRecord>> GetForReaderAsync(Guid readerId, CancellationToken ct = default);
     Task SaveAsync(InventoryRunRecord run, CancellationToken ct = default);
+}
+
+/// <summary>一次盘存停止后生成的最终聚合快照。实时 TagObserved 不属于日志路径。</summary>
+public sealed record InventoryRunSnapshot
+{
+    public required InventoryRunRecord Run { get; init; }
+    public IReadOnlyList<TagObservation> Tags { get; init; } = [];
+}
+
+/// <summary>停止后持久化最终盘存快照的边界；具体文件格式由 Infrastructure 决定。</summary>
+public interface IInventorySnapshotStore
+{
+    Task<string?> SaveAsync(InventoryRunSnapshot snapshot, CancellationToken ct = default);
 }

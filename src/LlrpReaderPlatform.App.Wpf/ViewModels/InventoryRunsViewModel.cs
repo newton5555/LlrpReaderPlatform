@@ -39,12 +39,23 @@ public partial class InventoryRunsViewModel : ObservableObject, IPageOperationOw
     private Guid? readerId;
 
     [ObservableProperty]
+    private string readerName = "No reader selected";
+
+    [ObservableProperty]
+    private InventoryRunRowViewModel? selectedRun;
+
+    [ObservableProperty]
     private string? status;
 
     [ObservableProperty]
     private bool isBusy;
 
-    public void SelectReader(Guid? id)
+    public int RunCount => Runs.Count;
+    public long LatestReadCount => Runs.FirstOrDefault()?.TotalReadCount ?? 0;
+    public int LatestUniqueTagCount => Runs.FirstOrDefault()?.UniqueTagCount ?? 0;
+    public string LatestStopReason => Runs.FirstOrDefault()?.StopReasonDisplay ?? "—";
+
+    public void SelectReader(Guid? id, string? name = null)
     {
         if (disposed)
         {
@@ -52,6 +63,7 @@ public partial class InventoryRunsViewModel : ObservableObject, IPageOperationOw
         }
 
         ReaderId = id;
+        ReaderName = id is null ? "No reader selected" : name ?? ReaderName;
         _ = StartLoadAsync(id);
     }
 
@@ -132,6 +144,12 @@ public partial class InventoryRunsViewModel : ObservableObject, IPageOperationOw
             {
                 Runs.Add(new InventoryRunRowViewModel(record));
             }
+
+            SelectedRun = Runs.FirstOrDefault();
+            OnPropertyChanged(nameof(RunCount));
+            OnPropertyChanged(nameof(LatestReadCount));
+            OnPropertyChanged(nameof(LatestUniqueTagCount));
+            OnPropertyChanged(nameof(LatestStopReason));
 
             Status = $"已加载 {Runs.Count} 条运行记录。";
         }
@@ -241,5 +259,28 @@ public sealed record InventoryRunRowViewModel(InventoryRunRecord Record)
     public string StopReason => Record.StopReason;
     public long TotalReadCount => Record.TotalReadCount;
     public int UniqueTagCount => Record.UniqueTagCount;
+    public string SnapshotFilePath => Record.SnapshotFilePath ?? string.Empty;
     public string LogFilePath => Record.LogFilePath ?? string.Empty;
+    public string StartedLocal => Record.StartedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+    public string EndedLocal => Record.EndedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "Running";
+    public string Duration => Record.EndedAtUtc is { } ended
+        ? $"{Math.Max(0, (ended - Record.StartedAtUtc).TotalSeconds):0.00} s"
+        : "Running";
+    public string StopReasonDisplay => Record.StopReason switch
+    {
+        "Manual" => "Manual stop",
+        "Duration" => "Duration reached",
+        "Gpi" => "GPI trigger",
+        "DeviceDisconnected" => "Device disconnected",
+        "ConnectionFaulted" => "Connection fault",
+        "ReaderException" => "Reader exception",
+        "Removed" => "Reader removed",
+        "Deactivated" => "Reader disabled",
+        "ApplicationExit" => "Application exit",
+        "StopFailed" => "Stop failed",
+        "Running" => "Running",
+        _ => Record.StopReason,
+    };
+    public bool HasLog => !string.IsNullOrWhiteSpace(Record.LogFilePath);
+    public bool HasSnapshot => !string.IsNullOrWhiteSpace(Record.SnapshotFilePath);
 }

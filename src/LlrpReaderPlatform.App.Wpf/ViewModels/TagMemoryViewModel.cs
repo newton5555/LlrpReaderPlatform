@@ -1,10 +1,14 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LlrpReaderPlatform.Contracts.Errors;
 using LlrpReaderPlatform.Contracts.Readers;
 using LlrpReaderPlatform.Contracts.Settings;
 using LlrpReaderPlatform.Contracts.Tagging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LlrpReaderPlatform.App.Wpf.ViewModels;
 
@@ -14,19 +18,27 @@ namespace LlrpReaderPlatform.App.Wpf.ViewModels;
 /// </summary>
 public partial class TagMemoryViewModel : ObservableObject, IPageOperationOwner, IDisposable
 {
+    private const int MaxTargetSuggestions = 500;
     private readonly IInventoryService inventory;
+    private readonly ILogger<TagMemoryViewModel> logger;
+    private readonly DispatcherTimer targetSuggestionTimer;
     private readonly CancellationTokenSource lifetimeCts = new();
     private readonly CancellationToken lifetimeToken;
     private CancellationTokenSource? activeOperationCts;
     private long readerContextVersion;
     private ReaderCapabilityContextStamp? readerContextStamp;
+    private bool updatingAvailableReaders;
     private bool disposed;
+    private int targetSuggestionsDirty;
 
     [ObservableProperty]
     private Guid? readerId;
 
     [ObservableProperty]
     private string readerName = "No reader selected";
+
+    [ObservableProperty]
+    private ReaderItemViewModel? selectedAccessReader;
 
     [ObservableProperty]
     private string epc = string.Empty;
@@ -66,20 +78,115 @@ public partial class TagMemoryViewModel : ObservableObject, IPageOperationOwner,
     /// <summary>Tag Memory 的按钮只有在页面已经绑定到一个 Reader 时才应呈现为可用。</summary>
     public bool IsReaderSelected => ReaderId is not null;
 
-    public TagMemoryViewModel(IInventoryService inventory)
+    public bool CanSelectReader => !IsBusy;
+
+    /// <summary>Tag Memory 只允许选择左侧开关已启用的 Reader。</summary>
+    public ObservableCollection<ReaderItemViewModel> AvailableReaders { get; } = [];
+
+    /// <summary>当前 Reader 已寻到的 EPC 或 TID；输入框仍允许录入列表外的值。</summary>
+    public ObservableCollection<string> TargetMatches { get; } = [];
+
+    public TagMemoryViewModel(
+        IInventoryService inventory,
+        ILogger<TagMemoryViewModel>? logger = null)
     {
         this.inventory = inventory;
+        this.logger = logger ?? NullLogger<TagMemoryViewModel>.Instance;
         lifetimeToken = lifetimeCts.Token;
+        Dispatcher dispatcher = System.Windows.Application.Current?.Dispatcher
+            ?? Dispatcher.CurrentDispatcher;
+        targetSuggestionTimer = new DispatcherTimer(
+            TimeSpan.FromMilliseconds(300),
+            DispatcherPriority.Background,
+            OnTargetSuggestionTimerTick,
+            dispatcher);
+        targetSuggestionTimer.Start();
+        inventory.TagObserved += OnTagObserved;
+    }
+
+    /// <summary>
+    /// 用 ReaderManager 的最新快照刷新操作目标。按 ReaderId 保留 Tag Memory 页内的
+    /// 下拉选择，避免短连接状态刷新把用户选中的设备切回左侧当前项。
+    /// </summary>
+    public void UpdateAvailableReaders(
+        IEnumerable<ReaderItemViewModel> readers,
+        Guid? preferredReaderId = null)
+    {
+        ArgumentNullException.ThrowIfNull(readers);
+        Guid? currentReaderId = SelectedAccessReader?.ReaderId;
+        ReaderItemViewModel[] enabledReaders = readers
+            .Where(static reader => reader.IsEnabled)
+            .ToArray();
+
+        updatingAvailableReaders = true;
+        try
+        {
+            AvailableReaders.Clear();
+            foreach (ReaderItemViewModel reader in enabledReaders)
+            {
+                AvailableReaders.Add(reader);
+            }
+
+            Guid? targetReaderId = currentReaderId is { } current
+                && enabledReaders.Any(reader => reader.ReaderId == current)
+                    ? current
+                    : preferredReaderId is { } preferred
+                        && enabledReaders.Any(reader => reader.ReaderId == preferred)
+                            ? preferred
+                            : enabledReaders.FirstOrDefault()?.ReaderId;
+            SelectedAccessReader = targetReaderId is { } target
+                ? enabledReaders.First(reader => reader.ReaderId == target)
+                : null;
+        }
+        finally
+        {
+            updatingAvailableReaders = false;
+        }
+
+        // ComboBox 会在 ItemsSource.Clear() 时短暂回写 null。只在列表完成替换后
+        // 应用一次最终目标，避免 Reader 状态刷新误取消正在进行的 Tag Access。
+        ApplyReaderContext(SelectedAccessReader);
+    }
+
+    /// <summary>用户点击左侧启用 Reader 时，同步 Tag Memory 的本地选择。</summary>
+    public void SelectReaderFromSidebar(ReaderItemViewModel? reader)
+    {
+        if (reader is null || !reader.IsEnabled)
+        {
+            return;
+        }
+
+        ReaderItemViewModel? available = AvailableReaders
+            .FirstOrDefault(item => item.ReaderId == reader.ReaderId);
+        if (available is not null)
+        {
+            SelectedAccessReader = available;
+        }
     }
 
     /// <summary>把当前 Reader 上下文投影到 Tag Memory 页面，避免 View 依赖窗口级 DataContext。</summary>
     public void SetReaderContext(ReaderItemViewModel? reader)
     {
+        SelectedAccessReader = reader;
+        ApplyReaderContext(reader);
+    }
+
+    partial void OnSelectedAccessReaderChanged(ReaderItemViewModel? value)
+    {
+        if (!updatingAvailableReaders)
+        {
+            ApplyReaderContext(value);
+        }
+    }
+
+    private void ApplyReaderContext(ReaderItemViewModel? reader)
+    {
         Guid? nextReaderId = reader?.ReaderId;
         ReaderCapabilityContextStamp nextContext = ReaderCapabilityContextStamp.From(reader);
         bool contextChanged = readerContextStamp is not { } currentContext
             || currentContext != nextContext;
-        if (contextChanged)
+        bool readerChanged = readerContextStamp?.ReaderId != nextReaderId;
+        if (contextChanged && (readerChanged || !IsBusy))
         {
             Interlocked.Increment(ref readerContextVersion);
             try
@@ -98,9 +205,59 @@ public partial class TagMemoryViewModel : ObservableObject, IPageOperationOwner,
         ReaderId = nextReaderId;
         ReaderName = reader?.Name ?? "No reader selected";
         IsTagAccessAvailable = nextContext.TagAccessAvailable;
+        RefreshTargetMatches();
     }
 
     partial void OnReaderIdChanged(Guid? value) => OnPropertyChanged(nameof(IsReaderSelected));
+
+    partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(CanSelectReader));
+
+    partial void OnSelectionBankChanged(TagMemoryBank value) => RefreshTargetMatches();
+
+    private void OnTagObserved(object? sender, TagObservedEventArgs args)
+    {
+        if (!disposed && ReaderId == args.ReaderId)
+        {
+            // 高频 TagReport 只置脏标记，ObservableCollection 最多每 300ms 更新一次。
+            Interlocked.Exchange(ref targetSuggestionsDirty, 1);
+        }
+    }
+
+    private void OnTargetSuggestionTimerTick(object? sender, EventArgs args)
+    {
+        if (Interlocked.Exchange(ref targetSuggestionsDirty, 0) != 0)
+        {
+            RefreshTargetMatches();
+        }
+    }
+
+    public void RefreshTargetMatches()
+    {
+        if (disposed || ReaderId is not { } readerId)
+        {
+            TargetMatches.Clear();
+            return;
+        }
+
+        string[] matches = inventory.GetTags(readerId)
+            .OrderByDescending(static tag => tag.LastSeen)
+            .Select(tag => SelectionBank == TagMemoryBank.Tid ? tag.Tid : tag.Epc)
+            .Where(static value => !string.IsNullOrWhiteSpace(value))
+            .Select(static value => value.Trim().ToUpperInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(MaxTargetSuggestions)
+            .ToArray();
+        if (TargetMatches.SequenceEqual(matches, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        TargetMatches.Clear();
+        foreach (string match in matches)
+        {
+            TargetMatches.Add(match);
+        }
+    }
 
     // 保持旧 Reader Studio 的操作顺序，避免把 Reserved 放在用户最常用的 EPC 前面。
     public IReadOnlyList<TagMemoryBank> MemoryBanks { get; } =
@@ -147,6 +304,15 @@ public partial class TagMemoryViewModel : ObservableObject, IPageOperationOwner,
 
         try
         {
+            Result = "正在读取标签内存...";
+            Guid operationId = Guid.NewGuid();
+            logger.LogInformation(
+                "WPF operation {Operation} started: {OperationId}, reader {ReaderId}, bank {MemoryBank}, words {WordCount}.",
+                "ReadTagMemory",
+                operationId,
+                readerId,
+                MemoryBank,
+                count);
             long contextVersion = Volatile.Read(ref readerContextVersion);
             using CancellationTokenSource operationCts = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
             CancellationTokenSource? previousOperationCts = Interlocked.Exchange(ref activeOperationCts, operationCts);
@@ -173,8 +339,17 @@ public partial class TagMemoryViewModel : ObservableObject, IPageOperationOwner,
             }
             else
             {
-                Result = PlatformErrorDisplay.Failure("读取", res.ErrorCode, res.Error);
+                Result = res.ErrorCode == PlatformErrorCode.NotFound
+                    ? res.Error ?? "未找到匹配标签，操作超时。"
+                    : PlatformErrorDisplay.Failure("读取", res.ErrorCode, res.Error);
             }
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, reader {ReaderId}, succeeded {Succeeded}, error code {ErrorCode}.",
+                "ReadTagMemory",
+                operationId,
+                readerId,
+                res.Succeeded,
+                res.ErrorCode);
         }
         catch (OperationCanceledException) when (
             lifetimeCts.IsCancellationRequested
@@ -184,6 +359,7 @@ public partial class TagMemoryViewModel : ObservableObject, IPageOperationOwner,
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed for reader {ReaderId}.", "ReadTagMemory", readerId);
             if (!disposed && ReaderId == readerId)
             {
                 Result = PlatformErrorDisplay.Failure("读取", ex);
@@ -236,6 +412,14 @@ public partial class TagMemoryViewModel : ObservableObject, IPageOperationOwner,
 
         try
         {
+            Result = "正在写入标签内存...";
+            Guid operationId = Guid.NewGuid();
+            logger.LogInformation(
+                "WPF operation {Operation} started: {OperationId}, reader {ReaderId}, bank {MemoryBank}.",
+                "WriteTagMemory",
+                operationId,
+                readerId,
+                MemoryBank);
             long contextVersion = Volatile.Read(ref readerContextVersion);
             using CancellationTokenSource operationCts = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
             CancellationTokenSource? previousOperationCts = Interlocked.Exchange(ref activeOperationCts, operationCts);
@@ -257,7 +441,16 @@ public partial class TagMemoryViewModel : ObservableObject, IPageOperationOwner,
 
             Result = res.Succeeded
                 ? "写入成功。"
-                : PlatformErrorDisplay.Failure("写入", res.ErrorCode, res.Error);
+                : res.ErrorCode == PlatformErrorCode.NotFound
+                    ? res.Error ?? "未找到匹配标签，操作超时。"
+                    : PlatformErrorDisplay.Failure("写入", res.ErrorCode, res.Error);
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, reader {ReaderId}, succeeded {Succeeded}, error code {ErrorCode}.",
+                "WriteTagMemory",
+                operationId,
+                readerId,
+                res.Succeeded,
+                res.ErrorCode);
         }
         catch (OperationCanceledException) when (
             lifetimeCts.IsCancellationRequested
@@ -267,6 +460,7 @@ public partial class TagMemoryViewModel : ObservableObject, IPageOperationOwner,
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed for reader {ReaderId}.", "WriteTagMemory", readerId);
             if (!disposed && ReaderId == readerId)
             {
                 Result = PlatformErrorDisplay.Failure("写入", ex);
@@ -360,6 +554,8 @@ public partial class TagMemoryViewModel : ObservableObject, IPageOperationOwner,
         }
 
         disposed = true;
+        inventory.TagObserved -= OnTagObserved;
+        targetSuggestionTimer.Stop();
         CancelPendingOperations();
         lifetimeCts.Cancel();
         lifetimeCts.Dispose();

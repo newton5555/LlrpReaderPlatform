@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITagListStore, InMemoryTagListStore>();
         services.AddSingleton<IInventoryRunStore, InMemoryInventoryRunStore>();
         services.AddSingleton<IInventoryTagLog, NullInventoryTagLog>();
+        services.AddSingleton<IInventorySnapshotStore, NullInventorySnapshotStore>();
 
         // ReaderManager 以单一实例同时提供生命周期与盘存服务。
         services.AddSingleton<ReaderManager>();

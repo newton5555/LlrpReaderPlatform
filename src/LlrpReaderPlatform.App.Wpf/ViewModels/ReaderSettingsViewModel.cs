@@ -6,6 +6,8 @@ using LlrpReaderPlatform.Contracts.Errors;
 using LlrpReaderPlatform.Contracts.Lifecycle;
 using LlrpReaderPlatform.Contracts.Readers;
 using LlrpReaderPlatform.Contracts.Settings;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LlrpReaderPlatform.App.Wpf.ViewModels;
 
@@ -16,6 +18,7 @@ namespace LlrpReaderPlatform.App.Wpf.ViewModels;
 public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationOwner, IDisposable
 {
     private readonly IReaderSettingsService settings;
+    private readonly ILogger<ReaderSettingsViewModel> logger;
     private readonly IReaderManager? readerManager;
     private readonly CancellationTokenSource lifetimeCts = new();
     private readonly CancellationToken lifetimeToken;
@@ -71,9 +74,11 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
     public ReaderSettingsViewModel(
         IReaderSettingsService settings,
         DiagnosticsViewModel? diagnostics = null,
-        IReaderManager? readerManager = null)
+        IReaderManager? readerManager = null,
+        ILogger<ReaderSettingsViewModel>? logger = null)
     {
         this.settings = settings;
+        this.logger = logger ?? NullLogger<ReaderSettingsViewModel>.Instance;
         Diagnostics = diagnostics;
         this.readerManager = readerManager;
         lifetimeToken = lifetimeCts.Token;
@@ -326,6 +331,12 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
         previousLoadCts?.Cancel();
         long contextVersion = Volatile.Read(ref readerContextVersion);
         ReaderId = id;
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation(
+            "WPF operation {Operation} started: {OperationId}, reader {ReaderId}.",
+            "QueryReaderSettings",
+            operationId,
+            id);
         Diagnostics?.SelectReader(
             id,
             readerFeatureCatalog,
@@ -361,6 +372,13 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
                 ? "设置已加载（可编辑）"
                 : "当前设置为只读；需要连接 Reader 或该 Reader 未提供可编辑能力。";
             SettingsOrigin = model.Layout.HasEditableSettings ? "Loaded from Reader" : "Cached / read-only";
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, reader {ReaderId}, editable {Editable}, entries {EntryCount}.",
+                "QueryReaderSettings",
+                operationId,
+                id,
+                model.Layout.HasEditableSettings,
+                model.Layout.Entries.Count);
             // QueryAsync may deliberately return a read-only semantic SQLite
             // preset when the Reader cannot be reached. Keep that distinction
             // for SaveAsync: a device Apply followed by a cached fallback is
@@ -374,6 +392,7 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}, reader {ReaderId}.", "QueryReaderSettings", operationId, id);
             if (!disposed)
             {
                 ClearRows();
@@ -451,6 +470,13 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
         CancelAndDispose(previousSaveCts);
         try
         {
+            Guid operationId = Guid.NewGuid();
+            logger.LogInformation(
+                "WPF operation {Operation} started: {OperationId}, reader {ReaderId}, fields {FieldCount}.",
+                "ApplyReaderSettings",
+                operationId,
+                id,
+                draft.Values.Count);
             SettingsApplyResult result = await settings.ApplyAsync(id, draft, saveCts.Token);
             if (saveCts.IsCancellationRequested || !IsCurrentReaderContext(id, contextVersion))
             {
@@ -486,6 +512,12 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
             }
 
             Status = applyStatus;
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, reader {ReaderId}, status {Status}.",
+                "ApplyReaderSettings",
+                operationId,
+                id,
+                applyStatus);
         }
         catch (OperationCanceledException) when (saveCts.IsCancellationRequested)
         {
@@ -493,6 +525,7 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed for reader {ReaderId}.", "ApplyReaderSettings", id);
             if (!disposed)
             {
                 Status = PlatformErrorDisplay.Failure("保存", ex);
@@ -542,6 +575,12 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
         previousLoadCts?.Cancel();
         try
         {
+            Guid operationId = Guid.NewGuid();
+            logger.LogInformation(
+                "WPF operation {Operation} started: {OperationId}, reader {ReaderId}.",
+                "LoadReaderDefaults",
+                operationId,
+                readerId);
             SettingsEditorModel model = await settings.GetDefaultsAsync(readerId, defaultsCts.Token);
             if (disposed
                 || defaultsCts.IsCancellationRequested
@@ -570,6 +609,12 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
 
             Status = "已加载 SDK 默认设置（尚未下发到 Reader）。";
             SettingsOrigin = "SDK defaults (not applied)";
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, reader {ReaderId}, entries {EntryCount}.",
+                "LoadReaderDefaults",
+                operationId,
+                readerId,
+                model.Layout.Entries.Count);
         }
         catch (OperationCanceledException) when (defaultsCts.IsCancellationRequested)
         {
@@ -577,6 +622,7 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed for reader {ReaderId}.", "LoadReaderDefaults", readerId);
             if (!disposed)
             {
                 Status = PlatformErrorDisplay.Failure("读取默认设置", ex);

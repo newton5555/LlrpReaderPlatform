@@ -23,6 +23,16 @@ public sealed partial class ReaderItemViewModel : ObservableObject
     public int Port => Snapshot.Profile.Port;
     public string Endpoint => ReaderEndpointFormatter.Format(Host, Port);
     public string State => Snapshot.State.ToString();
+    public bool IsOperationBusy => Snapshot.State is ReaderState.Connecting
+        or ReaderState.Stopping
+        or ReaderState.Disconnecting;
+    public string OperationStatus => Snapshot.State switch
+    {
+        ReaderState.Connecting => "正在启动...",
+        ReaderState.Stopping => "正在停止...",
+        ReaderState.Disconnecting => "正在断开...",
+        _ => string.Empty,
+    };
     public string StatusText => Snapshot.State switch
     {
         ReaderState.Inventorying => "寻卡中",
