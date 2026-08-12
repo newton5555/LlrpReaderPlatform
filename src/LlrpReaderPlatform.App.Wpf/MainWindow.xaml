@@ -178,7 +178,7 @@
                             Margin="12,0,12,20"
                             Padding="16,14"
                             BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
-                            BorderThickness="1">
+                            BorderThickness="4,0,0,0">
                             <StackPanel>
                                 <TextBlock
                                     FontSize="24"
@@ -300,19 +300,18 @@
                                                 <ControlTemplate TargetType="ListBoxItem">
                                                     <Border
                                                         x:Name="ItemBorder"
-                                                        Margin="0,1"
+                                                        Margin="0,3"
                                                         Background="Transparent"
-                                                        BorderBrush="Transparent"
-                                                        BorderThickness="1"
-                                                        CornerRadius="2">
+                                                        BorderThickness="0"
+                                                        CornerRadius="4">
                                                         <ContentPresenter />
                                                     </Border>
                                                     <ControlTemplate.Triggers>
                                                         <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                                                            <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource MahApps.Brushes.Gray8}" />
                                                         </Trigger>
                                                         <Trigger Property="IsSelected" Value="True">
-                                                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                                                            <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource MahApps.Brushes.Gray7}" />
                                                         </Trigger>
                                                     </ControlTemplate.Triggers>
                                                 </ControlTemplate>
@@ -545,34 +544,41 @@
                     Grid.Column="1"
                     VerticalAlignment="Center"
                     Orientation="Horizontal">
-                    <TextBlock FontSize="12" Text="Unique Tags: " />
+                    <TextBlock FontSize="12" Opacity="0.6" Text="Unique Tags: " />
                     <TextBlock
                         FontSize="12"
                         FontWeight="Bold"
+                        Foreground="{DynamicResource MahApps.Brushes.Accent}"
                         Text="{Binding Inventory.UniqueTagCount}" />
                     <TextBlock
                         Margin="16,0,0,0"
                         FontSize="12"
+                        Opacity="0.6"
                         Text="  |  Read Rate: " />
                     <TextBlock
                         FontSize="12"
                         FontWeight="Bold"
+                        Foreground="{DynamicResource MahApps.Brushes.Accent}"
                         Text="{Binding Inventory.TagRate}" />
                     <TextBlock
                         Margin="16,0,0,0"
                         FontSize="12"
+                        Opacity="0.6"
                         Text="  |  Dropped: " />
                     <TextBlock
                         FontSize="12"
                         FontWeight="Bold"
+                        Foreground="{DynamicResource MahApps.Brushes.Accent}"
                         Text="{Binding Inventory.DroppedTagReportCount}" />
                     <TextBlock
                         Margin="16,0,0,0"
                         FontSize="12"
+                        Opacity="0.6"
                         Text="  |  Selected: " />
                     <TextBlock
                         FontSize="12"
                         FontWeight="Bold"
+                        Foreground="{DynamicResource MahApps.Brushes.Accent}"
                         Text="{Binding SelectedReader.Name}" />
                 </StackPanel>
             </Grid>

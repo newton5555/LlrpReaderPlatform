@@ -40,6 +40,7 @@
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="mah:ControlsHelper.CornerRadius" Value="4" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsBusy}" Value="True">
                     <Setter Property="IsEnabled" Value="False" />
@@ -173,27 +174,27 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <WrapPanel Margin="0,0,0,8">
-                    <TextBlock Text="Hostname:" FontWeight="SemiBold" Margin="0,0,6,0" />
+                    <TextBlock Text="Hostname:" FontWeight="SemiBold" Opacity="0.6" Margin="0,0,6,0" />
                     <TextBlock Text="{Binding ReaderHost}"
-                               Margin="0,0,18,0" />
-                    <TextBlock Text="Interface:" FontWeight="SemiBold" Margin="0,0,6,0" />
-                    <TextBlock Text="LLRP" Margin="0,0,18,0" />
-                    <TextBlock Text="Model:" FontWeight="SemiBold" Margin="0,0,6,0" />
+                               Margin="0,0,24,0" />
+                    <TextBlock Text="Interface:" FontWeight="SemiBold" Opacity="0.6" Margin="0,0,6,0" />
+                    <TextBlock Text="LLRP" Margin="0,0,24,0" />
+                    <TextBlock Text="Model:" FontWeight="SemiBold" Opacity="0.6" Margin="0,0,6,0" />
                     <TextBlock Text="{Binding ReaderModel}"
-                               Margin="0,0,18,0" />
-                    <TextBlock Text="LLRP:" FontWeight="SemiBold" Margin="0,0,6,0" />
+                               Margin="0,0,24,0" />
+                    <TextBlock Text="LLRP:" FontWeight="SemiBold" Opacity="0.6" Margin="0,0,6,0" />
                     <TextBlock Text="{Binding ReaderProtocol}"
-                               Margin="0,0,18,0" />
-                    <TextBlock Text="Policy:" FontWeight="SemiBold" Margin="0,0,6,0" />
+                               Margin="0,0,24,0" />
+                    <TextBlock Text="Policy:" FontWeight="SemiBold" Opacity="0.6" Margin="0,0,6,0" />
                     <TextBlock Text="{Binding ReaderProtocolPolicy}"
-                               Margin="0,0,18,0" />
-                    <TextBlock Text="Session:" FontWeight="SemiBold" Margin="0,0,6,0" />
+                               Margin="0,0,24,0" />
+                    <TextBlock Text="Session:" FontWeight="SemiBold" Opacity="0.6" Margin="0,0,6,0" />
                     <TextBlock Text="{Binding ReaderConnection}"
-                               Margin="0,0,18,0" />
-                    <TextBlock Text="Extension:" FontWeight="SemiBold" Margin="0,0,6,0" />
+                               Margin="0,0,24,0" />
+                    <TextBlock Text="Extension:" FontWeight="SemiBold" Opacity="0.6" Margin="0,0,6,0" />
                     <TextBlock Text="{Binding ReaderExtensions}"
-                               Margin="0,0,18,0" />
-                    <TextBlock Text="Region:" FontWeight="SemiBold" Margin="0,0,6,0" />
+                               Margin="0,0,24,0" />
+                    <TextBlock Text="Region:" FontWeight="SemiBold" Opacity="0.6" Margin="0,0,6,0" />
                     <TextBlock Text="{Binding ReaderRegion}" />
                 </WrapPanel>
             </StackPanel>

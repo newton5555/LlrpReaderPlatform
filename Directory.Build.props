@@ -16,12 +16,6 @@
     <NoWarn>$(NoWarn);NU1903</NoWarn>
     <Deterministic>true</Deterministic>
 
-    <!--
-      Development-time SDK source checkout. Keep the SDK as a separate repository,
-      while allowing this platform workspace to compile directly against its current
-      implementation during cross-repository feature work.
-    -->
-    <LlrpSdkSourceRoot Condition="'$(LlrpSdkSourceRoot)' == ''">$(MSBuildThisFileDirectory)..\LLRPCSharp</LlrpSdkSourceRoot>
   </PropertyGroup>
 </Project>
 
