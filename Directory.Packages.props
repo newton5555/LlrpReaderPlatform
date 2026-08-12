@@ -5,17 +5,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- LLRP platform -->
-    <PackageVersion Include="LlrpSdk" Version="1.2.0" />
-    <PackageVersion Include="LlrpSdk.Extensions.Impinj" Version="1.2.0" />
-
     <!-- WPF consumer -->
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageVersion Include="FontAwesome.Sharp" Version="6.6.0" />
     <PackageVersion Include="MahApps.Metro" Version="2.4.11" />
 
     <!-- Platform services and infrastructure -->
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.10" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />

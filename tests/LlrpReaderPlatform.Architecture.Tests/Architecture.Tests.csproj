@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>LlrpReaderPlatform.Architecture.Tests</RootNamespace>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LlrpReaderPlatform.Contracts\Contracts.csproj" />
+    <ProjectReference Include="..\..\src\LlrpReaderPlatform.Services\Services.csproj" />
+    <ProjectReference Include="..\..\src\LlrpReaderPlatform.Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\LlrpReaderPlatform.Extensions.Impinj\Extensions.Impinj.csproj" />
+    <ProjectReference Include="..\..\src\LlrpReaderPlatform.App.Wpf\App.Wpf.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

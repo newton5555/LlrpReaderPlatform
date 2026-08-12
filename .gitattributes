@@ -3,6 +3,21 @@
 ###############################################################################
 * text=auto
 
+# Keep the repository canonicalized as LF while honoring the Windows
+# .editorconfig working-tree requirement of CRLF.
+*.cs text eol=crlf
+*.xaml text eol=crlf
+*.xml text eol=crlf
+*.csproj text eol=crlf
+*.props text eol=crlf
+*.targets text eol=crlf
+*.slnx text eol=crlf
+*.md text eol=crlf
+*.json text eol=crlf
+.editorconfig text eol=crlf
+.gitignore text eol=crlf
+.gitattributes text eol=crlf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

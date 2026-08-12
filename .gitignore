@@ -6,6 +6,7 @@
 # Build output
 bin/
 obj/
+artifacts/
 
 # Test and coverage output
 TestResults/
@@ -20,3 +21,4 @@ _ReSharper*/
 *.db-shm
 *.db-wal
 logs/
+.reasonix/

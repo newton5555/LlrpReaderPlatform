@@ -1,6 +1,12 @@
 <Project>
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <!-- Unified version for all LlrpReaderPlatform assemblies and future packages. -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -9,6 +15,13 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>$(NoWarn);NU1903</NoWarn>
     <Deterministic>true</Deterministic>
+
+    <!--
+      Development-time SDK source checkout. Keep the SDK as a separate repository,
+      while allowing this platform workspace to compile directly against its current
+      implementation during cross-repository feature work.
+    -->
+    <LlrpSdkSourceRoot Condition="'$(LlrpSdkSourceRoot)' == ''">$(MSBuildThisFileDirectory)..\LLRPCSharp</LlrpSdkSourceRoot>
   </PropertyGroup>
 </Project>
 
