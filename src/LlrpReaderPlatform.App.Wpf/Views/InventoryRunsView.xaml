@@ -3,12 +3,29 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-        <Style x:Key="InventoryRunsActionStyle" TargetType="Button">
+        <Style x:Key="InventoryRunsActionStyle" TargetType="Button"
+               BasedOn="{StaticResource FlatActionButtonStyle}">
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsBusy}" Value="True">
                     <Setter Property="IsEnabled" Value="False" />
                 </DataTrigger>
             </Style.Triggers>
+        </Style>
+        <Style x:Key="PageInfoCardStyle" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+        <Style x:Key="PageGroupStyle" TargetType="GroupBox">
+            <Setter Property="Padding" Value="14" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         </Style>
     </UserControl.Resources>
     <Grid Margin="36">
@@ -18,8 +35,13 @@
         </Grid.RowDefinitions>
         <StackPanel Grid.Row="0">
             <TextBlock Text="Inventory Runs" FontSize="28" FontWeight="Bold" />
-            <TextBlock Text="查看当前 Reader 的寻卡生命周期、统计和可选 JSONL 日志文件。"
-                       TextWrapping="Wrap" Margin="0,6,0,16" />
+            <Border Style="{StaticResource PageInfoCardStyle}" Margin="0,8,0,14">
+                <StackPanel>
+                    <TextBlock Text="功能说明" FontWeight="SemiBold" />
+                    <TextBlock Text="查看每次寻卡的运行记录，包括开始/结束时间、停止原因、读取总数、唯一标签数和日志文件路径，用于核对寻卡过程和结果。"
+                               TextWrapping="Wrap" Margin="0,5,0,0" />
+                </StackPanel>
+            </Border>
             <ProgressBar Height="4" Margin="0,0,0,10"
                          IsIndeterminate="True"
                          Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
@@ -29,16 +51,18 @@
                 <TextBlock Text="{Binding Status}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="18,0,0,0" />
             </StackPanel>
         </StackPanel>
-        <DataGrid Grid.Row="1" ItemsSource="{Binding Runs}" AutoGenerateColumns="False" CanUserAddRows="False"
-                  IsReadOnly="True" Margin="0,18,0,0">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Started (UTC)" Binding="{Binding StartedAtUtc}" Width="1.4*" />
-                <DataGridTextColumn Header="Ended (UTC)" Binding="{Binding EndedAtUtc}" Width="1.4*" />
-                <DataGridTextColumn Header="Stop reason" Binding="{Binding StopReason}" Width="*" />
-                <DataGridTextColumn Header="Reads" Binding="{Binding TotalReadCount}" Width="90" />
-                <DataGridTextColumn Header="Unique" Binding="{Binding UniqueTagCount}" Width="90" />
-                <DataGridTextColumn Header="Log" Binding="{Binding LogFilePath}" Width="2*" />
-            </DataGrid.Columns>
-        </DataGrid>
+        <GroupBox Grid.Row="1" Header="RUN HISTORY" Style="{StaticResource PageGroupStyle}" Margin="0,4,0,0">
+            <DataGrid ItemsSource="{Binding Runs}" AutoGenerateColumns="False" CanUserAddRows="False"
+                      IsReadOnly="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Started (UTC)" Binding="{Binding StartedAtUtc}" Width="1.4*" />
+                    <DataGridTextColumn Header="Ended (UTC)" Binding="{Binding EndedAtUtc}" Width="1.4*" />
+                    <DataGridTextColumn Header="Stop reason" Binding="{Binding StopReason}" Width="*" />
+                    <DataGridTextColumn Header="Reads" Binding="{Binding TotalReadCount}" Width="90" />
+                    <DataGridTextColumn Header="Unique" Binding="{Binding UniqueTagCount}" Width="90" />
+                    <DataGridTextColumn Header="Log" Binding="{Binding LogFilePath}" Width="2*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </GroupBox>
     </Grid>
 </UserControl>

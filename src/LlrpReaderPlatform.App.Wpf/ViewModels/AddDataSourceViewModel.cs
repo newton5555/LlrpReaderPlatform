@@ -189,7 +189,10 @@ public partial class AddDataSourceViewModel : ObservableObject, IPageOperationOw
             ExtensionSummary = FormatExtensionSummary(result.MatchedExtensionIds);
             if (result.Succeeded)
             {
-                Status = $"已添加 {ReaderEndpointFormatter.Format(profile.Host, profile.Port)}";
+                string actualName = readerManager.Readers
+                    .FirstOrDefault(reader => reader.ReaderId == profile.Id)?.Profile.Name
+                    ?? profile.Name;
+                Status = $"已添加 {actualName} · {ReaderEndpointFormatter.Format(profile.Host, profile.Port)}";
                 IsDiscoveryPanelOpen = false;
                 if (!disposed)
                 {

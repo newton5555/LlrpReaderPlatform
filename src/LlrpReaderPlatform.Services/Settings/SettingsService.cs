@@ -184,6 +184,14 @@ public sealed class SettingsService : IReaderSettingsService
 
             if (!draft.Values.TryGetValue(entry.Key, out object? value) || value is null)
             {
+                // Report fields are intentionally not exposed by the WPF settings page.
+                // An omitted report value means "keep the current Reader value"; the SDK
+                // compiler already applies that baseline when it builds the next settings.
+                if (IsInventoryReportSetting(entry.Key))
+                {
+                    continue;
+                }
+
                 issues.Add(new SettingsEntryIssue(entry.Key, $"{entry.Title} 未设置。"));
                 continue;
             }
@@ -387,6 +395,14 @@ public sealed class SettingsService : IReaderSettingsService
 
             if (!draft.Values.TryGetValue(entry.Key, out object? value) || value is null)
             {
+                // Report fields are intentionally not exposed by the WPF settings page.
+                // ApplyAsync validates against the freshly queried live layout, so it must
+                // use the same omission rule as the preflight validation above.
+                if (IsInventoryReportSetting(entry.Key))
+                {
+                    continue;
+                }
+
                 issues.Add(new SettingsEntryIssue(entry.Key, $"{entry.Title} 未设置。"));
                 continue;
             }
@@ -398,6 +414,10 @@ public sealed class SettingsService : IReaderSettingsService
             ? new SettingsValidationResult(true)
             : new SettingsValidationResult(false, "设置校验失败。", issues);
     }
+
+    private static bool IsInventoryReportSetting(string key) =>
+        key == SettingsKeys.ReportEvery
+        || key.StartsWith("report-", StringComparison.Ordinal);
 
     private static void AddUnknownEntryIssues(
         SettingsDraft draft,

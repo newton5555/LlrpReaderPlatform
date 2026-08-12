@@ -494,6 +494,7 @@ public sealed class InventoryViewModelTests
 
         Assert.False(vm.IsInventoryRunning);
         Assert.Equal(3, service.LastSpec?.DurationSeconds);
+        Assert.Equal((ushort)1, service.LastSpec?.Report?.ReportEveryNTags);
         Assert.Contains("启动失败", vm.Status);
         Assert.Contains("设备错误", vm.Status);
 

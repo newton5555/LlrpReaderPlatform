@@ -295,7 +295,8 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             DefaultValue = currentRfMode,
         });
 
-        SettingsRange tariRange = ResolveTariRange(runtime.Capabilities, inventory.ModeIndex, inventory.Tari);
+        ushort currentTari = ResolveTari(runtime.Capabilities, inventory.ModeIndex, inventory.Tari);
+        SettingsRange tariRange = ResolveTariRange(runtime.Capabilities, inventory.ModeIndex);
         entries.Add(new SettingsEntry
         {
             Key = SettingsKeys.Tari,
@@ -303,8 +304,8 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             EditorKind = EditorKind.Integer,
             ValueType = typeof(int),
             Range = tariRange,
-            CurrentValue = (int)inventory.Tari,
-            DefaultValue = (int)inventory.Tari,
+            CurrentValue = (int)currentTari,
+            DefaultValue = (int)currentTari,
         });
 
         entries.Add(new SettingsEntry
@@ -443,6 +444,11 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             inventory = inventory with { Tari = checked((ushort)tari) };
         }
 
+        inventory = inventory with
+        {
+            Tari = ResolveTari(runtime.Capabilities, inventory.ModeIndex, inventory.Tari),
+        };
+
         if (compiled.AntennaIds is { Count: > 0 } antennaIds)
         {
             inventory = inventory with { AntennaIds = antennaIds };
@@ -451,6 +457,8 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         {
             inventory = inventory with { AntennaIds = [selectedAntenna] };
         }
+
+        inventory = ExpandAllAntennas(inventory, reader, runtime.Capabilities);
 
         bool individual = draft.Values.TryGetValue(SettingsKeys.IndividualAntennaSettings, out object? individualValue)
             && Convert.ToBoolean(individualValue, CultureInfo.InvariantCulture);
@@ -569,8 +577,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
                     group.Key,
                     string.Join(
                         " / ",
-                        group.Select(static mode => mode.ForwardLinkModulation)
-                            .Where(static value => !string.IsNullOrWhiteSpace(value))
+                        group.Select(FormatRfModeDescription)
                             .Distinct(StringComparer.Ordinal)))))
             .ToList();
 
@@ -584,6 +591,25 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         }
 
         return options;
+    }
+
+    private static string FormatRfModeDescription(C1G2RfModeEntry mode)
+    {
+        string mValue = mode.MValue switch
+        {
+            0 => "M0",
+            1 => "M2",
+            2 => "M4",
+            3 => "M8",
+            _ => $"M{mode.MValue}",
+        };
+        string bdr = mode.BdrValue >= 1000
+            ? $"{(mode.BdrValue / 1000d).ToString("0.###", CultureInfo.InvariantCulture)}K"
+            : mode.BdrValue.ToString(CultureInfo.InvariantCulture);
+        string tari = (mode.MinTariValue / 1000d).ToString("0.0", CultureInfo.InvariantCulture);
+        string pie = (mode.PieValue / 1000d).ToString("0.###", CultureInfo.InvariantCulture);
+
+        return $"{mValue}/{bdr}, Tari: {tari} uS, PIE: {pie}";
     }
 
     private static void AddFilterEntries(
@@ -839,7 +865,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         ReaderCapabilities? capabilities,
         bool individual)
     {
-        IReadOnlyList<ushort> antennaIds = GetAntennaIds(draft, baseline);
+        IReadOnlyList<ushort> antennaIds = baseline.AntennaIds;
         if (individual)
         {
             var configurations = new List<InventoryAntennaConfiguration>();
@@ -858,14 +884,16 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
 
         ushort? globalTxIndex = GetUshort(draft, SettingsKeys.TxPowerIndex);
         ushort? globalRxIndex = GetUshort(draft, SettingsKeys.RxSensitivityIndex);
-        InventoryAntennaConfiguration existing = ResolveAntennaConfiguration(baseline, 0)
-            ?? new InventoryAntennaConfiguration { AntennaId = 0 };
-        if (globalTxIndex is null && globalRxIndex is null && existing.TransmitPowerIndex is null && existing.ReceiverSensitivityIndex is null)
-        {
-            return baseline.AntennaConfigurations;
-        }
-
-        return [ApplyAntennaValues(existing, 0, globalTxIndex, globalRxIndex, capabilities)];
+        return antennaIds
+            .Where(static antennaId => antennaId > 0)
+            .Distinct()
+            .Select(antennaId =>
+            {
+                InventoryAntennaConfiguration existing = ResolveAntennaConfiguration(baseline, antennaId)
+                    ?? new InventoryAntennaConfiguration { AntennaId = antennaId };
+                return ApplyAntennaValues(existing, antennaId, globalTxIndex, globalRxIndex, capabilities);
+            })
+            .ToArray();
     }
 
     private static InventorySettings ResolveInventoryBaseline(ReaderSettingsRuntimeSnapshot runtime)
@@ -980,32 +1008,76 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         return 1;
     }
 
-    private static IReadOnlyList<ushort> GetAntennaIds(SettingsDraft draft, InventorySettings baseline)
-    {
-        if (draft.Values.TryGetValue(SettingsKeys.AntennaIds, out object? value))
-        {
-            return ParseAntennaIds(value is null ? null : FormatInvariant(value));
-        }
-
-        if (draft.Values.TryGetValue(SettingsKeys.Antenna, out value) && value is not null)
-        {
-            return [Convert.ToUInt16(value, CultureInfo.InvariantCulture)];
-        }
-
-        return baseline.AntennaIds.Count > 0 ? baseline.AntennaIds : [0];
-    }
-
     private static IReadOnlyList<ushort> ParseAntennaIds(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
-            throw new InvalidOperationException("Antennas must not be empty; use ALL to select every antenna.");
+            throw new InvalidOperationException("Antennas must not be empty; select one or more explicit device antenna IDs.");
         }
 
-        return text.Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries)
+        ushort[] antennaIds = text.Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries)
             .Select(part => ushort.Parse(part, System.Globalization.CultureInfo.InvariantCulture))
             .Distinct()
             .ToArray();
+        if (antennaIds.Contains((ushort)0))
+        {
+            throw new InvalidOperationException("Antenna ID 0 is not supported; select the explicit device antenna IDs.");
+        }
+
+        return antennaIds;
+    }
+
+    private static InventorySettings ExpandAllAntennas(
+        InventorySettings inventory,
+        ReaderRuntimeSnapshot reader,
+        ReaderCapabilities? capabilities)
+    {
+        ushort[] availableAntennaIds = reader.Antennas
+            .Select(static antenna => antenna.AntennaId)
+            .Where(static antennaId => antennaId > 0)
+            .Distinct()
+            .OrderBy(static antennaId => antennaId)
+            .ToArray();
+        if (availableAntennaIds.Length == 0 && capabilities?.MaxNumberOfAntennas is > 0 and ushort maxAntennas)
+        {
+            availableAntennaIds = Enumerable.Range(1, maxAntennas)
+                .Select(static antennaId => checked((ushort)antennaId))
+                .ToArray();
+        }
+
+        bool selectsAll = inventory.AntennaIds.Count == 0 || inventory.AntennaIds.Contains((ushort)0);
+        ushort[] selectedAntennaIds = selectsAll
+            ? availableAntennaIds
+            : inventory.AntennaIds
+                .Where(static antennaId => antennaId > 0)
+                .Distinct()
+                .ToArray();
+        if (selectedAntennaIds.Length == 0)
+        {
+            throw new InvalidOperationException("The reader did not advertise any explicit antenna IDs; antenna ID 0 will not be sent.");
+        }
+
+        InventoryAntennaConfiguration? commonConfiguration = inventory.AntennaConfigurations
+            .FirstOrDefault(static configuration => configuration.AntennaId == 0);
+        Dictionary<ushort, InventoryAntennaConfiguration> explicitConfigurations = inventory.AntennaConfigurations
+            .Where(static configuration => configuration.AntennaId > 0)
+            .GroupBy(static configuration => configuration.AntennaId)
+            .ToDictionary(static group => group.Key, static group => group.First());
+        InventoryAntennaConfiguration[] antennaConfigurations = selectedAntennaIds
+            .Select(antennaId => explicitConfigurations.TryGetValue(antennaId, out InventoryAntennaConfiguration? explicitConfiguration)
+                ? explicitConfiguration
+                : commonConfiguration is null
+                    ? null
+                    : commonConfiguration with { AntennaId = antennaId })
+            .Where(static configuration => configuration is not null)
+            .Select(static configuration => configuration!)
+            .ToArray();
+
+        return inventory with
+        {
+            AntennaIds = selectedAntennaIds,
+            AntennaConfigurations = antennaConfigurations,
+        };
     }
 
     private static ushort? GetUshort(SettingsDraft draft, string key) =>
@@ -1265,14 +1337,58 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
 
     private static SettingsRange ResolveTariRange(
         ReaderCapabilities? capabilities,
-        ushort modeIndex,
-        ushort currentTari)
+        ushort modeIndex)
     {
-        C1G2RfModeEntry? mode = capabilities?.RfModes?.FirstOrDefault(m => m.ModeIdentifier == modeIndex);
-        return mode is null
+        C1G2RfModeEntry[] modes = capabilities?.RfModes?
+            .Where(mode => mode.ModeIdentifier == modeIndex)
+            .ToArray() ?? [];
+        return modes.Length == 0
             ? new SettingsRange(0, ushort.MaxValue)
             : new SettingsRange(
-                Math.Min(mode.MinTariValue, currentTari),
-                Math.Max(mode.MaxTariValue, currentTari));
+                modes.Min(static mode => (decimal)mode.MinTariValue),
+                modes.Max(static mode => (decimal)mode.MaxTariValue));
+    }
+
+    private static ushort ResolveTari(
+        ReaderCapabilities? capabilities,
+        ushort modeIndex,
+        ushort tari)
+    {
+        if (modeIndex == 0)
+        {
+            return tari;
+        }
+
+        C1G2RfModeEntry[] modes = capabilities?.RfModes?
+            .Where(mode => mode.ModeIdentifier == modeIndex)
+            .ToArray() ?? [];
+        if (modes.Length == 0)
+        {
+            return tari;
+        }
+
+        if (tari == 0)
+        {
+            return checked((ushort)modes[0].MinTariValue);
+        }
+
+        if (modes.Any(mode => IsSupportedTari(mode, tari)))
+        {
+            return tari;
+        }
+
+        throw new InvalidOperationException($"Tari {tari} is not valid for RF Mode {modeIndex}.");
+    }
+
+    private static bool IsSupportedTari(C1G2RfModeEntry mode, ushort tari)
+    {
+        if (tari < mode.MinTariValue || tari > mode.MaxTariValue)
+        {
+            return false;
+        }
+
+        return mode.StepTariValue == 0
+            ? mode.MinTariValue == mode.MaxTariValue && tari == mode.MinTariValue
+            : (tari - mode.MinTariValue) % mode.StepTariValue == 0;
     }
 }

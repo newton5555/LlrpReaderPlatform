@@ -57,6 +57,60 @@ public sealed class InventoryReaderManagerTests
         Assert.Equal(ReaderState.Inventorying, h.Manager.GetSnapshot(h.Profile.Id).State);
     }
 
+    [Fact]
+    public async Task StartInventory_projects_reader_antenna_rf_when_no_managed_rospec_exists()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        session.SettingsSnapshot = new ReaderSettingsSnapshot(
+            new ReaderSettings
+            {
+                Configuration = new ReaderConfiguration
+                {
+                    Antennas =
+                    [
+                        new AntennaConfigurationSettings
+                        {
+                            AntennaId = 1,
+                            IsConnected = true,
+                            TransmitPowerIndex = 192,
+                            HopTableId = 1,
+                            ReceiverSensitivityIndex = 0,
+                            ChannelIndex = 1,
+                        },
+                        new AntennaConfigurationSettings
+                        {
+                            AntennaId = 2,
+                            IsConnected = true,
+                            TransmitPowerIndex = 192,
+                            HopTableId = 1,
+                            ReceiverSensitivityIndex = 0,
+                            ChannelIndex = 1,
+                        },
+                    ],
+                },
+            },
+            ManagedRoSpec: null);
+
+        StartInventoryResult result = await h.Manager.StartInventoryAsync(
+            h.Profile.Id,
+            new InventorySpec());
+
+        Assert.True(result.Succeeded, result.Message);
+        InventorySettings started = Assert.IsType<InventorySettings>(session.LastStartedInventorySettings);
+        Assert.Equal(new ushort[] { 1, 2 }, started.AntennaIds);
+        Assert.Equal(2, started.AntennaConfigurations.Count);
+        Assert.All(started.AntennaConfigurations, configuration =>
+        {
+            Assert.Equal((ushort)192, configuration.TransmitPowerIndex);
+            Assert.Equal((ushort)1, configuration.HopTableId);
+            Assert.Equal((ushort)0, configuration.ReceiverSensitivityIndex);
+            Assert.Equal((ushort)1, configuration.ChannelIndex);
+        });
+
+        await h.Manager.StopInventoryAsync(h.Profile.Id);
+    }
+
     [Theory]
     [InlineData(-1)]
     [InlineData(86_401)]
@@ -158,6 +212,24 @@ public sealed class InventoryReaderManagerTests
         Assert.False(session.LastStartedInventorySettings?.Report.IncludePeakRssi);
         Assert.True(session.LastStartedInventorySettings?.Report.IncludePcBits);
         Assert.Equal(1, session.ConnectCount);
+    }
+
+    [Fact]
+    public async Task StartInventory_applies_report_batch_from_inventory_spec()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+
+        Tagging.StartInventoryResult result = await h.Manager.StartInventoryAsync(h.Profile.Id, new Tagging.InventorySpec
+        {
+            Report = new Tagging.InventoryReportSpec { ReportEveryNTags = 1 },
+        });
+
+        Assert.True(result.Succeeded);
+        Assert.Equal((ushort)1, session.LastStartedInventorySettings?.ReportEveryNTags);
+        Assert.Equal(
+            InventoryReportTrigger.UponNTagsOrEndOfAiSpec,
+            session.LastStartedInventorySettings?.Report.Trigger);
     }
 
     [Fact]

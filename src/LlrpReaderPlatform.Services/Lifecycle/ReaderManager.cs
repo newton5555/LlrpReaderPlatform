@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Threading.Channels;
 using LlrpReaderPlatform.Contracts.Lifecycle;
 using LlrpReaderPlatform.Contracts.Errors;
@@ -233,7 +234,6 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
             ToSdkProtocolVersion(probe.NegotiatedProtocolVersion));
         IReadOnlyList<IReaderExtensionModule> applicable = GetApplicableExtensions(probeInfo);
 
-        var persisted = profile with { IsEnabled = enableAfterAdding };
         IReaderSession? session = null;
         bool persistedToStore = false;
         await registryGate.WaitAsync(ct).ConfigureAwait(false);
@@ -278,6 +278,15 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                     applicable,
                     errorCode: PlatformErrorCode.AlreadyExists);
             }
+
+            IReadOnlyList<ReaderProfile> existingProfiles = persistedProfiles
+                .Concat(readers.Values.Select(static handle => handle.Profile))
+                .ToArray();
+            profile = profile with
+            {
+                Name = CreateUniqueReaderName(profile.Name, existingProfiles),
+            };
+            ReaderProfile persisted = profile with { IsEnabled = enableAfterAdding };
 
             try
             {
@@ -373,6 +382,61 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
             ReaderEndpoint.NormalizeHost(left.Host),
             ReaderEndpoint.NormalizeHost(right.Host),
             StringComparison.OrdinalIgnoreCase);
+
+    private static string CreateUniqueReaderName(
+        string? requestedName,
+        IEnumerable<ReaderProfile> existingProfiles)
+    {
+        string name = string.IsNullOrWhiteSpace(requestedName) ? "Reader" : requestedName.Trim();
+        HashSet<string> usedNames = existingProfiles
+            .Select(static profile => profile.Name.Trim())
+            .Where(static profileName => profileName.Length > 0)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (!usedNames.Contains(name))
+        {
+            return name;
+        }
+
+        int digitStart = name.Length;
+        while (digitStart > 0 && char.IsAsciiDigit(name[digitStart - 1]))
+        {
+            digitStart--;
+        }
+
+        string stem = name[..digitStart].TrimEnd();
+        string separator = digitStart == name.Length
+            || digitStart > 0 && char.IsWhiteSpace(name[digitStart - 1])
+            ? " "
+            : string.Empty;
+        int width = name.Length - digitStart;
+        long nextNumber = 2;
+
+        if (digitStart < name.Length
+            && long.TryParse(name[digitStart..], NumberStyles.None, CultureInfo.InvariantCulture, out long suffix))
+        {
+            nextNumber = suffix == long.MaxValue ? 2 : Math.Max(1, suffix + 1);
+        }
+
+        if (stem.Length == 0)
+        {
+            stem = "Reader";
+        }
+
+        while (true)
+        {
+            string suffixText = width > 0
+                ? nextNumber.ToString($"D{width}", CultureInfo.InvariantCulture)
+                : nextNumber.ToString(CultureInfo.InvariantCulture);
+            string candidate = $"{stem}{separator}{suffixText}";
+            if (!usedNames.Contains(candidate))
+            {
+                return candidate;
+            }
+
+            nextNumber = nextNumber == long.MaxValue ? 2 : nextNumber + 1;
+        }
+    }
 
     private static ReaderAddResult CreateDuplicateAddResult(ReaderProfile profile) =>
         new(
@@ -1268,9 +1332,7 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                 // 盘存启动沿用设备当前配置；只把平台层的可选天线限制覆盖到一份
                 // SDK InventorySettings 副本，绝不通过第二个 Session 重连或重建租约。
                 ReaderSettingsSnapshot current = await handle.Session.QuerySettingsAsync(ct).ConfigureAwait(false);
-                InventorySettings inventory = current.ManagedRoSpec?.Inventory
-                    ?? current.Settings.Inventory
-                    ?? new InventorySettings();
+                InventorySettings inventory = InventorySettingsResolver.Resolve(current);
                 if (spec.Antennas.Count > 0)
                 {
                     ushort[] selectedAntennas = spec.Antennas.ToArray();

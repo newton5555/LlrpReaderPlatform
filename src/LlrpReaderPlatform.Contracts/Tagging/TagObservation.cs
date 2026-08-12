@@ -24,6 +24,9 @@ public sealed record TagObservation
 /// <summary>寻卡报告中标准字段的请求覆盖。null 表示沿用 Reader 当前设置。</summary>
 public sealed record InventoryReportSpec
 {
+    /// <summary>本次寻卡的设备报告批次；UI 默认按 1 个标签实时报告。</summary>
+    public ushort? ReportEveryNTags { get; init; }
+
     public bool? IncludeAntennaId { get; init; }
     public bool? IncludeChannelIndex { get; init; }
     public bool? IncludePeakRssi { get; init; }

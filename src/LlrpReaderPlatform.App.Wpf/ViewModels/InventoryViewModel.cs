@@ -221,6 +221,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         }
 
         ReaderId = id;
+        Status = $"正在启动 Reader {ResolveReaderName(id)} 的盘存...";
         await LoadTagLabelsAsync();
         if (disposed)
         {
@@ -323,6 +324,8 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
             Status = "盘存已在运行，请先停止当前盘存。";
             return;
         }
+
+        Status = "正在启动所有启用 Reader 的盘存...";
 
         if (readerManager is null)
         {
@@ -451,6 +454,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
 
         try
         {
+            Status = $"正在停止 Reader {ResolveReaderName(id)} 的盘存...";
             await inventory.StopInventoryAsync(id, lifetimeToken);
         }
         catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)
@@ -610,35 +614,6 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
 
         UniqueTagCount = Tags.Count;
         UpdateMetrics();
-    }
-
-    [RelayCommand]
-    private void Clear()
-    {
-        foreach (Guid id in GetVisibleReaderIds())
-        {
-            inventory.ClearTags(id);
-        }
-
-        ClearPendingTags();
-
-        latestObservations.Clear();
-        tagRows.Clear();
-        Tags.Clear();
-        UniqueTagCount = 0;
-        Interlocked.Exchange(ref reportedTagCount, 0);
-        Interlocked.Exchange(ref droppedUiTagCount, 0);
-        if (IsInventoryRunning)
-        {
-            stopwatch.Restart();
-        }
-        else
-        {
-            stopwatch.Reset();
-        }
-
-        Elapsed = ZeroElapsedText;
-        TagRate = "0 tags/s";
     }
 
     private void OnTagObserved(object? sender, TagObservedEventArgs args)
@@ -878,6 +853,9 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
             DurationSeconds = durationSeconds,
             Report = new InventoryReportSpec
             {
+                // Report configuration is derived from the Inventory table columns;
+                // keep device reports granular so the UI and counters stay realtime.
+                ReportEveryNTags = 1,
                 IncludeAntennaId = ShowAntennaColumn,
                 IncludeChannelIndex = ShowChannelColumn,
                 IncludePeakRssi = ShowRssiColumn,
@@ -1074,6 +1052,8 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
             existing.Update(projection.ReaderName, projection.Tag, projection.TagListName);
             return;
         }
+
+        Status = "正在停止所有 Reader 的盘存...";
 
         if (Tags.Count >= MaxDisplayedTags)
         {

@@ -25,19 +25,39 @@
             <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
-        <Style x:Key="DiagnosticsRefreshStyle" TargetType="Control">
+        <Style x:Key="DiagnosticsRefreshStyle" TargetType="Button"
+               BasedOn="{StaticResource FlatActionButtonStyle}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Diagnostics.IsBusy}" Value="True">
                     <Setter Property="IsEnabled" Value="False" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-        <Style x:Key="SettingsActionStyle" TargetType="Button">
+        <Style x:Key="SettingsActionStyle" TargetType="Button"
+               BasedOn="{StaticResource FlatActionButtonStyle}">
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsBusy}" Value="True">
                     <Setter Property="IsEnabled" Value="False" />
                 </DataTrigger>
             </Style.Triggers>
+        </Style>
+        <Style x:Key="SettingsTabItemStyle" TargetType="TabItem">
+            <Setter Property="Padding" Value="18,8" />
+            <Setter Property="MinHeight" Value="42" />
+            <Setter Property="HeaderTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}"
+                                   FontSize="16"
+                                   FontWeight="SemiBold" />
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
         <Style x:Key="SettingsTabControlStyle" TargetType="TabControl">
             <Style.Triggers>
@@ -192,28 +212,16 @@
                      IsIndeterminate="True"
                      Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <Grid DockPanel.Dock="Bottom" Margin="0,8,0,0" MinHeight="38">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Button Grid.Column="0" Content="SAVE" Command="{Binding SaveCommand}"
-                    IsEnabled="{Binding CanSave}"
-                    Style="{StaticResource SettingsActionStyle}"
-                    Width="180" Margin="0,0,8,0" />
-            <Button Grid.Column="1" Content="CANCEL" Command="{Binding CancelCommand}"
-                    Style="{StaticResource SettingsActionStyle}"
-                    Width="180" Margin="0,0,12,0" />
-            <TextBox Grid.Column="2" Text="{Binding Status}" VerticalAlignment="Center" TextWrapping="Wrap"
-                     IsReadOnly="True" BorderThickness="0" Background="Transparent" Margin="5,0,0,0" />
-        </Grid>
-
         <Grid>
         <TabControl Style="{StaticResource SettingsTabControlStyle}">
-                <TabItem Header="Inventory">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,0,12">
-                        <StackPanel>
+                <TabItem Header="Inventory" Style="{StaticResource SettingsTabItemStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Padding="0,0,0,12">
+                            <StackPanel>
                             <WrapPanel Margin="0,0,0,8">
                                 <TextBlock Text="Preset:" VerticalAlignment="Center" Margin="0,0,8,0" />
                                 <ComboBox Text="{Binding Preset}" IsEditable="True" Width="260" Margin="0,0,16,0">
@@ -249,14 +257,17 @@
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
 
                                             <TextBlock Grid.Row="0" Text="Antennas:" Style="{StaticResource FieldLabelStyle}" />
                                             <DockPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,6">
                                                 <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,6,0,0">
-                                                    <Button Content="ALL" Width="60" Margin="0,0,6,0" Command="{Binding FillAllAntennasCommand}" />
-                                                    <Button Content="CLEAR" Width="70" Command="{Binding ClearAntennasCommand}" />
+                                                    <Button Content="ALL" Width="60" Margin="0,0,6,0"
+                                                            Command="{Binding FillAllAntennasCommand}"
+                                                            Style="{StaticResource FlatActionButtonStyle}" />
+                                                    <Button Content="CLEAR" Width="70"
+                                                            Command="{Binding ClearAntennasCommand}"
+                                                            Style="{StaticResource FlatActionButtonStyle}" />
                                                 </StackPanel>
                                                 <TextBox Text="{Binding AntennasRow.ValueText, UpdateSourceTrigger=PropertyChanged}"
                                                          IsReadOnly="{Binding AntennasRow.IsReadOnly}" />
@@ -290,30 +301,26 @@
                                             <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding PopulationRow.ValueText, UpdateSourceTrigger=PropertyChanged}"
                                                      IsEnabled="{Binding IsPopulationEditable}" Margin="0,0,0,6" />
 
-                                            <TextBlock Grid.Row="5" Text="Report Every N Tags:" Style="{StaticResource FieldLabelStyle}" />
-                                            <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding ReportEveryRow.ValueText, UpdateSourceTrigger=PropertyChanged}"
-                                                     IsEnabled="{Binding IsReportEveryEditable}" Margin="0,0,0,6" />
-
-                                            <TextBlock Grid.Row="6" Text="Session:" Style="{StaticResource FieldLabelStyle}" />
-                                            <ComboBox Grid.Row="6" Grid.Column="1"
+                                            <TextBlock Grid.Row="5" Text="Session:" Style="{StaticResource FieldLabelStyle}" />
+                                            <ComboBox Grid.Row="5" Grid.Column="1"
                                                       ItemsSource="{Binding SessionRow.ChoiceDisplays}"
                                                       SelectedIndex="{Binding SessionRow.SelectedChoiceIndex, Mode=TwoWay}"
                                                       IsEnabled="{Binding IsSessionEditable}"
                                                       Margin="0,0,0,6" />
 
-                                            <TextBlock Grid.Row="7" Text="Tari:" Style="{StaticResource FieldLabelStyle}" />
-                                            <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding TariRow.ValueText, UpdateSourceTrigger=PropertyChanged}"
+                                            <TextBlock Grid.Row="6" Text="Tari:" Style="{StaticResource FieldLabelStyle}" />
+                                            <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding TariRow.ValueText, UpdateSourceTrigger=PropertyChanged}"
                                                      IsEnabled="{Binding IsTariEditable}" Margin="0,0,0,6" />
 
-                                            <TextBlock Grid.Row="8" Text="Report Phase Angle:" Style="{StaticResource FieldLabelStyle}"
+                                            <TextBlock Grid.Row="7" Text="Report Phase Angle:" Style="{StaticResource FieldLabelStyle}"
                                                        Visibility="{Binding IsPhaseAngleVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                            <CheckBox Grid.Row="8" Grid.Column="1" IsChecked="{Binding PhaseAngleRow.BooleanValue, Mode=TwoWay}"
+                                            <CheckBox Grid.Row="7" Grid.Column="1" IsChecked="{Binding PhaseAngleRow.BooleanValue, Mode=TwoWay}"
                                                       IsEnabled="{Binding IsPhaseAngleEditable}" Margin="0,0,0,6"
                                                       Visibility="{Binding IsPhaseAngleVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-                                            <TextBlock Grid.Row="9" Text="Report Doppler Frequency:" Style="{StaticResource FieldLabelStyle}"
+                                            <TextBlock Grid.Row="8" Text="Report Doppler Frequency:" Style="{StaticResource FieldLabelStyle}"
                                                        Visibility="{Binding IsDopplerVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                            <CheckBox Grid.Row="9" Grid.Column="1" IsChecked="{Binding DopplerRow.BooleanValue, Mode=TwoWay}"
+                                            <CheckBox Grid.Row="8" Grid.Column="1" IsChecked="{Binding DopplerRow.BooleanValue, Mode=TwoWay}"
                                                       IsEnabled="{Binding IsDopplerEditable}"
                                                       Visibility="{Binding IsDopplerVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                         </Grid>
@@ -335,17 +342,15 @@
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
-                                            <TextBlock Grid.Column="0" Text="Tx Power Index:" Style="{StaticResource FieldLabelStyle}" />
+                                            <TextBlock Grid.Column="0" Text="Tx Power:" Style="{StaticResource FieldLabelStyle}" />
                                             <ComboBox Grid.Column="1" ItemsSource="{Binding TxPowerRow.ChoiceDisplays}"
                                                       SelectedIndex="{Binding TxPowerRow.SelectedChoiceIndex, Mode=TwoWay}"
-                                                      Text="{Binding TxPowerRow.ValueText, UpdateSourceTrigger=PropertyChanged}"
-                                                      IsEditable="True" IsEnabled="{Binding IsTxPowerEditable}"
+                                                      IsEnabled="{Binding IsTxPowerEditable}"
                                                       Style="{StaticResource FieldControlStyle}" />
-                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Rx Sensitivity Index:" Style="{StaticResource FieldLabelStyle}" />
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Rx Sensitivity:" Style="{StaticResource FieldLabelStyle}" />
                                             <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding RxSensitivityRow.ChoiceDisplays}"
                                                       SelectedIndex="{Binding RxSensitivityRow.SelectedChoiceIndex, Mode=TwoWay}"
-                                                      Text="{Binding RxSensitivityRow.ValueText, UpdateSourceTrigger=PropertyChanged}"
-                                                      IsEditable="True" IsEnabled="{Binding IsRxSensitivityEditable}"
+                                                      IsEnabled="{Binding IsRxSensitivityEditable}"
                                                       Style="{StaticResource FieldControlStyle}" />
                                         </Grid>
                                         <Expander DockPanel.Dock="Top"
@@ -369,11 +374,10 @@
                                                                     <ColumnDefinition Width="*" />
                                                                 </Grid.ColumnDefinitions>
                                                                 <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                                                <TextBlock Grid.Column="1" Text="Tx Power Index:" VerticalAlignment="Center" />
+                                                                <TextBlock Grid.Column="1" Text="Tx Power:" VerticalAlignment="Center" />
                                                                 <ComboBox Grid.Column="2" ItemsSource="{Binding TxPower.ChoiceDisplays}"
                                                                           SelectedIndex="{Binding TxPower.SelectedChoiceIndex, Mode=TwoWay}"
-                                                                          Text="{Binding TxPower.ValueText, UpdateSourceTrigger=PropertyChanged}"
-                                                                          IsEditable="True" Margin="0,0,12,0">
+                                                                          Margin="0,0,12,0">
                                                                     <ComboBox.Style>
                                                                         <Style TargetType="ComboBox">
                                                                             <Style.Triggers>
@@ -384,11 +388,9 @@
                                                                         </Style>
                                                                     </ComboBox.Style>
                                                                 </ComboBox>
-                                                                <TextBlock Grid.Column="3" Text="Rx Sensitivity Index:" VerticalAlignment="Center" />
+                                                                <TextBlock Grid.Column="3" Text="Rx Sensitivity:" VerticalAlignment="Center" />
                                                                 <ComboBox Grid.Column="4" ItemsSource="{Binding RxSensitivity.ChoiceDisplays}"
-                                                                          SelectedIndex="{Binding RxSensitivity.SelectedChoiceIndex, Mode=TwoWay}"
-                                                                          Text="{Binding RxSensitivity.ValueText, UpdateSourceTrigger=PropertyChanged}"
-                                                                          IsEditable="True">
+                                                                          SelectedIndex="{Binding RxSensitivity.SelectedChoiceIndex, Mode=TwoWay}">
                                                                     <ComboBox.Style>
                                                                         <Style TargetType="ComboBox">
                                                                             <Style.Triggers>
@@ -652,16 +654,6 @@
                                 </Border>
 
                                 <Border Style="{StaticResource SectionBorderStyle}"
-                                        Visibility="{Binding IsStateAwareSettingsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <DockPanel>
-                                        <Border DockPanel.Dock="Top" Style="{StaticResource SectionHeaderStyle}">
-                                            <TextBlock Text="STATE-AWARE SINGULATION" Style="{StaticResource SectionHeaderTextStyle}" />
-                                        </Border>
-                                        <ItemsControl ItemsSource="{Binding StateAwareRows}" ItemTemplate="{StaticResource SettingsRowTemplate}" Margin="12" />
-                                    </DockPanel>
-                                </Border>
-
-                                <Border Style="{StaticResource SectionBorderStyle}"
                                         Visibility="{Binding IsFrequencySettingsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <DockPanel>
                                         <Border DockPanel.Dock="Top" Style="{StaticResource SectionHeaderStyle}">
@@ -729,16 +721,6 @@
                                 </Border>
 
                                 <Border Style="{StaticResource SectionBorderStyle}"
-                                        Visibility="{Binding IsReportSettingsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <DockPanel>
-                                        <Border DockPanel.Dock="Top" Style="{StaticResource SectionHeaderStyle}">
-                                            <TextBlock Text="REPORT SETTINGS" Style="{StaticResource SectionHeaderTextStyle}" />
-                                        </Border>
-                                        <ItemsControl ItemsSource="{Binding ReportRows}" ItemTemplate="{StaticResource SettingsRowTemplate}" Margin="12" />
-                                    </DockPanel>
-                                </Border>
-
-                                <Border Style="{StaticResource SectionBorderStyle}"
                                         Visibility="{Binding IsOtherSettingsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <DockPanel>
                                         <Border DockPanel.Dock="Top" Style="{StaticResource SectionHeaderStyle}">
@@ -747,125 +729,144 @@
                                         <ItemsControl ItemsSource="{Binding OtherRows}" ItemTemplate="{StaticResource SettingsRowTemplate}" Margin="12" />
                                     </DockPanel>
                                 </Border>
-                            </StackPanel>
-                            </Grid>
-                        </StackPanel>
-                    </ScrollViewer>
-                </TabItem>
+                             </StackPanel>
+                             </Grid>
+                         </StackPanel>
+                     </ScrollViewer>
+                    <Grid Grid.Row="1" Margin="0,8,10,0" MinHeight="38">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="SAVE" Command="{Binding SaveCommand}"
+                                IsEnabled="{Binding CanSave}"
+                                Style="{StaticResource SettingsActionStyle}"
+                                Width="180" Margin="0,0,8,0" />
+                        <Button Grid.Column="1" Content="CANCEL" Command="{Binding CancelCommand}"
+                                Style="{StaticResource SettingsActionStyle}"
+                                Width="180" Margin="0,0,12,0" />
+                        <TextBox Grid.Column="2" Text="{Binding Status}" VerticalAlignment="Center" TextWrapping="Wrap"
+                                 IsReadOnly="True" BorderThickness="0" Background="Transparent" Margin="5,0,0,0" />
+                    </Grid>
+                    </Grid>
+                 </TabItem>
 
-                <TabItem Header="Diagnostics">
-                    <Border Style="{StaticResource SectionBorderStyle}"
-                            Margin="0,12,0,0"
-                            Width="520"
-                            MaxWidth="520"
-                            Visibility="{Binding Diagnostics.IsGpioRefreshAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
-                            HorizontalAlignment="Left"
-                            VerticalAlignment="Top">
-                        <DockPanel>
-                            <Border DockPanel.Dock="Top" Style="{StaticResource SectionHeaderStyle}">
-                                <TextBlock Text="GPO CONTROL" Style="{StaticResource SectionHeaderTextStyle}" />
-                            </Border>
-                            <ProgressBar DockPanel.Dock="Top"
-                                         Height="4"
-                                         Margin="12,6,12,0"
-                                         IsIndeterminate="True"
-                                         Visibility="{Binding Diagnostics.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                            <UniformGrid Columns="2" Rows="2" Margin="12,10,12,4"
-                                         Visibility="{Binding Diagnostics.IsGpoControlVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <StackPanel Orientation="Horizontal" Margin="4,0,20,10" VerticalAlignment="Center"
-                                            Visibility="{Binding Diagnostics.IsGpo1Available, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <mah:ToggleSwitch IsOn="{Binding Diagnostics.Gpo1, Mode=TwoWay}"
-                                                      IsEnabled="{Binding Diagnostics.IsGpo1Available}"
-                                                      OnContent="" OffContent="" MinWidth="44" VerticalAlignment="Center" />
-                                    <TextBlock Text="GPO 1" VerticalAlignment="Center" Margin="10,0,0,0" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="4,0,4,10" VerticalAlignment="Center"
-                                            Visibility="{Binding Diagnostics.IsGpo2Available, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <mah:ToggleSwitch IsOn="{Binding Diagnostics.Gpo2, Mode=TwoWay}"
-                                                      IsEnabled="{Binding Diagnostics.IsGpo2Available}"
-                                                      OnContent="" OffContent="" MinWidth="44" VerticalAlignment="Center" />
-                                    <TextBlock Text="GPO 2" VerticalAlignment="Center" Margin="10,0,0,0" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="4,0,20,10" VerticalAlignment="Center"
-                                            Visibility="{Binding Diagnostics.IsGpo3Available, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <mah:ToggleSwitch IsOn="{Binding Diagnostics.Gpo3, Mode=TwoWay}"
-                                                      IsEnabled="{Binding Diagnostics.IsGpo3Available}"
-                                                      OnContent="" OffContent="" MinWidth="44" VerticalAlignment="Center" />
-                                    <TextBlock Text="GPO 3" VerticalAlignment="Center" Margin="10,0,0,0" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="4,0,4,10" VerticalAlignment="Center"
-                                            Visibility="{Binding Diagnostics.IsGpo4Available, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <mah:ToggleSwitch IsOn="{Binding Diagnostics.Gpo4, Mode=TwoWay}"
-                                                      IsEnabled="{Binding Diagnostics.IsGpo4Available}"
-                                                      OnContent="" OffContent="" MinWidth="44" VerticalAlignment="Center" />
-                                    <TextBlock Text="GPO 4" VerticalAlignment="Center" Margin="10,0,0,0" />
-                                </StackPanel>
-                            </UniformGrid>
-                            <Border Margin="12,4,12,12"
-                                    Padding="8"
-                                    BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
-                                    BorderThickness="1"
+                <TabItem Header="Diagnostics" Style="{StaticResource SettingsTabItemStyle}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Width="520"
+                                    MaxWidth="520"
+                                    Margin="0,12,10,0"
+                                    HorizontalAlignment="Left"
                                     Visibility="{Binding Diagnostics.IsGpioRefreshAvailable, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Border Style="{StaticResource SectionBorderStyle}"
+                                    Visibility="{Binding Diagnostics.IsGpoControlVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <DockPanel>
-                                    <StackPanel DockPanel.Dock="Top"
-                                                Orientation="Horizontal"
-                                                Margin="0,0,0,6">
-                                        <TextBlock Text="GPI STATUS"
-                                                   FontWeight="SemiBold"
-                                                   VerticalAlignment="Center"
-                                                   Visibility="{Binding Diagnostics.IsGpiStatusAvailable, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                         <Button Content="REFRESH GPI/GPO"
-                                                 Command="{Binding Diagnostics.RefreshGpioCommand}"
-                                                 CommandParameter="{Binding DataContext.ReaderId, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
-                                                 Style="{StaticResource DiagnosticsRefreshStyle}"
-                                                 Visibility="{Binding Diagnostics.IsGpioRefreshAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                 Margin="12,0,0,0"
-                                                 Padding="10,3" />
-                                    </StackPanel>
-                                    <Grid DockPanel.Dock="Top" Margin="0,0,0,2"
-                                          Visibility="{Binding Diagnostics.IsGpiStatusAvailable, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="70" />
-                                            <ColumnDefinition Width="110" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="PORT" FontWeight="SemiBold" />
-                                        <TextBlock Grid.Column="1" Text="CONFIGURED" FontWeight="SemiBold" />
-                                        <TextBlock Grid.Column="2" Text="STATE" FontWeight="SemiBold" />
-                                    </Grid>
-                                    <ItemsControl ItemsSource="{Binding Diagnostics.Gpis}"
-                                                  Visibility="{Binding Diagnostics.IsGpiStatusAvailable, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid Margin="0,3">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="70" />
-                                                        <ColumnDefinition Width="110" />
-                                                        <ColumnDefinition Width="*" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Grid.Column="0"
-                                                               Text="{Binding PortNumber}"
-                                                               VerticalAlignment="Center" />
-                                                    <TextBlock Grid.Column="1"
-                                                               Text="{Binding Configured}"
-                                                               VerticalAlignment="Center" />
-                                                    <CheckBox Grid.Column="2"
-                                                              IsChecked="{Binding State}"
-                                                              IsEnabled="False"
-                                                              Content="High"
-                                                              VerticalAlignment="Center" />
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
+                                    <Border DockPanel.Dock="Top" Style="{StaticResource SectionHeaderStyle}">
+                                        <TextBlock Text="GPO CONTROL" Style="{StaticResource SectionHeaderTextStyle}" />
+                                    </Border>
+                                    <ProgressBar DockPanel.Dock="Top"
+                                                 Height="4"
+                                                 Margin="12,6,12,0"
+                                                 IsIndeterminate="True"
+                                                 Visibility="{Binding Diagnostics.IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    <UniformGrid Columns="2" Rows="2" Margin="12,10,12,4">
+                                        <StackPanel Orientation="Horizontal" Margin="4,0,20,10" VerticalAlignment="Center"
+                                                    Visibility="{Binding Diagnostics.IsGpo1Available, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="GPO 1" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                            <mah:ToggleSwitch IsOn="{Binding Diagnostics.Gpo1, Mode=TwoWay}"
+                                                              IsEnabled="{Binding Diagnostics.IsGpo1Available}"
+                                                              OnContent="" OffContent="" MinWidth="44" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="4,0,4,10" VerticalAlignment="Center"
+                                                    Visibility="{Binding Diagnostics.IsGpo2Available, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="GPO 2" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                            <mah:ToggleSwitch IsOn="{Binding Diagnostics.Gpo2, Mode=TwoWay}"
+                                                              IsEnabled="{Binding Diagnostics.IsGpo2Available}"
+                                                              OnContent="" OffContent="" MinWidth="44" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="4,0,20,10" VerticalAlignment="Center"
+                                                    Visibility="{Binding Diagnostics.IsGpo3Available, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="GPO 3" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                            <mah:ToggleSwitch IsOn="{Binding Diagnostics.Gpo3, Mode=TwoWay}"
+                                                              IsEnabled="{Binding Diagnostics.IsGpo3Available}"
+                                                              OnContent="" OffContent="" MinWidth="44" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="4,0,4,10" VerticalAlignment="Center"
+                                                    Visibility="{Binding Diagnostics.IsGpo4Available, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="GPO 4" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                            <mah:ToggleSwitch IsOn="{Binding Diagnostics.Gpo4, Mode=TwoWay}"
+                                                              IsEnabled="{Binding Diagnostics.IsGpo4Available}"
+                                                              OnContent="" OffContent="" MinWidth="44" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </UniformGrid>
                                 </DockPanel>
                             </Border>
-                            <TextBlock Text="{Binding Diagnostics.Status}" TextWrapping="Wrap"
-                                       Foreground="{DynamicResource MahApps.Brushes.Gray3}"
-                                       Margin="16,0,16,12" />
-                        </DockPanel>
-                    </Border>
-                </TabItem>
+
+                            <Border Style="{StaticResource SectionBorderStyle}"
+                                    Visibility="{Binding Diagnostics.IsGpioRefreshAvailable, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <DockPanel>
+                                    <Border DockPanel.Dock="Top" Style="{StaticResource SectionHeaderStyle}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="GPI STATUS" Style="{StaticResource SectionHeaderTextStyle}"
+                                                       VerticalAlignment="Center" />
+                                            <Button Grid.Column="1"
+                                                    Content="REFRESH GPI/GPO STATUS"
+                                                    Command="{Binding Diagnostics.RefreshGpioCommand}"
+                                                    CommandParameter="{Binding DataContext.ReaderId, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                    Style="{StaticResource DiagnosticsRefreshStyle}"
+                                                    Padding="10,3"
+                                                    FontSize="11"
+                                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                        </Grid>
+                                    </Border>
+                                    <Grid Margin="12,10,12,0"
+                                          Visibility="{Binding Diagnostics.IsGpiStatusAvailable, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid Grid.Row="0" Margin="0,0,0,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="70" />
+                                                <ColumnDefinition Width="140" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="PORT" FontWeight="SemiBold" />
+                                            <TextBlock Grid.Column="1" Text="CONFIGURED" FontWeight="SemiBold" />
+                                            <TextBlock Grid.Column="2" Text="STATE" FontWeight="SemiBold" />
+                                        </Grid>
+                                        <ItemsControl Grid.Row="1" ItemsSource="{Binding Diagnostics.Gpis}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,3">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="70" />
+                                                            <ColumnDefinition Width="140" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding PortNumber}" VerticalAlignment="Center" />
+                                                        <CheckBox Grid.Column="1" IsChecked="{Binding Configured}" IsEnabled="False"
+                                                                  Content="Configured" VerticalAlignment="Center" />
+                                                        <CheckBox Grid.Column="2" IsChecked="{Binding State}" IsEnabled="False"
+                                                                  Content="High" VerticalAlignment="Center" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                    <TextBlock Text="{Binding Diagnostics.Status}" TextWrapping="Wrap"
+                                               Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                                               Margin="12,12,12,12" />
+                                </DockPanel>
+                             </Border>
+                             </StackPanel>
+                         </ScrollViewer>
+                 </TabItem>
             </TabControl>
 
             <Border BorderBrush="{DynamicResource MahApps.Brushes.Accent}"

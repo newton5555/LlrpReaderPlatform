@@ -22,10 +22,12 @@
                                  FontSize="14" Padding="10,8" BorderThickness="1" />
                         <Button Grid.Column="1" Content="Scan LLRP Readers"
                                 Command="{Binding DiscoverCommand}" IsEnabled="{Binding IsInputEnabled}"
-                                Margin="10,0,0,0" Padding="14,8" />
+                                Margin="10,0,0,0" Padding="14,8"
+                                Style="{StaticResource FlatActionButtonStyle}" />
                         <Button Grid.Column="2" Content="PROBE"
                                 Command="{Binding ProbeCommand}" IsEnabled="{Binding IsInputEnabled}"
-                                Margin="10,0,0,0" Padding="14,8" />
+                                Margin="10,0,0,0" Padding="14,8"
+                                Style="{StaticResource FlatActionButtonStyle}" />
                     </Grid>
 
                     <Border Visibility="{Binding IsDiscoveryPanelOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
@@ -33,7 +35,8 @@
                         <StackPanel>
                             <DockPanel Margin="0,0,0,10">
                                 <Button Content="Close" Command="{Binding CloseDiscoveryPanelCommand}"
-                                        DockPanel.Dock="Right" FontWeight="Bold" />
+                                        DockPanel.Dock="Right" FontWeight="Bold"
+                                        Style="{StaticResource FlatActionButtonStyle}" />
                                 <TextBlock Text="Discovered LLRP Readers (mDNS _llrp._tcp.local.):"
                                            FontWeight="Bold" FontSize="13" />
                             </DockPanel>
@@ -58,7 +61,8 @@
                                                 </StackPanel>
                                                 <Button Grid.Column="1" Content="Select Reader"
                                                         Command="{Binding DataContext.UseDiscoveredCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                        CommandParameter="{Binding}" Padding="12,5" FontSize="11" />
+                                                        CommandParameter="{Binding}" Padding="12,5" FontSize="11"
+                                                        Style="{StaticResource FlatActionButtonStyle}" />
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
@@ -119,8 +123,10 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Content="ADD DATA SOURCE" Command="{Binding SubmitCommand}"
                                 IsEnabled="{Binding IsInputEnabled}"
-                                Padding="20,10" FontSize="13" Margin="0,0,12,0" />
-                        <Button Content="CANCEL" Command="{Binding CancelCommand}" Padding="20,10" FontSize="13" />
+                                Padding="20,10" FontSize="13" Margin="0,0,12,0"
+                                Style="{StaticResource FlatActionButtonStyle}" />
+                        <Button Content="CANCEL" Command="{Binding CancelCommand}" Padding="20,10" FontSize="13"
+                                Style="{StaticResource FlatActionButtonStyle}" />
                     </StackPanel>
                 </StackPanel>
             </Border>

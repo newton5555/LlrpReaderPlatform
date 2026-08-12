@@ -97,9 +97,7 @@ internal sealed class LlrpReaderSession : IReaderSession
 
         await SynchronizeIfNeededAsync(cancellationToken).ConfigureAwait(false);
         ReaderSettingsSnapshot current = await reader.QuerySettingsAsync(cancellationToken).ConfigureAwait(false);
-        InventorySettings settings = current.ManagedRoSpec?.Inventory
-            ?? current.Settings.Inventory
-            ?? new InventorySettings();
+        InventorySettings settings = InventorySettingsResolver.Resolve(current);
         settings = ApplyInventorySpec(settings, spec);
         InventorySession session = await reader.StartInventoryAsync(settings, cancellationToken).ConfigureAwait(false);
         StartInventoryReportConsumer(session);
@@ -319,6 +317,9 @@ internal sealed class LlrpReaderSession : IReaderSession
             {
                 Report = settings.Report with
                 {
+                    Trigger = report.ReportEveryNTags is not null
+                        ? InventoryReportTrigger.UponNTagsOrEndOfAiSpec
+                        : settings.Report.Trigger,
                     IncludeAntennaId = report.IncludeAntennaId ?? settings.Report.IncludeAntennaId,
                     IncludeChannelIndex = report.IncludeChannelIndex ?? settings.Report.IncludeChannelIndex,
                     IncludePeakRssi = report.IncludePeakRssi ?? settings.Report.IncludePeakRssi,
@@ -327,6 +328,7 @@ internal sealed class LlrpReaderSession : IReaderSession
                     IncludeTagSeenCount = report.IncludeTagSeenCount ?? settings.Report.IncludeTagSeenCount,
                     IncludePcBits = report.IncludePcBits ?? settings.Report.IncludePcBits,
                 },
+                ReportEveryNTags = report.ReportEveryNTags ?? settings.ReportEveryNTags,
             };
         }
 

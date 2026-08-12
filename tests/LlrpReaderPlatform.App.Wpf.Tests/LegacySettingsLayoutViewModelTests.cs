@@ -74,6 +74,7 @@ public sealed class LegacySettingsLayoutViewModelTests
         Assert.Equal(2, service.LastDraft!.Values[SettingsKeys.StartGpiPort]);
         Assert.Equal(true, service.LastDraft.Values[SettingsKeys.StartGpiLevel]);
         Assert.Equal(250, service.LastDraft.Values[ImpinjDebounceKey(1)]);
+        Assert.DoesNotContain(SettingsKeys.ReportEvery, service.LastDraft.Values.Keys);
         Assert.Equal(2, service.QueryCount);
         Assert.Contains("回读", vm.Status);
     }

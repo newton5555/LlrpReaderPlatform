@@ -156,7 +156,7 @@ public sealed class StandardSettingsCompilerTests
                 Array.Empty<RxSensitivityEntry>(),
                 Array.Empty<uint>(),
                 Array.Empty<FrequencyHopTableEntry>(),
-                new[] { new C1G2RfModeEntry(7, "", false, 0, "", "", 0, 0, 0, 0, 0) },
+                new[] { new C1G2RfModeEntry(7, "", false, 0, "", "", 640_000, 1_500, 6_250, 25_000, 6_250) },
                 true,
                 false,
                 false,
@@ -177,6 +177,9 @@ public sealed class StandardSettingsCompilerTests
         Assert.Equal(EditorKind.Choice, rfMode.EditorKind);
         Assert.Contains(rfMode.Options, static option => Equals(option.Value, 7));
         Assert.Contains(rfMode.Options, static option => Equals(option.Value, 1000));
+        Assert.Equal(
+            "7 (M0/640K, Tari: 6.3 uS, PIE: 1.5)",
+            Assert.Single(rfMode.Options, static option => Equals(option.Value, 7)).Display);
         Assert.Equal(1000, rfMode.CurrentValue);
     }
 
@@ -226,27 +229,59 @@ public sealed class StandardSettingsCompilerTests
     public void CompileSdk_writes_capability_table_indices_without_physical_value_conversion()
     {
         var compiler = new StandardSettingsCompiler();
-        ReaderRuntimeSnapshot snapshot = Snapshot(new ReaderAntennaInfo { AntennaId = 1, Name = "A1" });
+        ReaderRuntimeSnapshot snapshot = Snapshot(
+            new ReaderAntennaInfo { AntennaId = 1, Name = "A1" },
+            new ReaderAntennaInfo { AntennaId = 2, Name = "A2" });
         var runtime = new ReaderSettingsRuntimeSnapshot(
             new ReaderSettingsSnapshot(new ReaderSettings(), new ManagedRoSpecSnapshot(
-                new InventorySettings { AntennaIds = [1] }, InventoryRuntimeState.Disabled)),
+                new InventorySettings { AntennaIds = [1, 2] }, InventoryRuntimeState.Disabled)),
             CreateCapabilities(
                 txPowers: [new TxPowerEntry(3, 1000), new TxPowerEntry(7, 3050)],
                 rxSensitivities: [new RxSensitivityEntry(1, 0), new RxSensitivityEntry(2, 6)],
                 hopTables: [new FrequencyHopTableEntry(1, [902750, 903250])]));
         EffectiveSettingsLayout layout = compiler.BuildLayout(snapshot, runtime);
         var draft = new SettingsDraft { ReaderId = ReaderId, CapabilityRevision = 7 };
-        draft.Values[SettingsKeys.AntennaIds] = "1";
+        draft.Values[SettingsKeys.AntennaIds] = "1, 2";
         draft.Values[SettingsKeys.TxPowerIndex] = (ushort)3;
         draft.Values[SettingsKeys.RxSensitivityIndex] = (ushort)1;
 
         ReaderSettings compiled = compiler.CompileSdk(draft, layout, runtime, snapshot);
 
-        InventoryAntennaConfiguration configuration = Assert.Single(compiled.Inventory!.AntennaConfigurations);
-        Assert.Equal((ushort)3, configuration.TransmitPowerIndex);
-        Assert.Equal((ushort)1, configuration.ReceiverSensitivityIndex);
-        Assert.Equal((ushort)1, configuration.HopTableId);
-        Assert.Equal((ushort)1, configuration.ChannelIndex);
+        Assert.Collection(
+            compiled.Inventory!.AntennaConfigurations,
+            configuration => AssertGlobalAntennaConfiguration(configuration, 1),
+            configuration => AssertGlobalAntennaConfiguration(configuration, 2));
+    }
+
+    [Fact]
+    public void CompileSdk_uses_advertised_minimum_tari_when_selected_mode_has_no_tari_value()
+    {
+        var compiler = new StandardSettingsCompiler();
+        ReaderRuntimeSnapshot snapshot = Snapshot(new ReaderAntennaInfo { AntennaId = 1, Name = "A1" });
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(
+                new ReaderSettings(),
+                new ManagedRoSpecSnapshot(
+                    new InventorySettings { AntennaIds = [1], ModeIndex = 20, Tari = 0 },
+                    InventoryRuntimeState.Disabled)),
+            CreateCapabilities(
+                rfModes:
+                [
+                    new C1G2RfModeEntry(20, "DRV_64_3", true, 2, "PR_ASK", "DI", 64_000, 2_000, 12_500, 23_000, 2_100),
+                ]));
+        EffectiveSettingsLayout layout = compiler.BuildLayout(snapshot, runtime);
+        var draft = new SettingsDraft { ReaderId = ReaderId, CapabilityRevision = 7 };
+        draft.Values[SettingsKeys.AntennaIds] = "1";
+        draft.Values[SettingsKeys.RfMode] = 20;
+        draft.Values[SettingsKeys.Tari] = 0;
+
+        ReaderSettings compiled = compiler.CompileSdk(draft, layout, runtime, snapshot);
+
+        Assert.Equal((ushort)20, compiled.Inventory!.ModeIndex);
+        Assert.Equal((ushort)12_500, compiled.Inventory.Tari);
+        Assert.Equal(
+            12_500,
+            Assert.IsType<int>(Assert.Single(layout.Entries, static entry => entry.Key == SettingsKeys.Tari).CurrentValue));
     }
 
     [Fact]
@@ -327,7 +362,7 @@ public sealed class StandardSettingsCompilerTests
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(
             () => compiler.CompileSdk(draft, layout, runtime, snapshot));
 
-        Assert.Contains("use ALL", error.Message, StringComparison.Ordinal);
+        Assert.Contains("explicit device antenna IDs", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -496,7 +531,7 @@ public sealed class StandardSettingsCompilerTests
     public void Runtime_layout_and_compile_disable_gpi_when_capability_catalog_reports_no_gpi()
     {
         var compiler = new StandardSettingsCompiler();
-        ReaderRuntimeSnapshot snapshot = Snapshot() with
+        ReaderRuntimeSnapshot snapshot = Snapshot(new ReaderAntennaInfo { AntennaId = 1, Name = "A1" }) with
         {
             GpiCount = 0,
             FeatureCatalog = new ReaderFeatureCatalog
@@ -556,10 +591,22 @@ public sealed class StandardSettingsCompilerTests
         Assert.False(compiled.Configuration.Events.GpiEventEnabled);
     }
 
+    private static void AssertGlobalAntennaConfiguration(
+        InventoryAntennaConfiguration configuration,
+        ushort antennaId)
+    {
+        Assert.Equal(antennaId, configuration.AntennaId);
+        Assert.Equal((ushort)3, configuration.TransmitPowerIndex);
+        Assert.Equal((ushort)1, configuration.ReceiverSensitivityIndex);
+        Assert.Equal((ushort)1, configuration.HopTableId);
+        Assert.Equal((ushort)1, configuration.ChannelIndex);
+    }
+
     private static ReaderCapabilities CreateCapabilities(
         IEnumerable<TxPowerEntry>? txPowers = null,
         IEnumerable<RxSensitivityEntry>? rxSensitivities = null,
-        IEnumerable<FrequencyHopTableEntry>? hopTables = null)
+        IEnumerable<FrequencyHopTableEntry>? hopTables = null,
+        IEnumerable<C1G2RfModeEntry>? rfModes = null)
     {
         return (ReaderCapabilities)Activator.CreateInstance(
             typeof(ReaderCapabilities),
@@ -578,7 +625,7 @@ public sealed class StandardSettingsCompilerTests
                 rxSensitivities ?? Array.Empty<RxSensitivityEntry>(),
                 Array.Empty<uint>(),
                 hopTables ?? Array.Empty<FrequencyHopTableEntry>(),
-                Array.Empty<C1G2RfModeEntry>(),
+                rfModes ?? Array.Empty<C1G2RfModeEntry>(),
                 true,
                 false,
                 false,

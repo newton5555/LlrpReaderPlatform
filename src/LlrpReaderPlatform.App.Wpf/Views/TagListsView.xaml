@@ -3,12 +3,29 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-        <Style x:Key="TagListActionStyle" TargetType="Button">
+        <Style x:Key="TagListActionStyle" TargetType="Button"
+               BasedOn="{StaticResource FlatActionButtonStyle}">
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsBusy}" Value="True">
                     <Setter Property="IsEnabled" Value="False" />
                 </DataTrigger>
             </Style.Triggers>
+        </Style>
+        <Style x:Key="PageInfoCardStyle" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+        <Style x:Key="PageGroupStyle" TargetType="GroupBox">
+            <Setter Property="Padding" Value="14" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         </Style>
     </UserControl.Resources>
     <Grid Margin="36">
@@ -18,8 +35,13 @@
         </Grid.RowDefinitions>
         <StackPanel Grid.Row="0">
             <TextBlock Text="Tag Lists" FontSize="28" FontWeight="Bold" />
-            <TextBlock Text="维护可复用的 EPC 清单；服务层负责持久化，寻卡页会对启用清单中的标签显示匹配名称。"
-                       TextWrapping="Wrap" Margin="0,6,0,16" />
+            <Border Style="{StaticResource PageInfoCardStyle}" Margin="0,8,0,14">
+                <StackPanel>
+                    <TextBlock Text="功能说明" FontWeight="SemiBold" />
+                    <TextBlock Text="维护可复用的 EPC 标签清单。启用清单后，寻卡结果会自动显示匹配的标签名称和颜色；本页面只管理清单，不会直接写入 Reader。"
+                               TextWrapping="Wrap" Margin="0,5,0,0" />
+                </StackPanel>
+            </Border>
             <ProgressBar Height="4" Margin="0,0,0,10"
                          IsIndeterminate="True"
                          Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
@@ -32,16 +54,20 @@
             </StackPanel>
         </StackPanel>
 
-        <Grid Grid.Row="1" Margin="0,18,0,0">
+        <Grid Grid.Row="1" Margin="0,4,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="240" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <ListBox Grid.Column="0" ItemsSource="{Binding Lists}" SelectedItem="{Binding SelectedList}"
-                     DisplayMemberPath="Name" BorderThickness="1" />
+            <GroupBox Grid.Column="0" Header="TAG LISTS" Style="{StaticResource PageGroupStyle}">
+                <ListBox ItemsSource="{Binding Lists}" SelectedItem="{Binding SelectedList}"
+                         DisplayMemberPath="Name" BorderThickness="1" />
+            </GroupBox>
             <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Margin="18,0,0,0">
                 <StackPanel>
-                    <Grid>
+                    <GroupBox Header="LIST DETAILS" Style="{StaticResource PageGroupStyle}">
+                        <StackPanel>
+                            <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="120" />
                             <ColumnDefinition Width="*" />
@@ -50,25 +76,28 @@
                         <TextBlock Text="Name" VerticalAlignment="Center" />
                         <TextBox Grid.Column="1" Text="{Binding ListName, UpdateSourceTrigger=PropertyChanged}" Padding="8" />
                         <CheckBox Grid.Column="2" Content="Enabled" IsChecked="{Binding ListEnabled}" Margin="18,0,0,0" VerticalAlignment="Center" />
-                    </Grid>
-                    <Grid Margin="0,10,0,18">
+                            </Grid>
+                            <Grid Margin="0,10,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="120" />
                             <ColumnDefinition Width="220" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Color" VerticalAlignment="Center" />
                         <TextBox Grid.Column="1" Text="{Binding ListColor, UpdateSourceTrigger=PropertyChanged}" Padding="8" />
-                    </Grid>
-                    <TextBlock Text="ENTRIES" FontWeight="Bold" Margin="0,0,0,8" />
-                    <DataGrid ItemsSource="{Binding Entries}" SelectedItem="{Binding SelectedEntry}" AutoGenerateColumns="False" CanUserAddRows="False"
+                            </Grid>
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox Header="ENTRIES" Style="{StaticResource PageGroupStyle}" Margin="0,12,0,0">
+                        <StackPanel>
+                            <DataGrid ItemsSource="{Binding Entries}" SelectedItem="{Binding SelectedEntry}" AutoGenerateColumns="False" CanUserAddRows="False"
                               IsReadOnly="False" Height="300">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="EPC" Binding="{Binding EpcHex, UpdateSourceTrigger=PropertyChanged}" Width="2*" />
                             <DataGridTextColumn Header="Display name" Binding="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}" Width="*" />
                             <DataGridTextColumn Header="Color" Binding="{Binding ColorHex, UpdateSourceTrigger=PropertyChanged}" Width="140" />
                         </DataGrid.Columns>
-                    </DataGrid>
-                    <Grid Margin="0,12,0,0">
+                            </DataGrid>
+                            <Grid Margin="0,12,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="2*" />
                             <ColumnDefinition Width="*" />
@@ -82,7 +111,9 @@
                                     Style="{StaticResource TagListActionStyle}"
                                     Padding="12,8" Margin="8,0,0,0" />
                         </StackPanel>
-                    </Grid>
+                            </Grid>
+                        </StackPanel>
+                    </GroupBox>
                 </StackPanel>
             </ScrollViewer>
         </Grid>

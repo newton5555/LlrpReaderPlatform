@@ -6,7 +6,13 @@
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <local:BindingProxy x:Key="InventoryVmProxy" Data="{Binding}" />
-        <Style x:Key="InventoryLifecycleButtonStyle" TargetType="Button">
+        <Style x:Key="InventoryLifecycleButtonStyle" TargetType="Button"
+               BasedOn="{StaticResource FlatActionButtonStyle}">
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsBusy}" Value="True">
                     <Setter Property="IsEnabled" Value="False" />
@@ -55,22 +61,18 @@
                     <TextBlock Text="Duration(s)" VerticalAlignment="Center" Margin="0,0,4,0" />
                     <TextBox Text="{Binding DurationSecondsText, UpdateSourceTrigger=PropertyChanged}"
                              Width="64" Padding="4,2" ToolTip="0 = continuous inventory" />
-                    <Button Content="REFRESH" Command="{Binding RefreshCommand}" Padding="12,6" />
-                    <Button Content="CLEAR" Command="{Binding ClearCommand}" Padding="12,6" Margin="8,0,0,0" />
                 </StackPanel>
             </Grid>
         </Border>
 
-        <ProgressBar Grid.Row="0" VerticalAlignment="Bottom" Height="3"
-                     IsIndeterminate="{Binding IsBusy}" />
-
-        <DataGrid Grid.Row="1" ItemsSource="{Binding Tags}" AutoGenerateColumns="False" IsReadOnly="True"
-                  CanUserAddRows="False" GridLinesVisibility="Horizontal" RowHeight="32"
-                  FontSize="12" Margin="16" BorderThickness="1"
-                  EnableRowVirtualization="True" EnableColumnVirtualization="True"
-                  ScrollViewer.CanContentScroll="True"
-                  VirtualizingPanel.IsVirtualizing="True"
-                  VirtualizingPanel.VirtualizationMode="Recycling">
+        <Grid Grid.Row="1">
+            <DataGrid ItemsSource="{Binding Tags}" AutoGenerateColumns="False" IsReadOnly="True"
+                      CanUserAddRows="False" GridLinesVisibility="Horizontal" RowHeight="32"
+                      FontSize="12" Margin="16" BorderThickness="1"
+                      EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                      ScrollViewer.CanContentScroll="True"
+                      VirtualizingPanel.IsVirtualizing="True"
+                      VirtualizingPanel.VirtualizationMode="Recycling">
             <DataGrid.Resources>
                 <Style x:Key="CenteredCellTextStyle" TargetType="TextBlock">
                     <Setter Property="VerticalAlignment" Value="Center" />
@@ -154,6 +156,20 @@
                 <DataGridTextColumn Header="Tag List" Binding="{Binding TagListName}" Width="1.4*"
                                     ElementStyle="{StaticResource CenteredCellTextStyle}" />
             </DataGrid.Columns>
-        </DataGrid>
+            </DataGrid>
+
+            <Grid Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
+                  Panel.ZIndex="10">
+                <Border Background="{DynamicResource MahApps.Brushes.ThemeBackground}" Opacity="0.92" />
+                <StackPanel Width="260" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <mah:ProgressRing Width="52" Height="52" IsLarge="True" IsActive="True"
+                                      Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                      HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding Status}" FontSize="15" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" TextAlignment="Center"
+                               TextWrapping="Wrap" Margin="0,14,0,0" />
+                </StackPanel>
+            </Grid>
+        </Grid>
     </Grid>
 </UserControl>

@@ -225,6 +225,62 @@ public sealed class SettingsServiceTests
     }
 
     [Fact]
+    public async Task Validate_allows_hidden_inventory_report_settings_to_be_omitted()
+    {
+        var h = new Harness();
+        await h.Manager.AddAsync(h.Profile, enableAfterAdding: false);
+        await h.Manager.ActivateAsync(h.Profile.Id);
+        SettingsEditorModel model = await h.Settings.QueryAsync(h.Profile.Id);
+
+        var draft = new SettingsDraft
+        {
+            ReaderId = h.Profile.Id,
+            CapabilityRevision = model.Snapshot.CapabilityRevision,
+        };
+        foreach ((string key, object? value) in model.Snapshot.Values)
+        {
+            if (key == SettingsKeys.ReportEvery || key.StartsWith("report-", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            draft.Values[key] = value;
+        }
+
+        SettingsValidationResult result = h.Settings.Validate(draft);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task ApplyAsync_allows_hidden_inventory_report_settings_to_be_omitted()
+    {
+        var h = new Harness();
+        await h.Manager.AddAsync(h.Profile, enableAfterAdding: false);
+        await h.Manager.ActivateAsync(h.Profile.Id);
+        SettingsEditorModel model = await h.Settings.QueryAsync(h.Profile.Id);
+
+        var draft = new SettingsDraft
+        {
+            ReaderId = h.Profile.Id,
+            CapabilityRevision = model.Snapshot.CapabilityRevision,
+        };
+        foreach ((string key, object? value) in model.Snapshot.Values)
+        {
+            if (key == SettingsKeys.ReportEvery || key.StartsWith("report-", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            draft.Values[key] = value;
+        }
+
+        SettingsApplyResult result = await h.Settings.ApplyAsync(h.Profile.Id, draft);
+
+        Assert.True(result.Succeeded, result.Error);
+    }
+
+    [Fact]
     public async Task ApplyAsync_rejects_expired_capability()
     {
         var h = new Harness();

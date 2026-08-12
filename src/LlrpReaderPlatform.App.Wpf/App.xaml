@@ -12,6 +12,12 @@
             </ResourceDictionary.MergedDictionaries>
 
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+            <Style x:Key="FlatActionButtonStyle"
+                   TargetType="Button"
+                   BasedOn="{StaticResource MahApps.Styles.Button.Flat}">
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+            </Style>
             <converters:TagMemoryBankDisplayConverter x:Key="TagMemoryBankDisplayConverter" />
         </ResourceDictionary>
     </Application.Resources>

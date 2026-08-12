@@ -38,6 +38,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string? status;
 
+    [ObservableProperty]
+    private string busyMessage = "正在处理...";
+
+    [ObservableProperty]
+    private string contentBusyMessage = "正在加载...";
+
     public MainViewModel(
         IReaderManager readerManager,
         IReaderDiscoveryService discovery,
@@ -124,6 +130,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool isBusy;
 
+    [ObservableProperty]
+    private bool isSidebarBusy;
+
+    [ObservableProperty]
+    private bool isContentBusy;
+
     public AddDataSourceViewModel AddDataSource { get; }
 
     public async Task InitializeAsync(CancellationToken ct = default)
@@ -133,8 +145,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
-        IsBusy = true;
-        Status = "正在初始化 Reader 平台...";
+        SetBusy("正在初始化 Reader 平台...");
         try
         {
             using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetimeToken);
@@ -154,7 +165,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         finally
         {
-            IsBusy = false;
+            EndSidebarBusy();
         }
     }
 
@@ -202,7 +213,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
-        IsBusy = true;
         var profile = new ReaderProfile
         {
             Id = Guid.NewGuid(),
@@ -211,12 +221,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Port = Port,
             IsEnabled = true,
         };
+        SetBusy($"正在添加 Reader「{profile.Name}」...");
 
         try
         {
             ReaderAddResult result = await readerManager.AddAsync(profile, enableAfterAdding: true, lifetimeToken);
+            string actualName = result.Succeeded
+                ? readerManager.GetSnapshot(profile.Id).Profile.Name
+                : profile.Name;
             Status = result.Succeeded
-                ? $"已添加并同步 {profile.Host}:{profile.Port}"
+                ? $"已添加 {actualName} 并同步 {profile.Host}:{profile.Port}"
                 : PlatformErrorDisplay.Failure("添加", result.ErrorCode, result.Error);
         }
         catch (OperationCanceledException) when (discoveryCts.IsCancellationRequested)
@@ -232,7 +246,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         finally
         {
-            IsBusy = false;
+            EndSidebarBusy();
             Refresh();
         }
     }
@@ -245,7 +259,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
-        IsBusy = true;
+        string readerName = Readers.FirstOrDefault(reader => reader.ReaderId == readerId)?.Name ?? "Reader";
+        SetBusy($"正在删除 Reader「{readerName}」...");
         try
         {
             bool removedSettingsReader = Settings.ReaderId == readerId;
@@ -271,7 +286,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         finally
         {
-            IsBusy = false;
+            EndSidebarBusy();
             Refresh();
         }
     }
@@ -290,7 +305,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
-        IsBusy = true;
+        SetBusy($"正在激活 Reader「{item.Name}」...");
         try
         {
             ReaderActivationResult result = await readerManager.ActivateAsync(item.ReaderId, lifetimeToken);
@@ -311,7 +326,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         finally
         {
-            IsBusy = false;
+            EndSidebarBusy();
             Refresh();
         }
     }
@@ -324,8 +339,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
-        IsBusy = true;
-        Status = "正在扫描 _llrp._tcp...";
+        SetBusy("正在扫描 _llrp._tcp...");
         try
         {
             IReadOnlyList<DiscoveredReader> found = await discovery.DiscoverAsync(TimeSpan.FromSeconds(3), lifetimeToken);
@@ -355,7 +369,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         finally
         {
-            IsBusy = false;
+            EndSidebarBusy();
         }
     }
 
@@ -474,7 +488,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
-        IsBusy = true;
+        string readerName = Readers.FirstOrDefault(reader => reader.ReaderId == readerId)?.Name ?? "Reader";
+        SetBusy(enabled
+            ? $"正在连接 Reader「{readerName}」..."
+            : $"正在停用 Reader「{readerName}」...");
         try
         {
             await readerManager.SetEnabledAsync(readerId, enabled, lifetimeToken);
@@ -507,7 +524,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         finally
         {
-            IsBusy = false;
+            EndSidebarBusy();
             Refresh();
         }
     }
@@ -527,7 +544,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
             ref activeSettingsLoadCts,
             settingsLoadCts);
         CancelAndDispose(previousLoadCts);
-        IsBusy = true;
+        string readerName = Readers.FirstOrDefault(reader => reader.ReaderId == readerId)?.Name
+            ?? readerManager.Readers.FirstOrDefault(reader => reader.ReaderId == readerId)?.Profile.Name
+            ?? "Reader";
+        SetContentBusy($"正在加载 Reader「{readerName}」设置...");
         try
         {
             if (!IsCurrentSettingsLoad(generation))
@@ -541,6 +561,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 || snapshot.IsStale
                 || snapshot.CapabilityRevision == 0)
             {
+                SetContentBusy($"正在连接 Reader「{readerName}」并加载设置...");
                 ReaderActivationResult activation = await readerManager.ActivateAsync(
                     readerId,
                     settingsLoadCts.Token);
@@ -603,7 +624,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 Interlocked.CompareExchange(ref activeSettingsLoadCts, null, settingsLoadCts),
                 settingsLoadCts))
             {
-                IsBusy = false;
+                EndContentBusy();
             }
 
             settingsLoadCts.Dispose();
@@ -651,6 +672,34 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         operationCts.Dispose();
+    }
+
+    private void SetBusy(string message)
+    {
+        BusyMessage = message;
+        Status = message;
+        IsBusy = true;
+        IsSidebarBusy = true;
+    }
+
+    private void SetContentBusy(string message)
+    {
+        ContentBusyMessage = message;
+        Status = message;
+        IsBusy = true;
+        IsContentBusy = true;
+    }
+
+    private void EndSidebarBusy()
+    {
+        IsSidebarBusy = false;
+        IsBusy = false;
+    }
+
+    private void EndContentBusy()
+    {
+        IsContentBusy = false;
+        IsBusy = false;
     }
 
     private void OnReaderStateChanged(object? sender, ReaderStateChangedEventArgs args)

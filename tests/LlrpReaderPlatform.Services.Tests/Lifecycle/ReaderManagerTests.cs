@@ -74,6 +74,26 @@ public sealed class ReaderManagerTests
     }
 
     [Fact]
+    public async Task AddAsync_allocates_a_unique_name_by_incrementing_the_trailing_number()
+    {
+        var sessionFactory = new FakeSessionFactory();
+        var store = new FakeProfileStore();
+        await using var manager = new ReaderManager(sessionFactory, store);
+
+        ReaderProfile first = NewProfile() with { Name = "Reader", Host = "192.0.2.21" };
+        ReaderProfile second = NewProfile() with { Name = "Reader", Host = "192.0.2.22" };
+        ReaderProfile third = NewProfile() with { Name = "Reader 2", Host = "192.0.2.23" };
+
+        await manager.AddAsync(first, enableAfterAdding: false);
+        await manager.AddAsync(second, enableAfterAdding: false);
+        await manager.AddAsync(third, enableAfterAdding: false);
+
+        Assert.Equal("Reader", (await store.GetAsync(first.Id))?.Name);
+        Assert.Equal("Reader 2", (await store.GetAsync(second.Id))?.Name);
+        Assert.Equal("Reader 3", (await store.GetAsync(third.Id))?.Name);
+    }
+
+    [Fact]
     public async Task ActivateAsync_does_not_advertise_tag_access_when_reader_capability_is_false()
     {
         var sessionFactory = new FakeSessionFactory();

@@ -429,7 +429,7 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
         long contextVersion = Volatile.Read(ref readerContextVersion);
         foreach (SettingsEntryRowViewModel row in Rows)
         {
-            if (row.IsReadOnly)
+            if (row.IsReadOnly || IsInventoryReportSetting(row.Key))
             {
                 continue;
             }
@@ -986,6 +986,10 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
 
         return text;
     }
+
+    private static bool IsInventoryReportSetting(string key) =>
+        key == SettingsKeys.ReportEvery
+        || key.StartsWith("report-", StringComparison.Ordinal);
 
     public void Dispose()
     {

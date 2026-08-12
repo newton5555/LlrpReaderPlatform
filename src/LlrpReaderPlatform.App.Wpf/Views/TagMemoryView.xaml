@@ -4,7 +4,8 @@
              xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-        <Style x:Key="TagAccessActionStyle" TargetType="Button">
+        <Style x:Key="TagAccessActionStyle" TargetType="Button"
+               BasedOn="{StaticResource FlatActionButtonStyle}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsBusy}" Value="True">
                     <Setter Property="IsEnabled" Value="False" />
