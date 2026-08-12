@@ -281,8 +281,8 @@ public sealed class SettingsService : IReaderSettingsService
             { ErrorCode = PlatformErrorCode.InvalidSettings };
         }
         logger.LogInformation(
-            "Compiled settings for reader {Id}: antenna={Antenna}, session={Session}, txPower={TxPower}.",
-            readerId, compiled.AntennaId, compiled.Session, compiled.TxPowerDbm);
+            "Compiled settings for reader {Id}: antenna={Antenna}, session={Session}, txPowerIndex={TxPowerIndex}, rxSensitivityIndex={RxSensitivityIndex}.",
+            readerId, compiled.AntennaId, compiled.Session, compiled.TxPowerIndex, compiled.RxSensitivityIndex);
 
         try
         {
@@ -317,7 +317,7 @@ public sealed class SettingsService : IReaderSettingsService
                     await presetStore.SaveAsync(new ReaderSettingsPreset
                     {
                         ReaderId = readerId,
-                        SchemaVersion = 1,
+                        SchemaVersion = ReaderSettingsPreset.CurrentSchemaVersion,
                         SettingsJson = BuildSemanticPresetJson(draft.Values, layout),
                         UpdatedAtUtc = DateTimeOffset.UtcNow,
                     }, ct).ConfigureAwait(false);
@@ -575,9 +575,10 @@ public sealed class SettingsService : IReaderSettingsService
         try
         {
             ReaderSettingsPreset? preset = await presetStore.GetAsync(snapshot.ReaderId, ct).ConfigureAwait(false);
-            if (preset is null || preset.SchemaVersion != 1)
+            if (preset is null || preset.SchemaVersion != ReaderSettingsPreset.CurrentSchemaVersion)
             {
-                // schema 0 是旧 SDK JSON，不能直接当作新平台语义 Draft 使用。
+                // 能力表索引语义变更后，旧版本缓存不能直接当作新平台语义 Draft 使用。
+                // 新库允许清空重建，因此这里宁可回到实时 Query/能力未就绪，也不误写旧值。
                 return null;
             }
 
@@ -703,7 +704,7 @@ public sealed class SettingsService : IReaderSettingsService
             await presetStore.SaveAsync(new ReaderSettingsPreset
             {
                 ReaderId = model.Layout.ReaderId,
-                SchemaVersion = 1,
+                SchemaVersion = ReaderSettingsPreset.CurrentSchemaVersion,
                 SettingsJson = BuildSemanticPresetJson(model.Snapshot.Values, model.Layout),
                 UpdatedAtUtc = DateTimeOffset.UtcNow,
             }, ct).ConfigureAwait(false);

@@ -86,13 +86,13 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
 
         entries.Add(new SettingsEntry
         {
-            Key = SettingsKeys.TxPowerDbm,
-            Title = "Tx Power (dBm)",
-            EditorKind = EditorKind.Decimal,
-            ValueType = typeof(decimal),
-            Range = new SettingsRange(0, 30),
-            CurrentValue = 20m,
-            DefaultValue = 20m,
+            Key = SettingsKeys.TxPowerIndex,
+            Title = "Tx Power Index",
+            EditorKind = EditorKind.Integer,
+            ValueType = typeof(ushort),
+            Range = new SettingsRange(0, ushort.MaxValue),
+            CurrentValue = (ushort)20,
+            DefaultValue = (ushort)20,
         });
 
         return new EffectiveSettingsLayout
@@ -153,11 +153,11 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
                 case SettingsKeys.Session:
                     compiled.Session = Convert.ToInt32(value, CultureInfo.InvariantCulture);
                     break;
-                case SettingsKeys.TxPowerDbm:
-                    compiled.TxPowerDbm = Convert.ToDecimal(value, CultureInfo.InvariantCulture);
+                case SettingsKeys.TxPowerIndex:
+                    compiled.TxPowerIndex = Convert.ToUInt16(value, CultureInfo.InvariantCulture);
                     break;
-                case SettingsKeys.RxSensitivityDb:
-                    compiled.RxSensitivityDb = Convert.ToInt32(value, CultureInfo.InvariantCulture);
+                case SettingsKeys.RxSensitivityIndex:
+                    compiled.RxSensitivityIndex = Convert.ToUInt16(value, CultureInfo.InvariantCulture);
                     break;
                 case SettingsKeys.TagPopulation:
                     compiled.TagPopulation = Convert.ToInt32(value, CultureInfo.InvariantCulture);
@@ -184,9 +184,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(runtime);
 
-        InventorySettings inventory = runtime.Settings.ManagedRoSpec?.Inventory
-            ?? runtime.Settings.Settings.Inventory
-            ?? new InventorySettings();
+        InventorySettings inventory = ResolveInventoryBaseline(runtime);
         ushort currentAntenna = inventory.AntennaIds.FirstOrDefault();
         if (currentAntenna == 0 && snapshot.Antennas.Count > 0)
         {
@@ -231,32 +229,34 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             DefaultValue = session,
         });
 
-        decimal? txPower = ResolveTxPower(inventory, currentAntenna, runtime.Capabilities);
-        SettingsRange range = ResolveTxPowerRange(runtime.Capabilities);
+        ushort? txPowerIndex = ResolveTxPowerIndex(inventory, currentAntenna);
+        SettingsRange range = ResolveTxPowerIndexRange(runtime.Capabilities);
+        IReadOnlyList<SettingsOption> txPowerOptions = BuildTxPowerOptions(runtime.Capabilities);
         entries.Add(new SettingsEntry
         {
-            Key = SettingsKeys.TxPowerDbm,
-            Title = "Tx Power (dBm)",
-            EditorKind = EditorKind.Decimal,
-            ValueType = typeof(decimal),
-            Options = BuildTxPowerOptions(runtime.Capabilities),
+            Key = SettingsKeys.TxPowerIndex,
+            Title = "Tx Power Index",
+            EditorKind = txPowerOptions.Count > 0 ? EditorKind.Choice : EditorKind.Integer,
+            ValueType = typeof(ushort),
+            Options = txPowerOptions,
             Range = range,
-            CurrentValue = txPower ?? range.Min,
-            DefaultValue = txPower ?? range.Min,
+            CurrentValue = txPowerIndex ?? ToUshortRangeValue(range.Min),
+            DefaultValue = txPowerIndex ?? ToUshortRangeValue(range.Min),
         });
 
-        SettingsRange rxRange = ResolveRxSensitivityRange(runtime.Capabilities);
-        int rxCurrent = ResolveRxSensitivity(inventory, currentAntenna, runtime.Capabilities) ?? (int)rxRange.Min;
+        ushort? rxSensitivityIndex = ResolveRxSensitivityIndex(inventory, currentAntenna);
+        SettingsRange rxRange = ResolveRxSensitivityIndexRange(runtime.Capabilities);
+        IReadOnlyList<SettingsOption> rxSensitivityOptions = BuildRxSensitivityOptions(runtime.Capabilities);
         entries.Add(new SettingsEntry
         {
-            Key = SettingsKeys.RxSensitivityDb,
-            Title = "Rx Sensitivity (dBm)",
-            EditorKind = EditorKind.Integer,
-            ValueType = typeof(int),
-            Options = BuildRxSensitivityOptions(runtime.Capabilities),
+            Key = SettingsKeys.RxSensitivityIndex,
+            Title = "Rx Sensitivity Index",
+            EditorKind = rxSensitivityOptions.Count > 0 ? EditorKind.Choice : EditorKind.Integer,
+            ValueType = typeof(ushort),
+            Options = rxSensitivityOptions,
             Range = rxRange,
-            CurrentValue = rxCurrent,
-            DefaultValue = rxCurrent,
+            CurrentValue = rxSensitivityIndex ?? ToUshortRangeValue(rxRange.Min),
+            DefaultValue = rxSensitivityIndex ?? ToUshortRangeValue(rxRange.Min),
         });
 
         entries.Add(new SettingsEntry
@@ -330,47 +330,30 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
 
         foreach (ReaderAntennaInfo antenna in snapshot.Antennas)
         {
-            InventoryAntennaConfiguration? configuration = ResolveAntennaConfiguration(inventory, antenna.AntennaId);
-            decimal? antennaTx = ResolveTxPower(inventory, antenna.AntennaId, runtime.Capabilities);
-            int? antennaRx = ResolveRxSensitivity(inventory, antenna.AntennaId, runtime.Capabilities);
+            ushort? antennaTxIndex = ResolveTxPowerIndex(inventory, antenna.AntennaId);
+            ushort? antennaRxIndex = ResolveRxSensitivityIndex(inventory, antenna.AntennaId);
             entries.Add(new SettingsEntry
             {
-                Key = SettingsKeys.AntennaTxPowerDbm(antenna.AntennaId),
-                Title = $"{antenna.Name ?? $"Antenna {antenna.AntennaId}"} Tx Power (dBm)",
-                EditorKind = EditorKind.Decimal,
-                ValueType = typeof(decimal),
-                Options = BuildTxPowerOptions(runtime.Capabilities),
+                Key = SettingsKeys.AntennaTxPowerIndex(antenna.AntennaId),
+                Title = $"{antenna.Name ?? $"Antenna {antenna.AntennaId}"} Tx Power Index",
+                EditorKind = txPowerOptions.Count > 0 ? EditorKind.Choice : EditorKind.Integer,
+                ValueType = typeof(ushort),
+                Options = txPowerOptions,
                 Range = range,
-                CurrentValue = antennaTx ?? txPower ?? range.Min,
-                DefaultValue = antennaTx ?? txPower ?? range.Min,
+                CurrentValue = antennaTxIndex ?? txPowerIndex ?? ToUshortRangeValue(range.Min),
+                DefaultValue = antennaTxIndex ?? txPowerIndex ?? ToUshortRangeValue(range.Min),
             });
             entries.Add(new SettingsEntry
             {
-                Key = SettingsKeys.AntennaRxSensitivityDb(antenna.AntennaId),
-                Title = $"{antenna.Name ?? $"Antenna {antenna.AntennaId}"} Rx Sensitivity (dBm)",
-                EditorKind = EditorKind.Integer,
-                ValueType = typeof(int),
-                Options = BuildRxSensitivityOptions(runtime.Capabilities),
+                Key = SettingsKeys.AntennaRxSensitivityIndex(antenna.AntennaId),
+                Title = $"{antenna.Name ?? $"Antenna {antenna.AntennaId}"} Rx Sensitivity Index",
+                EditorKind = rxSensitivityOptions.Count > 0 ? EditorKind.Choice : EditorKind.Integer,
+                ValueType = typeof(ushort),
+                Options = rxSensitivityOptions,
                 Range = rxRange,
-                CurrentValue = antennaRx ?? rxCurrent,
-                DefaultValue = antennaRx ?? rxCurrent,
+                CurrentValue = antennaRxIndex ?? rxSensitivityIndex ?? ToUshortRangeValue(rxRange.Min),
+                DefaultValue = antennaRxIndex ?? rxSensitivityIndex ?? ToUshortRangeValue(rxRange.Min),
             });
-
-            if (GetFrequencyCount(runtime.Capabilities) > 0)
-            {
-                SettingsRange channelRange = new(1, GetFrequencyCount(runtime.Capabilities));
-                int channel = configuration?.ChannelIndex is ushort value ? value : 1;
-                entries.Add(new SettingsEntry
-                {
-                    Key = SettingsKeys.AntennaChannelIndex(antenna.AntennaId),
-                    Title = $"{antenna.Name ?? $"Antenna {antenna.AntennaId}"} Channel",
-                    EditorKind = EditorKind.Integer,
-                    ValueType = typeof(int),
-                    Range = channelRange,
-                    CurrentValue = channel,
-                    DefaultValue = channel,
-                });
-            }
         }
 
         AddFilterEntries(entries, inventory, runtime.Capabilities?.CanDoTagInventoryStateAwareSingulation == true);
@@ -426,7 +409,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         // 同一份基线，否则保存一个字段时会把其余 Tab1 配置回退到空默认值。
         InventorySettings inventory = runtime.Settings.ManagedRoSpec?.Inventory
             ?? baseline.Inventory
-            ?? new InventorySettings();
+            ?? CreateInventoryBaseline(baseline.Configuration);
 
         if (compiled.Session is int session)
         {
@@ -486,15 +469,15 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
                 : inventory.StopTrigger with { Type = InventoryStopTriggerType.None },
         };
 
-        // ReaderConfiguration.Antennas is the Reader-wide SET_READER_CONFIG projection
-        // returned by GET_READER_CONFIG. Inventory RF belongs to the ROSpec projection
-        // above. Echoing the Reader-wide antenna list makes some standard readers reject
-        // their own RFTransmitter values, while the same tuple is valid in a ROSpec.
-        // Do not replay those unrelated Reader-wide antenna defaults when saving Inventory.
+        // Keep the Reader-wide SET_READER_CONFIG antenna projection returned by
+        // GET_READER_CONFIG. It is a separate configuration scope from the Inventory
+        // ROSpec, but clearing it here loses the reader's antenna configuration whenever
+        // a settings page saves an unrelated field. Inventory RF is compiled separately
+        // in the ROSpec projection above.
         ReaderSettings compiledSettings = baseline with
         {
             Inventory = inventory,
-            Configuration = baseline.Configuration with { Antennas = [] },
+            Configuration = baseline.Configuration,
         };
         if (inventory.StartTrigger.Type == InventoryStartTriggerType.Gpi
             || inventory.StopTrigger.Type == InventoryStopTriggerType.GpiWithTimeout)
@@ -579,9 +562,16 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         }
 
         var options = modes
-            .Select(static mode => new SettingsOption(
-                (int)mode.ModeIdentifier,
-                $"{mode.ModeIdentifier}: {mode.ForwardLinkModulation}"))
+            .GroupBy(static mode => mode.ModeIdentifier)
+            .Select(static group => new SettingsOption(
+                (int)group.Key,
+                FormatTableOption(
+                    group.Key,
+                    string.Join(
+                        " / ",
+                        group.Select(static mode => mode.ForwardLinkModulation)
+                            .Where(static value => !string.IsNullOrWhiteSpace(value))
+                            .Distinct(StringComparer.Ordinal)))))
             .ToList();
 
         // Some readers report a valid active mode that is absent from the RF mode
@@ -857,57 +847,105 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             {
                 InventoryAntennaConfiguration configuration = ResolveAntennaConfiguration(baseline, antennaId)
                     ?? new InventoryAntennaConfiguration { AntennaId = antennaId };
-                decimal? tx = GetDecimal(draft, SettingsKeys.AntennaTxPowerDbm(antennaId));
-                int? rx = GetInt(draft, SettingsKeys.AntennaRxSensitivityDb(antennaId));
-                int? channel = GetInt(draft, SettingsKeys.AntennaChannelIndex(antennaId));
-                configuration = ApplyAntennaValues(configuration, antennaId, tx, rx, channel, capabilities);
+                ushort? txIndex = GetUshort(draft, SettingsKeys.AntennaTxPowerIndex(antennaId));
+                ushort? rxIndex = GetUshort(draft, SettingsKeys.AntennaRxSensitivityIndex(antennaId));
+                configuration = ApplyAntennaValues(configuration, antennaId, txIndex, rxIndex, capabilities);
                 configurations.Add(configuration);
             }
 
             return configurations;
         }
 
-        decimal? globalTx = GetDecimal(draft, SettingsKeys.TxPowerDbm);
-        int? globalRx = GetInt(draft, SettingsKeys.RxSensitivityDb);
+        ushort? globalTxIndex = GetUshort(draft, SettingsKeys.TxPowerIndex);
+        ushort? globalRxIndex = GetUshort(draft, SettingsKeys.RxSensitivityIndex);
         InventoryAntennaConfiguration existing = ResolveAntennaConfiguration(baseline, 0)
             ?? new InventoryAntennaConfiguration { AntennaId = 0 };
-        if (globalTx is null && globalRx is null && existing.TransmitPowerIndex is null && existing.ReceiverSensitivityIndex is null)
+        if (globalTxIndex is null && globalRxIndex is null && existing.TransmitPowerIndex is null && existing.ReceiverSensitivityIndex is null)
         {
             return baseline.AntennaConfigurations;
         }
 
-        return [ApplyAntennaValues(existing, 0, globalTx, globalRx, existing.ChannelIndex, capabilities)];
+        return [ApplyAntennaValues(existing, 0, globalTxIndex, globalRxIndex, capabilities)];
+    }
+
+    private static InventorySettings ResolveInventoryBaseline(ReaderSettingsRuntimeSnapshot runtime)
+    {
+        if (runtime.Settings.ManagedRoSpec?.Inventory is { } managedInventory)
+        {
+            return managedInventory;
+        }
+
+        if (runtime.Settings.Settings.Inventory is { } currentInventory)
+        {
+            return currentInventory;
+        }
+
+        // A reader may have valid GET_READER_CONFIG antenna RF values while no ROSpec
+        // exists yet. Project those values into the settings editor so the first save
+        // does not show SDK defaults or overwrite the device's current antenna setup.
+        return CreateInventoryBaseline(runtime.Settings.Settings.Configuration);
+    }
+
+    private static InventorySettings CreateInventoryBaseline(ReaderConfiguration configuration)
+    {
+        IReadOnlyList<AntennaConfigurationSettings> source = configuration.Antennas ?? [];
+        ushort[] antennaIds = source
+            .Select(static antenna => antenna.AntennaId)
+            .Where(static antennaId => antennaId > 0)
+            .Distinct()
+            .OrderBy(static antennaId => antennaId)
+            .ToArray();
+
+        AntennaConfigurationSettings[] rfSources = source
+            .Where(static antenna =>
+                antenna.TransmitPowerIndex.HasValue
+                || antenna.ReceiverSensitivityIndex.HasValue
+                || antenna.HopTableId.HasValue
+                || antenna.ChannelIndex.HasValue)
+            .ToArray();
+        AntennaConfigurationSettings[] explicitRfSources = rfSources
+            .Where(static antenna => antenna.AntennaId > 0)
+            .ToArray();
+        IReadOnlyList<AntennaConfigurationSettings> selectedSources = explicitRfSources.Length > 0
+            ? explicitRfSources
+            : rfSources.Where(static antenna => antenna.AntennaId == 0).Take(1).ToArray();
+
+        return new InventorySettings
+        {
+            AntennaIds = antennaIds.Length > 0 ? antennaIds : [0],
+            AntennaConfigurations = selectedSources
+                .Select(static antenna => new InventoryAntennaConfiguration
+                {
+                    AntennaId = antenna.AntennaId,
+                    TransmitPowerIndex = antenna.TransmitPowerIndex,
+                    ReceiverSensitivityIndex = antenna.ReceiverSensitivityIndex,
+                    HopTableId = antenna.HopTableId,
+                    ChannelIndex = antenna.ChannelIndex,
+                })
+                .ToArray(),
+        };
     }
 
     private static InventoryAntennaConfiguration ApplyAntennaValues(
         InventoryAntennaConfiguration configuration,
         ushort antennaId,
-        decimal? txDbm,
-        int? rxDbm,
-        int? channel,
+        ushort? txIndex,
+        ushort? rxIndex,
         ReaderCapabilities? capabilities)
     {
-        ushort? txIndex = txDbm is decimal tx && capabilities?.TxPowers is { Count: > 0 } powers
-            ? powers.OrderBy(p => Math.Abs((decimal)p.TransmitPowerDbm - tx)).First().Index
-            : configuration.TransmitPowerIndex;
-        ushort? rxIndex = rxDbm is int rx && capabilities?.RxSensitivities is { Count: > 0 } sensitivities
-            ? sensitivities.OrderBy(r => Math.Abs(r.ReceiveSensitivityDb - rx)).First().Index
-            : configuration.ReceiverSensitivityIndex;
-        ushort? channelIndex = channel is int channelValue and > 0 and <= ushort.MaxValue
-            ? (ushort)channelValue
-            : configuration.ChannelIndex;
+        txIndex ??= configuration.TransmitPowerIndex;
+        rxIndex ??= configuration.ReceiverSensitivityIndex;
         ushort? hopTableId = configuration.HopTableId;
+        ushort? channelIndex = configuration.ChannelIndex;
         if (txIndex is not null)
         {
-            // RFTransmitter is a complete LLRP tuple. Even when a hopping region ignores
-            // ChannelIndex, the SDK requires TransmitPower, HopTableID, and ChannelIndex
-            // to be supplied together. Channel 1 is therefore the neutral structural
-            // value for hopping readers; a future standard fixed-frequency editor will
-            // replace it with the selected FixedFrequencyTable index.
-            hopTableId ??= capabilities?.HopTables is { Count: > 0 } hopTables
-                ? hopTables[0].HopTableId
-                : (ushort)0;
-            channelIndex ??= 1;
+            // RFTransmitter is a complete LLRP tuple. The standard settings page does
+            // not own fixed-frequency selection, so ChannelIndex is always the neutral
+            // structural value 1. A future standard fixed-frequency editor may replace
+            // this value; vendor fixed-frequency extensions remain responsible for their
+            // own channel selection.
+            channelIndex = 1;
+            hopTableId = ResolveHopTableId(hopTableId, capabilities);
         }
 
         return configuration with
@@ -918,6 +956,28 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             ChannelIndex = channelIndex,
             HopTableId = hopTableId,
         };
+    }
+
+    private static ushort ResolveHopTableId(ushort? existing, ReaderCapabilities? capabilities)
+    {
+        if (existing is > 0)
+        {
+            return existing.Value;
+        }
+
+        ushort? advertised = capabilities?.HopTables
+            .Select(static table => (ushort)table.HopTableId)
+            .FirstOrDefault(static id => id > 0);
+        if (advertised is > 0)
+        {
+            return advertised.Value;
+        }
+
+        // The standard settings page does not expose fixed-frequency selection.
+        // Use the standard device default table instead of emitting HopTableID=0,
+        // which is rejected by the target standard reader and is not a safe
+        // substitute for a real capability-table identifier.
+        return 1;
     }
 
     private static IReadOnlyList<ushort> GetAntennaIds(SettingsDraft draft, InventorySettings baseline)
@@ -947,6 +1007,11 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             .Distinct()
             .ToArray();
     }
+
+    private static ushort? GetUshort(SettingsDraft draft, string key) =>
+        draft.Values.TryGetValue(key, out object? value) && value is not null
+            ? Convert.ToUInt16(value, CultureInfo.InvariantCulture)
+            : null;
 
     private static InventorySelectFilter[] BuildFilters(
         SettingsDraft draft,
@@ -1109,11 +1174,6 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             ? Convert.ToInt32(value, CultureInfo.InvariantCulture)
             : fallback;
 
-    private static decimal? GetDecimal(SettingsDraft draft, string key) =>
-        draft.Values.TryGetValue(key, out object? value) && value is not null
-            ? Convert.ToDecimal(value, CultureInfo.InvariantCulture)
-            : null;
-
     private static bool GetBool(SettingsDraft draft, string key, bool fallback = false) =>
         draft.Values.TryGetValue(key, out object? value) && value is not null
             ? Convert.ToBoolean(value, CultureInfo.InvariantCulture)
@@ -1137,84 +1197,71 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         return string.Join(", ", ids);
     }
 
-    private static int GetFrequencyCount(ReaderCapabilities? capabilities) =>
-        capabilities?.HopTables.FirstOrDefault()?.Frequencies.Count
-        ?? capabilities?.TxFrequencies.Count
-        ?? 0;
-
-    private static decimal? ResolveTxPower(
+    private static ushort? ResolveTxPowerIndex(
         InventorySettings inventory,
-        ushort antenna,
-        ReaderCapabilities? capabilities)
+        ushort antenna)
     {
-        ushort? index = inventory.AntennaConfigurations
-            .FirstOrDefault(c => c.AntennaId == antenna)?.TransmitPowerIndex;
-        if (index is null || capabilities?.TxPowers is not { Count: > 0 } powers)
-        {
-            return null;
-        }
-
-        TxPowerEntry? entry = powers.FirstOrDefault(p => p.Index == index.Value);
-        return entry is null ? null : (decimal)entry.TransmitPowerDbm;
+        return ResolveAntennaConfiguration(inventory, antenna)?.TransmitPowerIndex;
     }
 
-    private static SettingsRange ResolveTxPowerRange(ReaderCapabilities? capabilities)
+    private static SettingsRange ResolveTxPowerIndexRange(ReaderCapabilities? capabilities)
     {
         if (capabilities?.TxPowers is not { Count: > 0 } powers)
         {
-            return new SettingsRange(0, 30);
+            return new SettingsRange(0, ushort.MaxValue);
         }
 
         return new SettingsRange(
-            (decimal)powers.Min(static p => p.TransmitPowerDbm),
-            (decimal)powers.Max(static p => p.TransmitPowerDbm));
+            powers.Min(static p => (decimal)p.Index),
+            powers.Max(static p => (decimal)p.Index));
     }
 
     private static IReadOnlyList<SettingsOption> BuildTxPowerOptions(ReaderCapabilities? capabilities) =>
         capabilities?.TxPowers is { Count: > 0 } powers
             ? powers
                 .Select(power => new SettingsOption(
-                    (decimal)power.TransmitPowerDbm,
-                    $"Index {power.Index}: {power.TransmitPowerDbm.ToString("0.###", CultureInfo.InvariantCulture)} dBm"))
+                    power.Index,
+                    FormatTableOption(
+                        power.Index,
+                        $"{power.TransmitPowerDbm.ToString("0.###", CultureInfo.InvariantCulture)} dBm")))
                 .ToArray()
             : [];
 
-    private static int? ResolveRxSensitivity(
+    private static ushort? ResolveRxSensitivityIndex(
         InventorySettings inventory,
-        ushort antenna,
-        ReaderCapabilities? capabilities)
+        ushort antenna)
     {
-        ushort? index = inventory.AntennaConfigurations
-            .FirstOrDefault(c => c.AntennaId == antenna)?.ReceiverSensitivityIndex;
-        if (index is null || capabilities?.RxSensitivities is not { Count: > 0 } sensitivities)
-        {
-            return null;
-        }
-
-        RxSensitivityEntry? entry = sensitivities.FirstOrDefault(r => r.Index == index.Value);
-        return entry?.ReceiveSensitivityDb;
+        return ResolveAntennaConfiguration(inventory, antenna)?.ReceiverSensitivityIndex;
     }
 
-    private static SettingsRange ResolveRxSensitivityRange(ReaderCapabilities? capabilities)
+    private static SettingsRange ResolveRxSensitivityIndexRange(ReaderCapabilities? capabilities)
     {
         if (capabilities?.RxSensitivities is not { Count: > 0 } sensitivities)
         {
-            return new SettingsRange(-120, 0);
+            return new SettingsRange(0, ushort.MaxValue);
         }
 
         return new SettingsRange(
-            sensitivities.Min(static r => r.ReceiveSensitivityDb),
-            sensitivities.Max(static r => r.ReceiveSensitivityDb));
+            sensitivities.Min(static r => (decimal)r.Index),
+            sensitivities.Max(static r => (decimal)r.Index));
     }
 
     private static IReadOnlyList<SettingsOption> BuildRxSensitivityOptions(ReaderCapabilities? capabilities) =>
         capabilities?.RxSensitivities is { Count: > 0 } sensitivities
             ? sensitivities
                 .Select(sensitivity => new SettingsOption(
-                    sensitivity.ReceiveSensitivityDb,
-                    $"Index {sensitivity.Index}: {sensitivity.ReceiveSensitivityDb.ToString(CultureInfo.InvariantCulture)} dBm"))
+                    sensitivity.Index,
+                    FormatTableOption(
+                        sensitivity.Index,
+                        $"{sensitivity.ReceiveSensitivityDb.ToString(CultureInfo.InvariantCulture)} dB offset")))
                 .ToArray()
             : [];
+
+    private static ushort ToUshortRangeValue(decimal value) =>
+        checked((ushort)Math.Clamp(value, 0, ushort.MaxValue));
+
+    private static string FormatTableOption(object index, string description) =>
+        $"{Convert.ToString(index, CultureInfo.InvariantCulture)} ({description})";
 
     private static SettingsRange ResolveTariRange(
         ReaderCapabilities? capabilities,

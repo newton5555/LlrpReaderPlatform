@@ -596,7 +596,7 @@ public sealed class MainViewModelSmokeTests
         await vm.LoadCommand.ExecuteAsync(readerId);
 
         Assert.Contains(vm.ManualRows, row => row.Key == "session");
-        Assert.Contains(vm.PowerRows, row => row.Key == "tx-power-dbm");
+        Assert.Contains(vm.PowerRows, row => row.Key == SettingsKeys.TxPowerIndex);
         Assert.Contains(vm.GpiRows, row => row.Key == "start-gpi-enabled");
         Assert.Contains(vm.FilterRows, row => row.Key == "filter-1-enabled");
         Assert.Contains(vm.StateAwareRows, row => row.Key == "state-aware-target");
@@ -667,7 +667,7 @@ public sealed class MainViewModelSmokeTests
             SettingsEntry[] entries =
             [
                 new() { Key = "session", Title = "Session", EditorKind = EditorKind.Choice, ValueType = typeof(int), Options = [new(0, "S0")], CurrentValue = 0 },
-                new() { Key = "tx-power-dbm", Title = "Tx Power", EditorKind = EditorKind.Decimal, ValueType = typeof(decimal), CurrentValue = 20m },
+                new() { Key = SettingsKeys.TxPowerIndex, Title = "Tx Power Index", EditorKind = EditorKind.Integer, ValueType = typeof(ushort), CurrentValue = (ushort)20 },
                 new() { Key = "start-gpi-enabled", Title = "Start GPI", EditorKind = EditorKind.Boolean, ValueType = typeof(bool), CurrentValue = false },
                 new() { Key = "filter-1-enabled", Title = "Filter 1", EditorKind = EditorKind.Boolean, ValueType = typeof(bool), CurrentValue = false },
                 new() { Key = "state-aware-target", Title = "State Target", EditorKind = EditorKind.Choice, ValueType = typeof(int), Options = [new(0, "A")], CurrentValue = 0 },

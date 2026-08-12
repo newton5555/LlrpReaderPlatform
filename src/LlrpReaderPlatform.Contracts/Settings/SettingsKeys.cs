@@ -10,8 +10,8 @@ public static class SettingsKeys
     public const string AntennaIds = "antenna-ids";
     public const string IndividualAntennaSettings = "individual-antenna-settings";
     public const string Session = "session";
-    public const string TxPowerDbm = "tx-power-dbm";
-    public const string RxSensitivityDb = "rx-sensitivity-db";
+    public const string TxPowerIndex = "tx-power-index";
+    public const string RxSensitivityIndex = "rx-sensitivity-index";
     public const string TagPopulation = "tag-population";
     public const string ReportEvery = "report-every";
     public const string RfMode = "rf-mode";
@@ -43,7 +43,15 @@ public static class SettingsKeys
     public static string FilterNonMatchAction(int index) => $"filter-{index}-non-match-action";
     public static string FilterStateTarget(int index) => $"filter-{index}-state-target";
     public static string FilterStateAction(int index) => $"filter-{index}-state-action";
-    public static string AntennaTxPowerDbm(ushort antennaId) => $"antenna-{antennaId}-tx-power-dbm";
-    public static string AntennaRxSensitivityDb(ushort antennaId) => $"antenna-{antennaId}-rx-sensitivity-db";
+    public static string AntennaTxPowerIndex(ushort antennaId) => $"antenna-{antennaId}-tx-power-index";
+    public static string AntennaRxSensitivityIndex(ushort antennaId) => $"antenna-{antennaId}-rx-sensitivity-index";
     public static string AntennaChannelIndex(ushort antennaId) => $"antenna-{antennaId}-channel-index";
+
+    // Source-compatible aliases for consumers compiled against the earlier semantic names.
+    // The values of these settings are now table indices; the old names must not be used for
+    // new persisted data or UI labels.
+    public const string TxPowerDbm = TxPowerIndex;
+    public const string RxSensitivityDb = RxSensitivityIndex;
+    public static string AntennaTxPowerDbm(ushort antennaId) => AntennaTxPowerIndex(antennaId);
+    public static string AntennaRxSensitivityDb(ushort antennaId) => AntennaRxSensitivityIndex(antennaId);
 }

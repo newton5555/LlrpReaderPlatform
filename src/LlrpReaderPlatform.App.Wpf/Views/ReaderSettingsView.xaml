@@ -341,7 +341,7 @@
                                                       Text="{Binding TxPowerRow.ValueText, UpdateSourceTrigger=PropertyChanged}"
                                                       IsEditable="True" IsEnabled="{Binding IsTxPowerEditable}"
                                                       Style="{StaticResource FieldControlStyle}" />
-                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Rx Sensitivity:" Style="{StaticResource FieldLabelStyle}" />
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Rx Sensitivity Index:" Style="{StaticResource FieldLabelStyle}" />
                                             <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding RxSensitivityRow.ChoiceDisplays}"
                                                       SelectedIndex="{Binding RxSensitivityRow.SelectedChoiceIndex, Mode=TwoWay}"
                                                       Text="{Binding RxSensitivityRow.ValueText, UpdateSourceTrigger=PropertyChanged}"
@@ -384,7 +384,7 @@
                                                                         </Style>
                                                                     </ComboBox.Style>
                                                                 </ComboBox>
-                                                                <TextBlock Grid.Column="3" Text="Rx Sensitivity:" VerticalAlignment="Center" />
+                                                                <TextBlock Grid.Column="3" Text="Rx Sensitivity Index:" VerticalAlignment="Center" />
                                                                 <ComboBox Grid.Column="4" ItemsSource="{Binding RxSensitivity.ChoiceDisplays}"
                                                                           SelectedIndex="{Binding RxSensitivity.SelectedChoiceIndex, Mode=TwoWay}"
                                                                           Text="{Binding RxSensitivity.ValueText, UpdateSourceTrigger=PropertyChanged}"

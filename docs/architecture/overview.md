@@ -10,7 +10,7 @@
 UI Consumer
   -> Contracts
   -> Services
-       -> LlrpSdk
+       -> local LLRPCSharp SDK projects
        -> Registered Extension Modules
        -> Persistence / Discovery interfaces
   -> Infrastructure implementations
@@ -19,9 +19,9 @@ UI Consumer
 实际依赖以项目引用为准：
 
 - `Contracts`：UI 无关 DTO、状态、设置编辑模型和服务接口；不引用 SDK 或 WPF；
-- `Services`：Reader 生命周期、连接租约、能力聚合、设置服务、盘存和 Tag Access；引用 `Contracts` 与 `LlrpSdk`；标准设置编译器通过 `ISettingsExtensionContributor` 接收已注册扩展的语义贡献；
+- `Services`：Reader 生命周期、连接租约、能力聚合、设置服务、盘存和 Tag Access；引用 `Contracts` 与本地 LLRPCSharp SDK 项目；标准设置编译器通过 `ISettingsExtensionContributor` 接收已注册扩展的语义贡献；
 - `Infrastructure`：SQLite、Preset、Profile、发现和日志实现；实现 Contracts/Services 定义的接口；
-- `Extensions.*`：厂商模块，引用 Services 与对应 SDK 扩展包；
+- `Extensions.*`：厂商模块，引用 Services 与对应本地 SDK 扩展项目；
 - `App.*`：UI 组合根和展示层，注册 Services、Infrastructure 和扩展模块。
 
 ## 解决方案结构
@@ -43,21 +43,24 @@ LlrpReaderPlatform.slnx
 依赖规则：
 
 ```text
-Contracts <── Services ──> LlrpSdk
+Contracts <── Services ──> local LLRPCSharp SDK
     ▲             ▲
-    │             ├── Extensions.Impinj ──> LlrpSdk.Extensions.Impinj
+    │             ├── Extensions.Impinj ──> local Impinj SDK project
     │             └── Infrastructure
     └── App.Wpf ──┘
 ```
 
 - `Contracts` 和 `Services` 使用 `net10.0`；`App.Wpf` 使用 `net10.0-windows`；
 - `Contracts` 不引用任何 UI、SDK 或厂商程序集；
-- `Services` 不设置 `UseWPF`，只依赖 Contracts 和 `LlrpSdk`；
+- `Services` 不设置 `UseWPF`，只依赖 Contracts 和 SDK 适配项目；
 - Infrastructure 不把 SQLite、Zeroconf 或日志实现暴露给 Contracts；
 - `Extensions.Impinj` 不得被 Services 反向引用；
 - Services 内的 `Persistence/` 只放接口和边界模型，SQLite Entity、EF 配置和迁移放在 Infrastructure；
 - Infrastructure 的各 SQLite Store 通过同一 `DbContextFactory` 维度的迁移闸门串行初始化 schema，查询和写入仍各自使用独立 `DbContext`；
 - SDK 类型到 Contracts DTO 的转换集中在 Services/SDK Adapter 内部。
+
+当前开发构建通过 `LlrpSdkSourceRoot` 定位相邻的 `LLRPCSharp` 仓库；该边界和切换原因见
+[ADR-0006](../decisions/ADR-0006-local-sdk-project-reference.md)。
 
 ## UI 消费者边界
 

@@ -1,4 +1,4 @@
-# 厂商扩展与设置模型
+6# 厂商扩展与设置模型
 
 ## 厂商扩展目标
 
@@ -73,6 +73,12 @@ Boolean / Choice / Integer / Decimal / Text / Collection
 
 天线、Filter、频率列表等复杂值可以使用专用语义模型。Contracts 不出现 TextBox、ComboBox、CheckBox、Visibility、Dispatcher 等 WPF 概念。
 
+LLRP 能力响应中的表项是表驱动设置的唯一选项源：`TxPowers`、`RxSensitivities`、`RfModes`
+以及频率表生成 `SettingsOption`。选项的 `Value` 始终是设备要接收的 index/id，`Display`
+统一使用“索引（具体描述）”格式；例如 `7 (30.5 dBm)`、`2 (6 dB offset)`、`20 (FM0)`。
+Draft、CompiledSettings 和 SDK `ReaderSettings` 都沿用该 index/id，不把显示用的物理描述反向换算成邻近表项。
+Rx 的描述只用于说明 dB offset，不作为写入值。没有能力表时才退回范围文本编辑；有能力表时使用 Choice 下拉。
+
 ## 设置服务边界
 
 UI 只依赖：
@@ -91,3 +97,7 @@ Apply 前必须重新验证：
 - Draft 的 CapabilityRevision 是否过期；
 - 当前操作是否被 Inventory 占用；
 - 所有标准和扩展参数是否都能编译并通过校验。
+
+Reader 的当前配置与 managed ROSpec 是两个查询范围。设备没有初始 ROSpec 时，设置编译器
+会以新的默认 `InventorySettings` 作为待部署 ROSpec；这不代表设备配置为空，`GET_READER_CONFIG`
+返回的 `ReaderConfiguration.Antennas`、事件、GPO 等仍作为 `SET_READER_CONFIG` 基线保留并回写。

@@ -418,7 +418,7 @@ public sealed class InventoryViewModelTests
 
         Assert.False(vm.IsInventoryRunning);
         Assert.Contains("GPI 触发", vm.Status);
-        Assert.Equal("00:00", vm.Elapsed);
+        Assert.Equal("0.00 s", vm.Elapsed);
     }
 
     [Fact]

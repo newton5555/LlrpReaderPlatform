@@ -63,7 +63,11 @@ public partial class App : Application
 
         sdkLoggerFactory = LoggerFactory.Create(builder =>
         {
-            builder.SetMinimumLevel(LogLevel.Debug);
+            // Keep SDK lifecycle/protocol errors and useful informational events, but do not
+            // send one Debug line for every RO_ACCESS_REPORT through the Debug provider. The
+            // transport Debug stream is a second bottleneck under ReportEveryNTags=1 and can
+            // make Visual Studio's output listener starve the WPF dispatcher.
+            builder.SetMinimumLevel(LogLevel.Information);
             builder.AddDebug();
             builder.AddSerilog(CreateRollingLogger(logDirectory, "sdk-.log", excludeSdkCategories: false), dispose: true);
         });

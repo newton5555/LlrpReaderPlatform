@@ -10,8 +10,8 @@ public sealed class CompiledSettings
     public IReadOnlyList<ushort>? AntennaIds { get; set; }
     public bool? IndividualAntennaSettings { get; set; }
     public int? Session { get; set; }
-    public decimal? TxPowerDbm { get; set; }
-    public int? RxSensitivityDb { get; set; }
+    public ushort? TxPowerIndex { get; set; }
+    public ushort? RxSensitivityIndex { get; set; }
     public int? TagPopulation { get; set; }
     public int? ReportEvery { get; set; }
     public int? RfMode { get; set; }

@@ -5,10 +5,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- LLRP platform -->
-    <PackageVersion Include="LlrpSdk" Version="1.2.1" />
-    <PackageVersion Include="LlrpSdk.Extensions.Impinj" Version="1.2.1" />
-
     <!-- WPF consumer -->
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageVersion Include="FontAwesome.Sharp" Version="6.6.0" />

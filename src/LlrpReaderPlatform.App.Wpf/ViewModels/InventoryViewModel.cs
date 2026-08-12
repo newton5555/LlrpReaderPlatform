@@ -18,6 +18,7 @@ namespace LlrpReaderPlatform.App.Wpf.ViewModels;
 /// </summary>
 public partial class InventoryViewModel : ObservableObject, IDisposable
 {
+    private const string ZeroElapsedText = "0.00 s";
     private const int MaxPendingTags = 2_000;
     private const int MaxDisplayedTags = 1_000;
     private const int MaxTrackedTagObservations = 2_000;
@@ -73,7 +74,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
     private bool isBusy;
 
     [ObservableProperty]
-    private string elapsed = "00:00:00";
+    private string elapsed = ZeroElapsedText;
 
     [ObservableProperty]
     private string tagRate = "0 tags/s";
@@ -636,7 +637,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
             stopwatch.Reset();
         }
 
-        Elapsed = "00:00:00";
+        Elapsed = ZeroElapsedText;
         TagRate = "0 tags/s";
     }
 
@@ -821,7 +822,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
     {
         DroppedTagReportCount = inventory.DroppedTagReportCount + Interlocked.Read(ref droppedUiTagCount);
         TimeSpan value = stopwatch.Elapsed;
-        Elapsed = value.ToString(value.TotalHours >= 1 ? @"hh\:mm\:ss" : @"mm\:ss");
+        Elapsed = $"{value.TotalSeconds.ToString("0.00", CultureInfo.InvariantCulture)} s";
         double seconds = Math.Max(value.TotalSeconds, 0.001);
         TagRate = $"{reportedTagCount / seconds:0.0} tags/s";
     }
@@ -938,7 +939,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         Interlocked.Exchange(ref reportedTagCount, 0);
         Interlocked.Exchange(ref droppedUiTagCount, 0);
         stopwatch.Reset();
-        Elapsed = "00:00:00";
+        Elapsed = ZeroElapsedText;
         TagRate = "0 tags/s";
     }
 

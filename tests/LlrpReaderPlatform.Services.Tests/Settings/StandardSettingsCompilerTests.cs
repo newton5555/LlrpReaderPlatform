@@ -70,13 +70,13 @@ public sealed class StandardSettingsCompilerTests
         var draft = new SettingsDraft { ReaderId = ReaderId, CapabilityRevision = 7 };
         draft.Values["antenna"] = (ushort)2;
         draft.Values["session"] = 3;
-        draft.Values["tx-power-dbm"] = 22.5m;
+        draft.Values[SettingsKeys.TxPowerIndex] = (ushort)22;
 
         CompiledSettings compiled = compiler.Compile(draft, layout);
 
         Assert.Equal((ushort)2, compiled.AntennaId);
         Assert.Equal(3, compiled.Session);
-        Assert.Equal(22.5m, compiled.TxPowerDbm);
+        Assert.Equal((ushort)22, compiled.TxPowerIndex);
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public sealed class StandardSettingsCompilerTests
         Assert.Contains(layout.Entries, static e => e.Key == SettingsKeys.FilterMask(1));
         Assert.Contains(layout.Entries, static e => e.Key == SettingsKeys.StartGpiPort);
         Assert.Contains(layout.Entries, static e => e.Key == SettingsKeys.ReportPcBits);
-        Assert.Contains(layout.Entries, static e => e.Key == SettingsKeys.AntennaTxPowerDbm(2));
+        Assert.Contains(layout.Entries, static e => e.Key == SettingsKeys.AntennaTxPowerIndex(2));
         Assert.Equal(new SettingsRange(1, 1),
             Assert.Single(layout.Entries, e => e.Key == SettingsKeys.StartGpiPort).Range);
         Assert.Equal(new SettingsRange(1, 1),
@@ -178,6 +178,75 @@ public sealed class StandardSettingsCompilerTests
         Assert.Contains(rfMode.Options, static option => Equals(option.Value, 7));
         Assert.Contains(rfMode.Options, static option => Equals(option.Value, 1000));
         Assert.Equal(1000, rfMode.CurrentValue);
+    }
+
+    [Fact]
+    public void Runtime_layout_uses_capability_tables_as_indexed_power_choices()
+    {
+        var compiler = new StandardSettingsCompiler();
+        ReaderRuntimeSnapshot snapshot = Snapshot(new ReaderAntennaInfo { AntennaId = 1, Name = "A1" });
+        var inventory = new InventorySettings
+        {
+            AntennaIds = [1],
+            AntennaConfigurations =
+            [
+                new InventoryAntennaConfiguration
+                {
+                    AntennaId = 1,
+                    TransmitPowerIndex = 7,
+                    ReceiverSensitivityIndex = 2,
+                },
+            ],
+        };
+        var capabilities = CreateCapabilities(
+            txPowers: [new TxPowerEntry(3, 1000), new TxPowerEntry(7, 3050)],
+            rxSensitivities: [new RxSensitivityEntry(1, 0), new RxSensitivityEntry(2, 6)],
+            hopTables: [new FrequencyHopTableEntry(1, [902750, 903250])]);
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(new ReaderSettings(), new ManagedRoSpecSnapshot(
+                inventory, InventoryRuntimeState.Disabled)),
+            capabilities);
+
+        EffectiveSettingsLayout layout = compiler.BuildLayout(snapshot, runtime);
+
+        SettingsEntry tx = Assert.Single(layout.Entries, static entry => entry.Key == SettingsKeys.TxPowerIndex);
+        Assert.Equal(EditorKind.Choice, tx.EditorKind);
+        Assert.Equal((ushort)7, tx.CurrentValue);
+        Assert.Equal(new object?[] { (ushort)3, (ushort)7 }, tx.Options.Select(static option => option.Value));
+        Assert.Equal(new[] { "3 (10 dBm)", "7 (30.5 dBm)" }, tx.Options.Select(static option => option.Display));
+
+        SettingsEntry rx = Assert.Single(layout.Entries, static entry => entry.Key == SettingsKeys.RxSensitivityIndex);
+        Assert.Equal(EditorKind.Choice, rx.EditorKind);
+        Assert.Equal((ushort)2, rx.CurrentValue);
+        Assert.Equal(new object?[] { (ushort)1, (ushort)2 }, rx.Options.Select(static option => option.Value));
+        Assert.Equal(new[] { "1 (0 dB offset)", "2 (6 dB offset)" }, rx.Options.Select(static option => option.Display));
+    }
+
+    [Fact]
+    public void CompileSdk_writes_capability_table_indices_without_physical_value_conversion()
+    {
+        var compiler = new StandardSettingsCompiler();
+        ReaderRuntimeSnapshot snapshot = Snapshot(new ReaderAntennaInfo { AntennaId = 1, Name = "A1" });
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(new ReaderSettings(), new ManagedRoSpecSnapshot(
+                new InventorySettings { AntennaIds = [1] }, InventoryRuntimeState.Disabled)),
+            CreateCapabilities(
+                txPowers: [new TxPowerEntry(3, 1000), new TxPowerEntry(7, 3050)],
+                rxSensitivities: [new RxSensitivityEntry(1, 0), new RxSensitivityEntry(2, 6)],
+                hopTables: [new FrequencyHopTableEntry(1, [902750, 903250])]));
+        EffectiveSettingsLayout layout = compiler.BuildLayout(snapshot, runtime);
+        var draft = new SettingsDraft { ReaderId = ReaderId, CapabilityRevision = 7 };
+        draft.Values[SettingsKeys.AntennaIds] = "1";
+        draft.Values[SettingsKeys.TxPowerIndex] = (ushort)3;
+        draft.Values[SettingsKeys.RxSensitivityIndex] = (ushort)1;
+
+        ReaderSettings compiled = compiler.CompileSdk(draft, layout, runtime, snapshot);
+
+        InventoryAntennaConfiguration configuration = Assert.Single(compiled.Inventory!.AntennaConfigurations);
+        Assert.Equal((ushort)3, configuration.TransmitPowerIndex);
+        Assert.Equal((ushort)1, configuration.ReceiverSensitivityIndex);
+        Assert.Equal((ushort)1, configuration.HopTableId);
+        Assert.Equal((ushort)1, configuration.ChannelIndex);
     }
 
     [Fact]
@@ -304,7 +373,52 @@ public sealed class StandardSettingsCompilerTests
         Assert.True(compiled.Configuration.Events.GpiEventEnabled);
         Assert.True(compiled.Configuration.Events.AntennaEventEnabled);
         Assert.True(compiled.Configuration.Events.ReaderExceptionEventEnabled);
-        Assert.Empty(compiled.Configuration.Antennas);
+        Assert.Single(compiled.Configuration.Antennas);
+        Assert.Equal((ushort)5, compiled.Configuration.Antennas[0].TransmitPowerIndex);
+        Assert.Equal((ushort)1, compiled.Configuration.Antennas[0].ChannelIndex);
+    }
+
+    [Fact]
+    public void CompileSdk_without_initial_rospec_keeps_reader_configuration_and_creates_inventory()
+    {
+        var compiler = new StandardSettingsCompiler();
+        ReaderRuntimeSnapshot snapshot = Snapshot(new ReaderAntennaInfo { AntennaId = 1, Name = "A1" });
+        var readerConfiguration = new ReaderConfiguration
+        {
+            Antennas =
+            [
+                new AntennaConfigurationSettings
+                {
+                    AntennaId = 1,
+                    TransmitPowerIndex = 7,
+                    ReceiverSensitivityIndex = 2,
+                    HopTableId = 1,
+                    ChannelIndex = 1,
+                },
+            ],
+        };
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(new ReaderSettings { Configuration = readerConfiguration }, ManagedRoSpec: null),
+            CreateCapabilities(
+                txPowers: [new TxPowerEntry(3, 1000), new TxPowerEntry(7, 3050)],
+                rxSensitivities: [new RxSensitivityEntry(1, 0), new RxSensitivityEntry(2, 6)],
+                hopTables: [new FrequencyHopTableEntry(1, [902750, 903250])]));
+        EffectiveSettingsLayout layout = compiler.BuildLayout(snapshot, runtime);
+        Assert.Equal("1", Assert.Single(layout.Entries, static entry => entry.Key == SettingsKeys.AntennaIds).CurrentValue);
+        Assert.Equal((ushort)7, Assert.Single(layout.Entries, static entry => entry.Key == SettingsKeys.TxPowerIndex).CurrentValue);
+        Assert.Equal((ushort)2, Assert.Single(layout.Entries, static entry => entry.Key == SettingsKeys.RxSensitivityIndex).CurrentValue);
+        Assert.True(Assert.Single(layout.Entries, static entry => entry.Key == SettingsKeys.IndividualAntennaSettings).CurrentValue is true);
+        var draft = new SettingsDraft { ReaderId = ReaderId, CapabilityRevision = 7 };
+        draft.Values[SettingsKeys.AntennaIds] = "1";
+        draft.Values[SettingsKeys.TxPowerIndex] = (ushort)7;
+        draft.Values[SettingsKeys.RxSensitivityIndex] = (ushort)2;
+
+        ReaderSettings compiled = compiler.CompileSdk(draft, layout, runtime, snapshot);
+
+        Assert.Null(runtime.Settings.ManagedRoSpec);
+        Assert.NotNull(compiled.Inventory);
+        Assert.Equal(new ushort[] { 1 }, compiled.Inventory!.AntennaIds);
+        Assert.Equal(readerConfiguration.Antennas, compiled.Configuration.Antennas);
     }
 
     [Fact]
@@ -322,6 +436,7 @@ public sealed class StandardSettingsCompilerTests
                     AntennaId = 0,
                     TransmitPowerIndex = 5,
                     ReceiverSensitivityIndex = 7,
+                    HopTableId = 1,
                 },
             ],
         };
@@ -439,5 +554,39 @@ public sealed class StandardSettingsCompilerTests
         Assert.Equal(InventoryStartTriggerType.Immediate, compiled.Inventory?.StartTrigger.Type);
         Assert.Equal(InventoryStopTriggerType.None, compiled.Inventory?.StopTrigger.Type);
         Assert.False(compiled.Configuration.Events.GpiEventEnabled);
+    }
+
+    private static ReaderCapabilities CreateCapabilities(
+        IEnumerable<TxPowerEntry>? txPowers = null,
+        IEnumerable<RxSensitivityEntry>? rxSensitivities = null,
+        IEnumerable<FrequencyHopTableEntry>? hopTables = null)
+    {
+        return (ReaderCapabilities)Activator.CreateInstance(
+            typeof(ReaderCapabilities),
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            binder: null,
+            args:
+            [
+                (ushort)4,
+                true,
+                false,
+                Array.Empty<ILlrpParameter>(),
+                (ILlrpMessage)RuntimeHelpers.GetUninitializedObject(
+                    typeof(LlrpNet.Protocol.Messages.V1_0_1.GET_READER_CAPABILITIES_RESPONSE)),
+                Array.Empty<ILlrpParameter>(),
+                txPowers ?? Array.Empty<TxPowerEntry>(),
+                rxSensitivities ?? Array.Empty<RxSensitivityEntry>(),
+                Array.Empty<uint>(),
+                hopTables ?? Array.Empty<FrequencyHopTableEntry>(),
+                Array.Empty<C1G2RfModeEntry>(),
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                null,
+            ],
+            culture: null)!;
     }
 }

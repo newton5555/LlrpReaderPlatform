@@ -17,12 +17,13 @@ internal sealed class LlrpReaderSession : IReaderSession
     private readonly LlrpReader reader;
     private readonly ILogger<LlrpReaderSession>? logger;
     private InventorySession? inventorySession;
+    private CancellationTokenSource? inventoryReportsCancellation;
+    private Task? inventoryReportsTask;
 
     public LlrpReaderSession(LlrpReader reader, ILogger<LlrpReaderSession>? logger = null)
     {
         this.reader = reader;
         this.logger = logger;
-        reader.TagsReported += OnTagsReported;
         reader.ReaderExceptionOccurred += OnReaderExceptionOccurred;
         reader.ConnectionChanged += OnConnectionChanged;
         reader.GpiChanged += OnGpiChanged;
@@ -59,6 +60,7 @@ internal sealed class LlrpReaderSession : IReaderSession
         finally
         {
             inventorySession = null;
+            await StopInventoryReportConsumerAsync(cancel: true).ConfigureAwait(false);
         }
     }
 
@@ -99,7 +101,8 @@ internal sealed class LlrpReaderSession : IReaderSession
             ?? current.Settings.Inventory
             ?? new InventorySettings();
         settings = ApplyInventorySpec(settings, spec);
-        inventorySession = await reader.StartInventoryAsync(settings, cancellationToken).ConfigureAwait(false);
+        InventorySession session = await reader.StartInventoryAsync(settings, cancellationToken).ConfigureAwait(false);
+        StartInventoryReportConsumer(session);
     }
 
     public async Task StartInventoryAsync(InventorySettings settings, CancellationToken cancellationToken)
@@ -111,7 +114,8 @@ internal sealed class LlrpReaderSession : IReaderSession
         }
 
         await SynchronizeIfNeededAsync(cancellationToken).ConfigureAwait(false);
-        inventorySession = await reader.StartInventoryAsync(settings, cancellationToken).ConfigureAwait(false);
+        InventorySession session = await reader.StartInventoryAsync(settings, cancellationToken).ConfigureAwait(false);
+        StartInventoryReportConsumer(session);
     }
 
     public async Task StopInventoryAsync(CancellationToken cancellationToken)
@@ -120,12 +124,33 @@ internal sealed class LlrpReaderSession : IReaderSession
         inventorySession = null;
         if (session is null)
         {
-            await SynchronizeIfNeededAsync(cancellationToken).ConfigureAwait(false);
-            await reader.StopAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await SynchronizeIfNeededAsync(cancellationToken).ConfigureAwait(false);
+                await reader.StopAsync(cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                await StopInventoryReportConsumerAsync(cancel: true).ConfigureAwait(false);
+            }
+
             return;
         }
 
-        await session.StopAsync(cancellationToken).ConfigureAwait(false);
+        bool stopped = false;
+        try
+        {
+            await session.StopAsync(cancellationToken).ConfigureAwait(false);
+            stopped = true;
+        }
+        finally
+        {
+            // A successful SDK stop completes the InventorySession channel, so wait for
+            // every buffered report to cross the Services boundary. If the stop itself
+            // failed, cancel the consumer so a half-open report stream cannot hold the
+            // Reader lifecycle forever.
+            await StopInventoryReportConsumerAsync(cancel: !stopped).ConfigureAwait(false);
+        }
     }
 
     public async Task<Tagging.TagAccessResult> ReadTagMemoryAsync(Tagging.TagReadRequest request, CancellationToken cancellationToken)
@@ -310,15 +335,99 @@ internal sealed class LlrpReaderSession : IReaderSession
 
     public async ValueTask DisposeAsync()
     {
-        reader.TagsReported -= OnTagsReported;
         reader.ReaderExceptionOccurred -= OnReaderExceptionOccurred;
         reader.ConnectionChanged -= OnConnectionChanged;
         reader.GpiChanged -= OnGpiChanged;
-        await reader.DisposeAsync().ConfigureAwait(false);
+        try
+        {
+            await reader.DisposeAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            await StopInventoryReportConsumerAsync(cancel: true).ConfigureAwait(false);
+        }
     }
 
-    private void OnTagsReported(object? sender, TagReportEventArgs args) =>
-        TagReported?.Invoke(this, new SdkTagReportEventArgs(args.Report));
+    private void StartInventoryReportConsumer(InventorySession session)
+    {
+        if (inventoryReportsTask is not null)
+        {
+            throw new InvalidOperationException("An inventory report consumer is already active for this reader.");
+        }
+
+        var cancellation = new CancellationTokenSource();
+        inventorySession = session;
+        inventoryReportsCancellation = cancellation;
+        // The SDK session may already contain reports by the time StartInventoryAsync
+        // returns. Schedule consumption on the thread pool so startup never drains a
+        // burst synchronously on the caller (typically the WPF command path).
+        inventoryReportsTask = Task.Run(
+            () => ConsumeInventoryReportsAsync(session, cancellation.Token),
+            CancellationToken.None);
+    }
+
+    private async Task ConsumeInventoryReportsAsync(
+        InventorySession session,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await foreach (TagReport report in session.ReadReportsAsync(cancellationToken).ConfigureAwait(false))
+            {
+                PublishTagReported(report);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Disconnect/failed stop owns cancellation of a report stream that cannot
+            // be completed by the SDK because the underlying connection is already bad.
+        }
+        catch (Exception ex)
+        {
+            logger?.LogWarning(ex, "Inventory report consumer stopped unexpectedly.");
+        }
+    }
+
+    private async Task StopInventoryReportConsumerAsync(bool cancel)
+    {
+        CancellationTokenSource? cancellation = inventoryReportsCancellation;
+        Task? consumer = inventoryReportsTask;
+        inventoryReportsCancellation = null;
+        inventoryReportsTask = null;
+
+        if (cancel)
+        {
+            cancellation?.Cancel();
+        }
+
+        try
+        {
+            if (consumer is not null)
+            {
+                await consumer.ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            cancellation?.Dispose();
+        }
+    }
+
+    private void PublishTagReported(TagReport report)
+    {
+        var args = new SdkTagReportEventArgs(report);
+        foreach (Delegate subscriber in TagReported?.GetInvocationList() ?? [])
+        {
+            try
+            {
+                ((EventHandler<SdkTagReportEventArgs>)subscriber)(this, args);
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "A Services inventory report subscriber failed.");
+            }
+        }
+    }
 
     private void OnReaderExceptionOccurred(object? sender, ReaderExceptionEventArgs args) =>
         ReaderExceptionOccurred?.Invoke(this, new ReaderDeviceExceptionEventArgs(

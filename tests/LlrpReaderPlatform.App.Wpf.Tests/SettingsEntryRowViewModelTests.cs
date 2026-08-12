@@ -39,31 +39,31 @@ public sealed class SettingsEntryRowViewModelTests
     }
 
     [Fact]
-    public void Numeric_capability_options_select_the_underlying_dBm_value()
+    public void Numeric_capability_options_select_the_underlying_table_index()
     {
         var row = new SettingsEntryRowViewModel(new SettingsEntry
         {
-            Key = "tx-power-dbm",
+            Key = SettingsKeys.TxPowerIndex,
             Title = "Tx Power",
-            EditorKind = EditorKind.Decimal,
-            ValueType = typeof(decimal),
-            CurrentValue = 20.5m,
+            EditorKind = EditorKind.Integer,
+            ValueType = typeof(ushort),
+            CurrentValue = (ushort)2,
             Options =
             [
-                new SettingsOption(10m, "Index 0: 10 dBm"),
-                new SettingsOption(20.5m),
+                new SettingsOption((ushort)1, "1 (10 dBm)"),
+                new SettingsOption((ushort)2, "2 (20.5 dBm)"),
             ],
         });
 
         Assert.Equal(1, row.SelectedChoiceIndex);
-        Assert.Equal("Index 0: 10 dBm", row.ChoiceDisplays[0]);
-        Assert.Equal("20.5", row.ChoiceDisplays[1]);
-        Assert.Equal("20.5", row.ValueText);
+        Assert.Equal("1 (10 dBm)", row.ChoiceDisplays[0]);
+        Assert.Equal("2 (20.5 dBm)", row.ChoiceDisplays[1]);
+        Assert.Equal("2", row.ValueText);
 
         row.SelectedChoiceIndex = 0;
 
-        Assert.Equal("10", row.ValueText);
-        Assert.Equal(10m, row.SelectedChoiceValue);
+        Assert.Equal("1", row.ValueText);
+        Assert.Equal((ushort)1, row.SelectedChoiceValue);
     }
 
     [Fact]
@@ -91,11 +91,11 @@ public sealed class SettingsEntryRowViewModelTests
     {
         var row = new SettingsEntryRowViewModel(new SettingsEntry
         {
-            Key = "tx-power-dbm",
+            Key = SettingsKeys.TxPowerIndex,
             Title = "Tx Power",
             EditorKind = EditorKind.Decimal,
-            ValueType = typeof(decimal),
-            CurrentValue = 20m,
+            ValueType = typeof(ushort),
+            CurrentValue = (ushort)20,
         });
         var readonlyRow = new SettingsEntryRowViewModel(new SettingsEntry
         {

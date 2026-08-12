@@ -1945,7 +1945,9 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
 
     private async Task ProcessTagBatchAsync(IReadOnlyList<TagWorkItem> batch)
     {
-        var latestByReaderAndEpc = new Dictionary<(Guid ReaderId, string Epc), (ReaderHandle Handle, TagObservation Tag)>();
+        var latestByReaderAndEpc = new Dictionary<
+            (Guid ReaderId, string Epc),
+            (ReaderHandle Handle, TagAggregateStore Store, string Epc)>();
         foreach (TagWorkItem item in batch)
         {
             // REMOVE 已移除的 reader，Session/InventoryRun 已切换：丢弃已入队
@@ -1961,16 +1963,27 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
             {
                 TagAggregateStore store = aggregates.GetOrAdd(item.Handle.Profile.Id, static _ => new TagAggregateStore());
                 ReaderTagReportProjection projection = ProjectTagReport(item.Handle, item.Report);
-                TagObservation tag = store.Add(item.Report, projection.TidHex, projection.Fields);
+                // Apply the raw report without allocating a TagObservation snapshot. The UI only
+                // needs the latest cumulative state for each Reader/EPC at the end of this batch;
+                // snapshotting every report creates avoidable allocations and GC pressure when a
+                // Reader is configured for ReportEveryNTags=1.
+                string epc = store.Apply(item.Report, projection.TidHex, projection.Fields);
                 if (item.Handle.ActiveRun is InventoryRunRecord run
                     && run.LogFilePath is not null)
                 {
-                    await EnqueueTagLogAsync(item.Handle, run, tag).ConfigureAwait(false);
+                    // TagLog intentionally preserves one cumulative observation per raw report.
+                    // This is the explicit full-fidelity logging path; the normal UI path below
+                    // remains batch-coalesced.
+                    if (store.TrySnapshot(epc, out TagObservation? logTag)
+                        && logTag is not null)
+                    {
+                        await EnqueueTagLogAsync(item.Handle, run, logTag).ConfigureAwait(false);
+                    }
                 }
 
                 // The UI needs the newest cumulative observation for each Reader/EPC,
                 // not one notification for every raw air-protocol read in this batch.
-                latestByReaderAndEpc[(item.Handle.Profile.Id, tag.Epc)] = (item.Handle, tag);
+                latestByReaderAndEpc[(item.Handle.Profile.Id, epc)] = (item.Handle, store, epc);
             }
             catch (Exception ex)
             {
@@ -1979,9 +1992,12 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
             }
         }
 
-        foreach ((ReaderHandle handle, TagObservation tag) in latestByReaderAndEpc.Values)
+        foreach ((ReaderHandle handle, TagAggregateStore store, string epc) in latestByReaderAndEpc.Values)
         {
-            if (handle.AcceptTagReports && handle.ActiveRun is not null)
+            if (handle.AcceptTagReports
+                && handle.ActiveRun is not null
+                && store.TrySnapshot(epc, out TagObservation? tag)
+                && tag is not null)
             {
                 PublishTagObserved(handle, tag);
             }
@@ -3174,7 +3190,11 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
         private readonly object gate = new();
         private readonly Dictionary<string, MutableTag> tags = new(StringComparer.OrdinalIgnoreCase);
 
-        public TagObservation Add(
+        /// <summary>
+        /// Applies one raw report in place and returns its EPC. No public snapshot is allocated;
+        /// callers should snapshot only the EPCs that need to cross a consumer boundary.
+        /// </summary>
+        public string Apply(
             LlrpSdk.TagReport report,
             string? tid = null,
             IReadOnlyDictionary<string, string>? extensionFields = null)
@@ -3228,8 +3248,23 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                     tag.LastAntenna = ant;
                 }
 
-                return tag.Snapshot();
+                return epc;
             }
+        }
+
+        public bool TrySnapshot(string epc, out TagObservation? observation)
+        {
+            lock (gate)
+            {
+                if (tags.TryGetValue(epc, out MutableTag? tag))
+                {
+                    observation = tag.Snapshot();
+                    return true;
+                }
+            }
+
+            observation = null;
+            return false;
         }
 
         private static DateTimeOffset? ToUtcTimestamp(TagTimestamp? timestamp)

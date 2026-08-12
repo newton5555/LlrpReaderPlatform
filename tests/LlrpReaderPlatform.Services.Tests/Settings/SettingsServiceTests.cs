@@ -200,14 +200,14 @@ public sealed class SettingsServiceTests
             draft.Values[key] = value;
         }
 
-        draft.Values["tx-power-dbm"] = 99m; // 超出 0..30
+        draft.Values[SettingsKeys.TxPowerIndex] = 65536; // 超出 ushort index 范围
         SettingsValidationResult result = h.Settings.Validate(draft);
         Assert.False(result.IsValid);
 
-        draft.Values["tx-power-dbm"] = "not-a-number";
+        draft.Values[SettingsKeys.TxPowerIndex] = "not-a-number";
         result = h.Settings.Validate(draft);
         Assert.False(result.IsValid);
-        Assert.Contains(result.Issues, issue => issue.Key == "tx-power-dbm");
+        Assert.Contains(result.Issues, issue => issue.Key == SettingsKeys.TxPowerIndex);
 
         draft.Values[SettingsKeys.AntennaIds] = string.Empty;
         result = h.Settings.Validate(draft);
@@ -592,8 +592,8 @@ public sealed class SettingsServiceTests
         await presets.SaveAsync(new ReaderSettingsPreset
         {
             ReaderId = h.Profile.Id,
-            SchemaVersion = 1,
-            SettingsJson = "{\"values\":{\"session\":2,\"tx-power-dbm\":24.5}}",
+            SchemaVersion = ReaderSettingsPreset.CurrentSchemaVersion,
+            SettingsJson = "{\"values\":{\"session\":2,\"tx-power-index\":24}}",
         });
         var settings = new SettingsService(h.Manager, h.Compiler, h.Manager, presets);
 
@@ -601,7 +601,7 @@ public sealed class SettingsServiceTests
 
         Assert.False(model.Layout.HasEditableSettings);
         Assert.Equal(2, model.Snapshot.Values[SettingsKeys.Session]);
-        Assert.Equal(24.5m, model.Snapshot.Values[SettingsKeys.TxPowerDbm]);
+        Assert.Equal(24, Convert.ToInt32(model.Snapshot.Values[SettingsKeys.TxPowerIndex]));
     }
 
     [Fact]
@@ -614,8 +614,8 @@ public sealed class SettingsServiceTests
         await presets.SaveAsync(new ReaderSettingsPreset
         {
             ReaderId = h.Profile.Id,
-            SchemaVersion = 1,
-            SettingsJson = "{\"values\":{\"session\":3,\"tx-power-dbm\":21.5}}",
+            SchemaVersion = ReaderSettingsPreset.CurrentSchemaVersion,
+            SettingsJson = "{\"values\":{\"session\":3,\"tx-power-index\":21}}",
         });
         var settings = new SettingsService(h.Manager, h.Compiler, h.Manager, presets);
 
@@ -623,7 +623,7 @@ public sealed class SettingsServiceTests
 
         Assert.False(model.Layout.HasEditableSettings);
         Assert.Equal(3, model.Snapshot.Values[SettingsKeys.Session]);
-        Assert.Equal(21.5m, model.Snapshot.Values[SettingsKeys.TxPowerDbm]);
+        Assert.Equal(21, Convert.ToInt32(model.Snapshot.Values[SettingsKeys.TxPowerIndex]));
     }
 
     [Fact]
@@ -637,8 +637,8 @@ public sealed class SettingsServiceTests
         await presets.SaveAsync(new ReaderSettingsPreset
         {
             ReaderId = h.Profile.Id,
-            SchemaVersion = 1,
-            SettingsJson = "{\"session\":2,\"tx-power-dbm\":24.5}",
+            SchemaVersion = ReaderSettingsPreset.CurrentSchemaVersion,
+            SettingsJson = "{\"session\":2,\"tx-power-index\":24}",
         });
         var settings = new SettingsService(h.Manager, h.Compiler, h.Manager, presets);
 

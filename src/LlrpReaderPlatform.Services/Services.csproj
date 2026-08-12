@@ -7,10 +7,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LlrpReaderPlatform.Contracts\Contracts.csproj" />
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpSdk\LlrpSdk.csproj" />
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpNet\LlrpNet.Core\LlrpNet.Core.csproj" />
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpNet\LlrpNet.Protocol\LlrpNet.Protocol.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="LlrpSdk" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>

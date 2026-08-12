@@ -5,8 +5,10 @@ namespace LlrpReaderPlatform.Contracts.Persistence;
 /// </summary>
 public sealed record ReaderSettingsPreset
 {
+    public const int CurrentSchemaVersion = 2;
+
     public required Guid ReaderId { get; init; }
-    public int SchemaVersion { get; init; } = 1;
+    public int SchemaVersion { get; init; } = CurrentSchemaVersion;
     public required string SettingsJson { get; init; }
     public DateTimeOffset UpdatedAtUtc { get; init; } = DateTimeOffset.UtcNow;
 }

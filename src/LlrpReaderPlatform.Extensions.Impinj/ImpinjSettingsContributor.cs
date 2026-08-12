@@ -332,7 +332,7 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
         return frequencies
             .Select((frequency, index) => new SettingsOption(
                 index + 1,
-                $"{index + 1} - {(frequency / 1000.0).ToString("0.###", CultureInfo.InvariantCulture)} MHz"))
+                $"{index + 1} ({(frequency / 1000.0).ToString("0.###", CultureInfo.InvariantCulture)} MHz)"))
             .ToArray();
     }
 

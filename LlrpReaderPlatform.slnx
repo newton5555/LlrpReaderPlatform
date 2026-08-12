@@ -35,6 +35,7 @@
     <File Path="docs/decisions/ADR-0003-reader-session-ownership.md" />
     <File Path="docs/decisions/ADR-0004-ef-sqlite-persistence.md" />
     <File Path="docs/decisions/ADR-0005-inventory-lifecycle-events.md" />
+    <File Path="docs/decisions/ADR-0006-local-sdk-project-reference.md" />
   </Folder>
   <Folder Name="/docs/templates/">
     <File Path="docs/templates/ADR-template.md" />
@@ -62,5 +63,17 @@
     <Project Path="tests/LlrpReaderPlatform.Infrastructure.Tests/Infrastructure.Tests.csproj" />
     <Project Path="tests/LlrpReaderPlatform.App.Wpf.Tests/App.Wpf.Tests.csproj" />
     <Project Path="tests/LlrpReaderPlatform.Architecture.Tests/Architecture.Tests.csproj" />
+  </Folder>
+
+  <!-- Development-time source projects from the adjacent LLRPCSharp repository. -->
+  <Folder Name="/dependencies/LLRPCSharp/LlrpNet/">
+    <Project Path="../LLRPCSharp/src/LlrpNet/LlrpNet.Core/LlrpNet.Core.csproj" />
+    <Project Path="../LLRPCSharp/src/LlrpNet/LlrpNet.Protocol/LlrpNet.Protocol.csproj" />
+    <Project Path="../LLRPCSharp/src/LlrpNet/LlrpNet.Protocol.Impinj/LlrpNet.Protocol.Impinj.csproj" />
+  </Folder>
+  <Folder Name="/dependencies/LLRPCSharp/LlrpSdk/">
+    <Project Path="../LLRPCSharp/src/LlrpSdk/LlrpSdk.csproj" />
+    <Project Path="../LLRPCSharp/src/LlrpSdk.Extensions.Abstractions/LlrpSdk.Extensions.Abstractions.csproj" />
+    <Project Path="../LLRPCSharp/src/LlrpSdk.Extensions.Impinj/LlrpSdk.Extensions.Impinj.csproj" />
   </Folder>
 </Solution>

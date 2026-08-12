@@ -87,13 +87,13 @@ public sealed class LegacySettingsLayoutViewModelTests
 
         await vm.LoadCommand.ExecuteAsync(readerId);
 
-        SettingsEntryRowViewModel row = Find(vm, SettingsKeys.AntennaTxPowerDbm(1));
-        row.ValueText = "Index 33: 33 dBm";
+        SettingsEntryRowViewModel row = Find(vm, SettingsKeys.AntennaTxPowerIndex(1));
+        row.ValueText = "33 (33 dBm)";
 
         await vm.SaveCommand.ExecuteAsync(null);
 
         Assert.NotNull(service.LastDraft);
-        Assert.Equal(33m, service.LastDraft!.Values[SettingsKeys.AntennaTxPowerDbm(1)]);
+        Assert.Equal(33, service.LastDraft!.Values[SettingsKeys.AntennaTxPowerIndex(1)]);
         Assert.DoesNotContain("值无效", vm.Status, StringComparison.Ordinal);
     }
 
@@ -449,11 +449,11 @@ public sealed class LegacySettingsLayoutViewModelTests
             Integer(ImpinjDebounceKey(1), 20),
             Boolean(SettingsKeys.FilterEnabled(1), false),
             Boolean(SettingsKeys.FilterEnabled(2), false),
-            Decimal(
-                SettingsKeys.AntennaTxPowerDbm(1),
-                33m,
-                includeTxPowerOption ? new SettingsOption(33m, "Index 33: 33 dBm") : null),
-            Integer(SettingsKeys.AntennaRxSensitivityDb(1), 0),
+            Integer(SettingsKeys.AntennaTxPowerIndex(1), 33) with
+            {
+                Options = includeTxPowerOption ? [new SettingsOption(33, "33 (33 dBm)")] : [],
+            },
+            Integer(SettingsKeys.AntennaRxSensitivityIndex(1), 0),
         ];
 
         return new SettingsEditorModel(
@@ -477,9 +477,9 @@ public sealed class LegacySettingsLayoutViewModelTests
         [
             Text(SettingsKeys.AntennaIds, "1"),
             Boolean(SettingsKeys.IndividualAntennaSettings, false),
-            Decimal(SettingsKeys.TxPowerDbm, 20m),
-            Integer(SettingsKeys.RxSensitivityDb, 0),
-            Choice(SettingsKeys.RfMode, 0, new SettingsOption(0, "0: FM0")),
+            Integer(SettingsKeys.TxPowerIndex, 20),
+            Integer(SettingsKeys.RxSensitivityIndex, 0),
+            Choice(SettingsKeys.RfMode, 0, new SettingsOption(0, "0 (FM0)")),
             Choice(SettingsKeys.Session, 1, new SettingsOption(0, "S0"), new SettingsOption(1, "S1")),
             Integer(SettingsKeys.TagPopulation, 32),
             Integer(SettingsKeys.ReportEvery, 2),
@@ -488,11 +488,11 @@ public sealed class LegacySettingsLayoutViewModelTests
             Choice("impinj.search-mode", -1, new SettingsOption(-1, "Reader selected")),
             Boolean("impinj.phase-angle", false),
             Boolean("impinj.doppler", false),
-            Decimal(SettingsKeys.AntennaTxPowerDbm(1), 20m),
-            Integer(SettingsKeys.AntennaRxSensitivityDb(1), 0),
+            Integer(SettingsKeys.AntennaTxPowerIndex(1), 20),
+            Integer(SettingsKeys.AntennaRxSensitivityIndex(1), 0),
             Integer(SettingsKeys.AntennaChannelIndex(1), 1),
-            Decimal(SettingsKeys.AntennaTxPowerDbm(2), 20m),
-            Integer(SettingsKeys.AntennaRxSensitivityDb(2), 0),
+            Integer(SettingsKeys.AntennaTxPowerIndex(2), 20),
+            Integer(SettingsKeys.AntennaRxSensitivityIndex(2), 0),
             Integer(SettingsKeys.AntennaChannelIndex(2), 2),
             Boolean(SettingsKeys.StateAwareFiltersEnabled, false),
             ..FilterEntries(1),

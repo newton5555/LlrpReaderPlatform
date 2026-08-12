@@ -213,8 +213,8 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
     public SettingsEntryRowViewModel? TariRow => FindRow(SettingsKeys.Tari);
     public SettingsEntryRowViewModel? PhaseAngleRow => FindRow("impinj.phase-angle");
     public SettingsEntryRowViewModel? DopplerRow => FindRow("impinj.doppler");
-    public SettingsEntryRowViewModel? TxPowerRow => FindRow(SettingsKeys.TxPowerDbm);
-    public SettingsEntryRowViewModel? RxSensitivityRow => FindRow(SettingsKeys.RxSensitivityDb);
+    public SettingsEntryRowViewModel? TxPowerRow => FindRow(SettingsKeys.TxPowerIndex);
+    public SettingsEntryRowViewModel? RxSensitivityRow => FindRow(SettingsKeys.RxSensitivityIndex);
     public SettingsEntryRowViewModel? StateAwareFiltersRow => FindRow(SettingsKeys.StateAwareFiltersEnabled);
     public SettingsEntryRowViewModel? StateAwareTargetRow => FindRow(SettingsKeys.StateAwareTarget);
     public SettingsEntryRowViewModel? StateAwareSelectedFlagRow => FindRow(SettingsKeys.StateAwareSelectedFlag);
@@ -750,8 +750,8 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
             .Distinct()
             .OrderBy(static id => id))
         {
-            SettingsEntryRowViewModel? tx = FindRow(SettingsKeys.AntennaTxPowerDbm(antennaId));
-            SettingsEntryRowViewModel? rx = FindRow(SettingsKeys.AntennaRxSensitivityDb(antennaId));
+            SettingsEntryRowViewModel? tx = FindRow(SettingsKeys.AntennaTxPowerIndex(antennaId));
+            SettingsEntryRowViewModel? rx = FindRow(SettingsKeys.AntennaRxSensitivityIndex(antennaId));
             // ChannelIndex belongs to the complete LLRP RFTransmitter tuple, but it is
             // not an antenna power setting. Keep it out of the old WPF antenna matrix;
             // fixed-frequency UI will own the value when that standard path is added.
@@ -931,7 +931,7 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
             return ReportRows;
         }
 
-        if (key is "tx-power-dbm" or "rx-sensitivity-db" or "antenna-ids" or "individual-antenna-settings")
+        if (key is "tx-power-index" or "rx-sensitivity-index" or "antenna-ids" or "individual-antenna-settings")
         {
             return PowerRows;
         }
@@ -952,8 +952,8 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
 
     private static object ConvertValue(string text, SettingsEntry entry)
     {
-        // Numeric capability ComboBoxes display a human-readable label (for example,
-        // "Index 33: 33 dBm") while their binding source remains the semantic value.
+        // Capability-table ComboBoxes display a human-readable label (for example,
+        // "33 (33 dBm)") while their binding source remains the table index.
         // WPF can write that display text back through the editable ComboBox.Text binding;
         // recover the option value before attempting numeric parsing.
         SettingsOption? displayedOption = entry.Options.FirstOrDefault(option =>
