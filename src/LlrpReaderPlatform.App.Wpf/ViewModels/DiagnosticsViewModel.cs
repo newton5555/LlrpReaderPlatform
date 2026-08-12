@@ -4,6 +4,8 @@ using LlrpReaderPlatform.Contracts.Errors;
 using LlrpReaderPlatform.Contracts.Readers;
 using LlrpReaderPlatform.Contracts.Settings;
 using LlrpReaderPlatform.Contracts.Tagging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.ObjectModel;
 using System.Windows.Threading;
 
@@ -13,6 +15,7 @@ namespace LlrpReaderPlatform.App.Wpf.ViewModels;
 public partial class DiagnosticsViewModel : ObservableObject, IPageOperationOwner, IDisposable
 {
     private readonly IInventoryService inventory;
+    private readonly ILogger<DiagnosticsViewModel> logger;
     private readonly Dispatcher dispatcher;
     private readonly SemaphoreSlim operationGate = new(1, 1);
     private readonly CancellationTokenSource lifetimeCts = new();
@@ -74,9 +77,12 @@ public partial class DiagnosticsViewModel : ObservableObject, IPageOperationOwne
         && (gpiCount is null || gpiCount > 0);
     public bool IsGpioRefreshAvailable => IsGpiStatusAvailable || IsGpoControlVisible;
 
-    public DiagnosticsViewModel(IInventoryService inventory)
+    public DiagnosticsViewModel(
+        IInventoryService inventory,
+        ILogger<DiagnosticsViewModel>? logger = null)
     {
         this.inventory = inventory;
+        this.logger = logger ?? NullLogger<DiagnosticsViewModel>.Instance;
         dispatcher = System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
         lifetimeToken = lifetimeCts.Token;
         operationScopeCts = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
@@ -195,6 +201,14 @@ public partial class DiagnosticsViewModel : ObservableObject, IPageOperationOwne
         }
 
         long contextVersion = Volatile.Read(ref readerContextVersion);
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation(
+            "WPF operation {Operation} started: {OperationId}, reader {ReaderId}, port {PortNumber}, state {State}.",
+            "SetGpo",
+            operationId,
+            readerId,
+            PortNumber,
+            OutputState);
         try
         {
             if (!IsCurrentReaderContext(readerId, contextVersion))
@@ -210,6 +224,12 @@ public partial class DiagnosticsViewModel : ObservableObject, IPageOperationOwne
             if (IsCurrentReaderContext(readerId, contextVersion))
             {
                 Status = $"GPO {PortNumber} 已设置为 {(OutputState ? "ON" : "OFF")}。";
+                logger.LogInformation(
+                    "WPF operation {Operation} completed: {OperationId}, reader {ReaderId}, port {PortNumber}.",
+                    "SetGpo",
+                    operationId,
+                    readerId,
+                    PortNumber);
             }
         }
         catch (OperationCanceledException) when (operationToken.IsCancellationRequested)
@@ -218,6 +238,7 @@ public partial class DiagnosticsViewModel : ObservableObject, IPageOperationOwne
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}, reader {ReaderId}.", "SetGpo", operationId, readerId);
             if (!disposed && IsCurrentReaderContext(readerId, contextVersion))
             {
                 Status = PlatformErrorDisplay.Failure("GPO 操作", ex);
@@ -250,6 +271,12 @@ public partial class DiagnosticsViewModel : ObservableObject, IPageOperationOwne
         }
 
         long contextVersion = Volatile.Read(ref readerContextVersion);
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation(
+            "WPF operation {Operation} started: {OperationId}, reader {ReaderId}.",
+            "RefreshGpio",
+            operationId,
+            readerId);
         try
         {
             if (!IsCurrentReaderContext(readerId, contextVersion))
@@ -290,6 +317,13 @@ public partial class DiagnosticsViewModel : ObservableObject, IPageOperationOwne
             if (IsCurrentReaderContext(readerId, contextVersion))
             {
                 Status = $"已读取 {Gpis.Count} 个 GPI、{gpio.Gpos.Count} 个 GPO 状态。";
+                logger.LogInformation(
+                    "WPF operation {Operation} completed: {OperationId}, reader {ReaderId}, gpi {GpiCount}, gpo {GpoCount}.",
+                    "RefreshGpio",
+                    operationId,
+                    readerId,
+                    gpio.Gpis.Count,
+                    gpio.Gpos.Count);
             }
         }
         catch (OperationCanceledException) when (operationToken.IsCancellationRequested)
@@ -298,6 +332,7 @@ public partial class DiagnosticsViewModel : ObservableObject, IPageOperationOwne
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}, reader {ReaderId}.", "RefreshGpio", operationId, readerId);
             if (!disposed && IsCurrentReaderContext(readerId, contextVersion))
             {
                 Status = PlatformErrorDisplay.Failure("读取 GPI/GPO", ex);
@@ -337,6 +372,14 @@ public partial class DiagnosticsViewModel : ObservableObject, IPageOperationOwne
 
         long contextVersion = Volatile.Read(ref readerContextVersion);
         long intentVersion = RegisterGpoIntent(portNumber);
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation(
+            "WPF operation {Operation} started: {OperationId}, reader {ReaderId}, port {PortNumber}, state {State}.",
+            "SetGpoFromSwitch",
+            operationId,
+            id,
+            portNumber,
+            newValue);
         CancellationToken operationToken = GetOperationToken();
         if (!await BeginOperationAsync(operationToken))
         {
@@ -365,6 +408,12 @@ public partial class DiagnosticsViewModel : ObservableObject, IPageOperationOwne
             {
                 SetConfirmedGpoState(portNumber, newValue);
                 Status = $"GPO {portNumber} 已设置为 {(newValue ? "ON" : "OFF")}。";
+                logger.LogInformation(
+                    "WPF operation {Operation} completed: {OperationId}, reader {ReaderId}, port {PortNumber}.",
+                    "SetGpoFromSwitch",
+                    operationId,
+                    id,
+                    portNumber);
             }
         }
         catch (OperationCanceledException) when (operationToken.IsCancellationRequested)
@@ -373,6 +422,7 @@ public partial class DiagnosticsViewModel : ObservableObject, IPageOperationOwne
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}, reader {ReaderId}, port {PortNumber}.", "SetGpoFromSwitch", operationId, id, portNumber);
             if (!disposed && IsCurrentReaderContext(id, contextVersion))
             {
                 if (IsCurrentGpoIntent(portNumber, intentVersion))

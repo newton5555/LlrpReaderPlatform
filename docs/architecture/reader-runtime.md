@@ -18,7 +18,7 @@
   明确为 0 时分别移除对应能力，未返回该参数时保留未知能力的兼容回退；
 - Inventory：`Start` 建立一个完整 LLRP 长连接租约，并一直持有到 `Stop`；期间所有 TagReport 都来自这一个 Session，不允许按报告或按批次重新连接。Services 的 SDK 适配器不注册 `LlrpReader.TagsReported`，而是在 `StartInventoryAsync` 返回后后台持续消费唯一的 `InventorySession.ReadReportsAsync()` 出口，再投影为平台 `TagReported` 事件；同一次盘存不得混用 SDK 的三种报告出口；
 - Inventory 入口：服务层先拒绝无效时长、重复天线以及“全部天线(0)”与指定天线混用的参数，不为无效请求建立 LLRP 连接；
-- TagReport 先进入容量 8,192 的有界 Channel，由单消费者按最多 512 条一批聚合；原始报告只原位更新聚合状态，同一批末尾才为每个 Reader/EPC 创建一次快照并发布最新累计状态，不把每条原始报告变成一次 UI 通知。启用 Tag Logging 时再进入独立有界 TagLog Channel，由单消费者串行写入；TagLog 保留每条原始读取的累计记录，但不改变正常 UI 路径的批量快照策略；
+- TagReport 先进入容量 8,192 的有界 Channel，由单消费者按最多 512 条一批聚合；原始报告只原位更新聚合状态，同一批末尾才为每个 Reader/EPC 创建一次快照并发布最新累计状态，不把每条原始报告变成一次 UI 通知。选择 `RawReports` 时再进入独立有界 TagLog Channel，由单消费者串行写入；TagLog 保留每条原始读取的累计记录，但不改变正常 UI 路径的批量快照策略；默认 `FinalSnapshot` 只在停止排空后写入一次聚合快照；
 - Inventory `Stop`：停止 ROSpec/InventorySession、断开 TCP、释放 Gate 后才发布 `Disconnected`；如果 Stop 或断开失败，则发布 `StopFailed` 并保留 `Faulted + IsStale`，不把未确认释放的长连接伪装为正常离线；
 - Disable/Remove：取消操作、停止盘存、断开并释放 Session。
 

@@ -1,7 +1,7 @@
 # LlrpReaderPlatform 交接文档（Handoff）
 
-> 状态：基础中间层与首个 WPF 消费者首版代码已完成；能力目录已接入运行时快照和设置布局，并按型号、固件和 SDK 能力画像限定 Impinj L4 能力；自动化测试 315 项全绿，真机已完成标准 Probe/Settings Query、WPF 设置/GPO/GPI 状态查询、Impinj debounce/FastID/Phase/Search/Low Duty/固定频率回写、真实 TagReport 聚合、EPC/TID/User/Reserved 四个 Memory Bank 读取、User Bank 写入恢复和 FastID/Phase 扩展 TagReport，R420 Doppler 已按 SDK 能力隐藏；代码已补齐统一 `LifecycleChanged` 事件；平台通知订阅者异常不会中断生命周期收尾，TagReport/GPI/定时停止任务绑定来源 Session 与 InventoryRun，旧事件不会跨 Run 污染新数据；手动 Stop、GPI Stop、定时结束、连接 Faulted、ReaderException、设备主动关闭都会由平台事件驱动 WPF 收尾；GPI 启停触发器保存时，标准设置编译器会同步开启 `Configuration.Events.GpiEventEnabled`；GPI 平台事件保留 Reader 事件时间戳并记录端口/状态/触发匹配日志，便于 WPF 状态和真机记录对齐；设备列表刷新期间保持选中 Reader，避免取消在途设置查询的竞态；设备列表已提供 Faulted Reader 的重新连接/能力刷新入口；标准 Tag Access 按 Reader 能力声明降级，明确不支持的设备不会在服务或 Tag Memory 页显示为可用；标准 GPIO 端口数量优先来自 General Device Capabilities，若能力响应未声明端口数量则在成功状态查询后按返回端口补充当前运行时快照，但不把状态查询当作物理接线验收；明确无端口时 Tab1/Tab2 对应操作降级，部分 GPO 设备只启用实际端口；WPF 设置保存、Tag Memory 和寻卡启动按稳定 `PlatformErrorCode` 投影忙碌/不支持/设备错误等状态；Contracts 的 `PlatformOperationException` 让 Settings Query/GPI/GPO 在 ReaderBusy 时保留同一错误码，明确无 GPO 能力时返回 Unsupported；SQLite 只维护新平台数据，早期 schema 变化允许清空数据库重建；Settings Preset 以版本化语义 JSON 同时保存设置和 Inventory 字段，不考虑旧库导入；短连接断开失败时设置布局转为只读并要求重新激活，Reader 能力快照过期时设置页同步禁用编辑和保存；能力解析循环使用整数索引，避免 `ushort` 最大值回绕；Inventory 服务入口拒绝无效时长、重复天线和混合全部天线/指定天线参数；寻卡页已恢复旧 WPF 的 ELAPSED TIME 顶部布局、列头右键菜单列选择和 Peak RSSI 命名，同时保留平台 Tag List 附加列与原生 ProgressBar；添加数据源页加入 Host/Port 校验、发现记录归一化与 IPv6 端点展示，并在 Probe、发现、提交期间锁定端点及发现条目选择；离开页面会取消在途操作；其它 WPF 页面退出时会取消未完成的 Reader 操作和数据库操作；设备状态、GPI 事件和运行记录的 WPF Dispatcher 投影在页面销毁或应用 Dispatcher 关闭竞态下会静默收口；应用设置页会显示 JSONL TagLog 的默认目录；Tag List 保存/删除会即时刷新已显示 Inventory 行的名称且不触碰 Reader 生命周期；GPI 物理事件/触发、其它 Memory Bank 写入、多 Reader、断网/重启现场恢复及其它现场证据仍在验收。
-> 最新自动化基线：318 项全绿（Contracts 5、Services 166、Infrastructure 7、App.Wpf 120、Architecture 7、Extensions.Impinj 13）。标准 Reader 未声明 GPIO 数量时，成功状态查询会将返回端口合并到运行时快照；这不替代 GPI 物理事件/触发验收。取消 `ActivateAsync`、Inventory Start 和短操作在 Probe/连接/扩展 Session 替换阶段会回收并重建干净 Session，下一次操作重新探测能力。
+> 状态：基础中间层与首个 WPF 消费者首版代码已完成；能力目录已接入运行时快照和设置布局，并按型号、固件和 SDK 能力画像限定 Impinj L4 能力；最新构建 0 警告/0 错误，相关自动化已覆盖分层日志、盘存快照和设置模式，真机已完成标准 Probe/Settings Query、WPF 设置/GPO/GPI 状态查询、Impinj debounce/FastID/Phase/Search/Low Duty/固定频率回写、真实 TagReport 聚合、EPC/TID/User/Reserved 四个 Memory Bank 读取、User Bank 写入恢复和 FastID/Phase 扩展 TagReport，R420 Doppler 已按 SDK 能力隐藏；代码已补齐统一 `LifecycleChanged` 事件；平台通知订阅者异常不会中断生命周期收尾，TagReport/GPI/定时停止任务绑定来源 Session 与 InventoryRun，旧事件不会跨 Run 污染新数据；手动 Stop、GPI Stop、定时结束、连接 Faulted、ReaderException、设备主动关闭都会由平台事件驱动 WPF 收尾；GPI 启停触发器保存时，标准设置编译器会同步开启 `Configuration.Events.GpiEventEnabled`；GPI 平台事件保留 Reader 事件时间戳并记录端口/状态/触发匹配日志，便于 WPF 状态和真机记录对齐；设备列表刷新期间保持选中 Reader，避免取消在途设置查询的竞态；设备列表已提供 Faulted Reader 的重新连接/能力刷新入口；标准 Tag Access 按 Reader 能力声明降级，明确不支持的设备不会在服务或 Tag Memory 页显示为可用；标准 GPIO 端口数量优先来自 General Device Capabilities，若能力响应未声明端口数量则在成功状态查询后按返回端口补充当前运行时快照，但不把状态查询当作物理接线验收；明确无端口时 Tab1/Tab2 对应操作降级，部分 GPO 设备只启用实际端口；WPF 设置保存、Tag Memory 和寻卡启动按稳定 `PlatformErrorCode` 投影忙碌/不支持/设备错误等状态；Contracts 的 `PlatformOperationException` 让 Settings Query/GPI/GPO 在 ReaderBusy 时保留同一错误码，明确无 GPO 能力时返回 Unsupported；SQLite 只维护新平台数据，早期 schema 变化允许清空数据库重建；Settings Preset 以版本化语义 JSON 同时保存设置和 Inventory 字段，不考虑旧库导入；短连接断开失败时设置布局转为只读并要求重新激活，Reader 能力快照过期时设置页同步禁用编辑和保存；能力解析循环使用整数索引，避免 `ushort` 最大值回绕；Inventory 服务入口拒绝无效时长、重复天线和混合全部天线/指定天线参数；寻卡页已恢复旧 WPF 的 ELAPSED TIME 顶部布局、列头右键菜单列选择和 Peak RSSI 命名，同时保留平台 Tag List 附加列与原生 ProgressBar；添加数据源页加入 Host/Port 校验、发现记录归一化与 IPv6 端点展示，并在 Probe、发现、提交期间锁定端点及发现条目选择；离开页面会取消在途操作；其它 WPF 页面退出时会取消未完成的 Reader 操作和数据库操作；设备状态、GPI 事件和运行记录的 WPF Dispatcher 投影在页面销毁或应用 Dispatcher 关闭竞态下会静默收口；应用设置页会显示盘存数据记录模式和原始报告目录；Tag List 保存/删除会即时刷新已显示 Inventory 行的名称且不触碰 Reader 生命周期；GPI 物理事件/触发、其它 Memory Bank 写入、多 Reader、断网/重启现场恢复及其它现场证据仍在验收。
+> 最新自动化基线：336 项全绿（Contracts 5、Services 176、Infrastructure 10、App.Wpf 125、Architecture 7、Extensions.Impinj 13）。标准 Reader 未声明 GPIO 数量时，成功状态查询会将返回端口合并到运行时快照；这不替代 GPI 物理事件/触发验收。取消 `ActivateAsync`、Inventory Start 和短操作在 Probe/连接/扩展 Session 替换阶段会回收并重建干净 Session，下一次操作重新探测能力。
 > 生成日期：以提交时为准。
 > 本文档供接手的开发者在短时间内了解项目现状、关键设计、已知边界与下一步。
 
@@ -80,10 +80,10 @@ LLRP Reader Platform 是一个**厂商无关的 LLRP 应用框架 + 首个 WPF �
 
 ```text
 dotnet build LlrpReaderPlatform.slnx   # 0 警告 0 错误
- dotnet test  LlrpReaderPlatform.slnx --no-build   # 317 项全绿
+ dotnet test  LlrpReaderPlatform.slnx --no-build   # 336 项全绿
 ```
 
-测试分布：Contracts.Tests 5、Services.Tests 162、Infrastructure.Tests 7、App.Wpf.Tests 118、Architecture.Tests 7、Extensions.Impinj.Tests 13。
+测试分布：Contracts.Tests 5、Services.Tests 176、Infrastructure.Tests 10、App.Wpf.Tests 125、Architecture.Tests 7、Extensions.Impinj.Tests 13。
 
 WPF 发布：`dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj -c Release -r win-x64 --self-contained false -o artifacts/publish/win-x64`，然后运行 `artifacts/publish/win-x64/App.Wpf.exe`；发布目录已加入 `.gitignore`。
 
@@ -156,7 +156,7 @@ LlrpReaderPlatform.slnx
 - **当前连接链路**：新增设备从 `AddDataSourceViewModel` 提交后执行 `Probe → 持久化 → 注册 → ActivateAsync`；激活阶段建立 TCP/LLRP 会话，读取身份、固件和最大天线能力，更新 `ReaderRuntimeSnapshot`，然后为短连接主动断开。`ReaderProbeResult` 和添加结果都会回显匹配的扩展 Id，快照的 `ActiveExtensionIds` 记录当前 Session 选择的模块，空集合表示标准 LLRP 路径；设备设置页顶部也显示该诊断信息。寻卡页如果先于设置页启动，Inventory 长连接在启动前也会刷新同一份身份、CapabilityRevision 和 FeatureCatalog。因而激活成功后的稳定状态可能是 `Disconnected`，判断是否已就绪应看 `IsStale == false`、`CapabilityRevision > 0` 以及身份/能力字段，而不是只看 `State == Connected`；协议/网络故障收敛会保留快照但标记 `IsStale=true` 并要求下一次激活/短操作重新执行标准 Probe 与扩展匹配，设置、Tag Memory 和 Tab2 短操作会在入口自恢复能力并等待重新激活；故障或断开不可靠的旧 Session 会先被回收并替换为干净 Session，恢复 Probe 失败则保持 Faulted 并等待下一次显式重试。设备列表 Enable 开关也执行同一套激活/停用流程；添加/激活失败通过 `ReaderAddResult`/`ReaderActivationResult.ErrorCode` 投影稳定的 ReaderBusy/设备错误语义，WPF 不解析错误文本；未结构化的 Probe、添加或激活异常统一归类为设备错误并保留详细信息。
 - **WPF 启动链路**：组合根先注册 Services 的内存兜底，再由 `AddLlrpInfrastructure()` 覆盖为 SQLite Store，随后创建并显示 `MainWindow`；窗口 `Loaded` 再调用 `MainViewModel.InitializeAsync`，由 ViewModel 依次执行 Reader 启动恢复、应用设置加载和列表刷新。ViewModel 只接收 Contracts Store 接口，不创建 InMemory/SQLite 实现；各 SQLite Store 通过同一 `DbContextFactory` 维度的迁移闸门串行初始化 schema，实际读写仍使用独立 `DbContext`；初始化期间使用 WPF 原生 `ProgressBar`，异常保留在状态栏而不让窗口静默退出。
 - **寻卡停止状态投影**：`InventoryViewModel` 以平台 `LifecycleChanged` 为唯一运行收尾来源；手动停止、GPI 触发、定时结束、设备断开和 Reader 异常都会更新按钮、计时器和 `Status`，主窗口底部状态栏同时显示该停止原因，真机验收无需通过按钮轮询推断生命周期。
-- **WPF 日志链路**：组合根将应用/服务日志写入 `platform-*.log`，将 SDK/LLRP 协议日志写入独立的 `sdk-*.log`；两者均按天和 50 MB 滚动，最多保留 14 个文件，退出时随组合根释放。
+- **WPF 日志链路**：组合根将 WPF 操作、平台服务和 SDK/LLRP 适配/协议日志分别写入 `ui-*.log`、`platform-*.log` 和 `sdk-*.log`；EF Core SQL 不进入文件日志；三类文件均按天和 50 MB 滚动，最多保留 14 个文件，退出时随组合根释放。盘存默认只在停止后写入最终 JSON 快照，`RawReports` 模式才额外写原始 JSONL。
 - **当前设置链路**：打开设置页时若能力缓存过期，UI 先激活并同步能力，再由 `SettingsService.QueryAsync` 通过短连接读取 SDK `ReaderSettingsSnapshot`，生成能力驱动布局；保存时重新 Query、校验、编译 SDK `ReaderSettings`，由 ReaderManager 在短租约内 Validate/Apply 并持久化平台 JSON 快照。
 - **设置校验边界**：`SettingsService` 会缓存最近一次实时 Query/Defaults 的完整布局供同步 `Validate` 使用，因此 Tab1 的 Filter/GPI/Report/扩展项不会绕过校验；标准或扩展编译阶段的格式/范围错误会返回可显示的 Apply 失败结果，不会直接冒泡为未处理异常。
 - **取消语义**：Probe、Initialize、Activate、Inventory Start/Stop 在调用方取消时先完成必要的会话/运行上下文清理，再传播 `OperationCanceledException`；普通网络/SDK 异常仍按设备失败或 StopFailed 返回，不与取消混淆。
@@ -187,7 +187,7 @@ LlrpReaderPlatform.slnx
 - 架构：`docs/architecture/`（overview / reader-runtime / extensions-and-settings）
 - 兼容性：`docs/compatibility/device-matrix.md`
 - 开发：`docs/development/roadmap.md`、`docs/development/testing-strategy.md`、`docs/development/legacy-feature-matrix.md`、`docs/development/hardware-validation-runbook.md`
-- 决策：`docs/decisions/`（ADR 0001~0005）
+- 决策：`docs/decisions/`（ADR 0001~0007）
 - 冻结仓库参考：`docs/legacy/README.md`
 
 ## 9. 交接注意事项

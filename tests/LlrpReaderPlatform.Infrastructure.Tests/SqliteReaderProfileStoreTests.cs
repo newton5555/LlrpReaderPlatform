@@ -223,6 +223,64 @@ public sealed class SqliteReaderProfileStoreTests
     }
 
     [Fact]
+    public async Task Inventory_logging_policy_prefers_explicit_mode_over_legacy_switch()
+    {
+        var settings = new FakeAppSettingsStore
+        {
+            [InventoryLoggingSettings.ModeKey] = nameof(InventoryLoggingMode.FinalSnapshot),
+            [InventoryLoggingSettings.LegacyEnabledKey] = "True",
+        };
+
+        var policy = new AppSettingsInventoryLoggingPolicy(settings);
+
+        Assert.Equal(InventoryLoggingMode.FinalSnapshot, await policy.GetModeAsync());
+    }
+
+    [Fact]
+    public async Task Json_lines_tag_log_respects_off_and_raw_reports_modes()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"llrp-tag-mode-{Guid.NewGuid():N}");
+        try
+        {
+            var settings = new FakeAppSettingsStore
+            {
+                [InventoryLoggingSettings.ModeKey] = nameof(InventoryLoggingMode.Off),
+                [InventoryLoggingSettings.RawDirectoryKey] = root,
+            };
+            var writer = new JsonLinesInventoryTagLog(settings);
+            var run = new InventoryRunRecord
+            {
+                Id = Guid.NewGuid(),
+                ReaderId = Guid.NewGuid(),
+                StartedAtUtc = DateTimeOffset.UtcNow,
+            };
+
+            Assert.Null(await writer.StartAsync(run));
+            Assert.False(Directory.Exists(root));
+
+            settings[InventoryLoggingSettings.ModeKey] = nameof(InventoryLoggingMode.RawReports);
+            string? path = await writer.StartAsync(run);
+            Assert.NotNull(path);
+            await writer.AppendAsync(run, new Tagging.TagObservation
+            {
+                Epc = "3008",
+                ReadCount = 1,
+                FirstSeen = run.StartedAtUtc,
+                LastSeen = run.StartedAtUtc,
+            });
+            await writer.CompleteAsync(run);
+            Assert.Contains("3008", await File.ReadAllTextAsync(path!));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task Json_inventory_snapshot_writes_final_aggregate_only()
     {
         string root = Path.Combine(Path.GetTempPath(), $"llrp-inventory-snapshot-{Guid.NewGuid():N}");

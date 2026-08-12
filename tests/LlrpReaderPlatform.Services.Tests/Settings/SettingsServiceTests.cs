@@ -24,8 +24,11 @@ public sealed class SettingsServiceTests
             Compiler = new StandardSettingsCompiler();
             Settings = new SettingsService(Manager, Compiler);
             Profile = new ReaderProfile { Id = Guid.NewGuid(), Host = "192.0.2.2" };
-            SessionFactory.Queue.Enqueue(new FakeSession()); // probe
+            var probeSession = new FakeSession();
+            probeSession.SetCapabilities(maxNumberOfAntennas: 1);
+            SessionFactory.Queue.Enqueue(probeSession); // probe
             RegisterSession = new FakeSession();
+            RegisterSession.SetCapabilities(maxNumberOfAntennas: 1);
             SessionFactory.Queue.Enqueue(RegisterSession); // register
         }
 

@@ -23,7 +23,7 @@
 | Report 列选择 | `InventoryReportSpec` | DataGrid 列头右键菜单列开关（含 EPC、Peak RSSI） | Inventory 服务/WPF 测试 | 不需设备 |
 | Tag Memory Read/Write | `IInventoryService`、`SdkTagAccessMapper` | Tag Memory | Mapper/Busy/Write 测试 | R420 EPC/TID/User/Reserved Read、User Bank 写入/恢复 `HardwareVerified`；其它 Memory Bank 写入与 Inventory 冲突待补 |
 | GPO、GPI 状态与事件 | `GpioCommand`、`GpiPortStatus`、`GpoPortStatus`、`GpioStatusSnapshot` | Reader Settings Tab2（GPO）；Tab1 GPI Configuration | Services/WPF 组合测试；匹配 GPI Stop 触发器自动收尾测试 | GPO1 ON/OFF、4 路 GPI 状态查询、Services 会话事件投影 `HardwareVerified`；GPI 物理事件/触发 `PendingHardware` |
-| Tag Logging | `IInventoryTagLog` | App Settings | JSONL SQLite 测试 | R420 真实 3 秒 Inventory 生成 12 行 JSONL `HardwareVerified` |
+| 盘存数据记录 | `IInventorySnapshotStore`、`IInventoryTagLog` | App Settings | JSON/JSONL SQLite 测试 | 默认停止后最终快照；R420 真实 3 秒 Inventory 生成 12 行 JSONL `HardwareVerified` |
 | Tag Lists 与 EPC 匹配显示 | `ITagListStore` | Tag Lists、Inventory Tag List 列 | WPF/SQLite 测试 | 不需设备 |
 | Inventory Runs 与统计 | `IInventoryRunStore` | Inventory Runs | Services/SQLite 测试 | R420 真实定时停止记录 `Duration`、5 个唯一标签/12 次读取 `HardwareVerified` |
 | App Settings | `IAppSettingsStore` | Software Settings | SQLite/WPF 测试 | 不需设备 |
@@ -33,7 +33,7 @@
 
 Tag Memory 页面保留平台层的 `TagMemoryBank` 枚举和通用四 Bank 读写契约，WPF 显示文本已对齐旧项目的 `EPC`、`TID`、`User`、`Reserved`；不会把旧项目类型带入共享层。
 
-当前自动化基线：`dotnet build` 0 警告 0 错误；`dotnet test --no-build` 312 项全绿（Contracts 5、Services 162、Infrastructure 7、Impinj 13、Architecture 7、App.Wpf 118）。Connection Faulted、ReaderException 事件投影、统一 Inventory `LifecycleChanged`、Faulted Reader 重新连接、故障/取消 Session 回收与干净 Session 重建、取消后重新 Probe 恢复能力、匹配 GPI Stop 触发器、Inventory 收尾与重新 Start、Reader 明确不支持 Tag Access/无 GPIO 端口/部分 GPI/GPO 端口时的服务/UI 降级、无 GPI/GPO 能力的状态查询 Unsupported 语义、未知 GPIO 数量从成功状态查询回填运行时快照、短连接断开失败后的只读设置降级、能力解析上限回绕、Inventory 输入边界校验、WPF 页面退出取消在途操作、设置能力过期后的编辑门禁、设备列表刷新期间保持设置页选中 Reader、添加页 Host/Port 校验、发现端点归一化和 IPv6 展示、Probe/发现/提交互斥和发现条目输入门禁、应用设置默认 TagLog 目录和生产组合根解析 SQLite Store、TagLog 关闭开关和 Start 时跳过文件创建、Start 返回与早到生命周期停止事件的状态保护、Settings Query 在 ReaderBusy 时保留稳定错误码、Tag List 保存/删除后即时刷新 Inventory 行名称已有 Services/WPF 自动化覆盖。
+当前自动化验证：`dotnet build` 0 警告 0 错误；`dotnet test --no-build` 336 项全绿（Contracts 5、Services 176、Infrastructure 10、Impinj 13、Architecture 7、App.Wpf 125）。Connection Faulted、ReaderException 事件投影、统一 Inventory `LifecycleChanged`、Faulted Reader 重新连接、故障/取消 Session 回收与干净 Session 重建、取消后重新 Probe 恢复能力、匹配 GPI Stop 触发器、Inventory 收尾与重新 Start、Reader 明确不支持 Tag Access/无 GPIO 端口/部分 GPI/GPO 端口时的服务/UI 降级、无 GPI/GPO 能力的状态查询 Unsupported 语义、未知 GPIO 数量从成功状态查询回填运行时快照、短连接断开失败后的只读设置降级、能力解析上限回绕、Inventory 输入边界校验、WPF 页面退出取消在途操作、设置能力过期后的编辑门禁、设备列表刷新期间保持设置页选中 Reader、添加页 Host/Port 校验、发现端点归一化和 IPv6 展示、Probe/发现/提交互斥和发现条目输入门禁、应用设置默认目录和生产组合根解析 SQLite Store、盘存记录模式、Start 返回与早到生命周期停止事件的状态保护、Settings Query 在 ReaderBusy 时保留稳定错误码、Tag List 保存/删除后即时刷新 Inventory 行名称已有 Services/WPF 自动化覆盖。
 
 标准 GPIO 能力解析同时覆盖 LLRP 1.0.1 与 1.1 的 `GeneralDeviceCapabilities` 参数；V1.1 端口数量和能力目录映射已有自动化回归，尚未将此代码证据提升为真实 1.1 设备验收结论。
 

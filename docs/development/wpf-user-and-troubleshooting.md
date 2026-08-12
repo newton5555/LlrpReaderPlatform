@@ -13,9 +13,10 @@ dotnet run --project src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj
 默认数据和日志位置：
 
 - SQLite：`%LocalAppData%\LlrpReaderPlatform\llrp-reader-platform.db`；首次访问持久化服务时自动执行 EF Core migration；
+- WPF 操作日志：`%LocalAppData%\LlrpReaderPlatform\logs\ui-*.log`；
 - 平台日志：`%LocalAppData%\LlrpReaderPlatform\logs\platform-*.log`；
 - SDK/LLRP 日志：`%LocalAppData%\LlrpReaderPlatform\logs\sdk-*.log`；
-- Tag Logging：由 Software Settings 中的配置决定，默认位于 `%LocalAppData%\LlrpReaderPlatform\tag-logs`。
+- 盘存最终快照：默认位于 `%LocalAppData%\LlrpReaderPlatform\inventory-snapshots`；原始 JSONL 目录由 Software Settings 配置。
 
 应用退出时会先取消各页面尚未完成的网络/数据库操作，再停止运行中的 Inventory、等待已入队的 TagReport/TagLog 完成，最后断开 Reader 并异步释放 DI 容器。取消不会被显示为设备故障。不要在应用仍运行时复制或删除 SQLite 文件。
 
@@ -28,7 +29,9 @@ dotnet run --project src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj
 5. 只有点击寻卡 Start 后才会建立持续的 Inventory Session；Stop 会停止 ROSpec、完成排空并断开同一 Session；
 6. 删除或禁用 Reader 前先停止寻卡。
 
-如果 Activate 失败，先查看列表中的错误详情和 `platform-*.log`；若是协议或厂商扩展问题，再查看同一时间段的 `sdk-*.log`。
+如果 Activate 失败，先查看列表中的错误详情和 `ui-*.log`；平台生命周期/持久化问题查看 `platform-*.log`，协议或厂商扩展问题查看 `sdk-*.log`。
+
+EF Core SQL 和参数默认不写入文件日志，仅保留数据库 Warning/Error。
 
 ## 3. 设备设置 Tab1 和 Tab2
 
@@ -52,10 +55,15 @@ Tab2（Diagnostics）包括四路 GPO 开关和 GPI 状态刷新/事件显示。
 1. 在 Inventory 页点击 Start；默认使用 Reader 当前天线配置，不会偷偷限制为天线 1；
 2. 在 DataGrid 任一列头上右键，使用列头菜单选择 EPC、TID、PC Bits、Peak RSSI、天线、信道、时间和 Count；Tag List 是平台附加列；
 3. 运行期间观察旧 WPF 风格的 ELAPSED TIME、Unique Tags、Read Rate 和 Dropped 状态；原生 ProgressBar 表示正在执行异步生命周期操作；
-4. 点击 Stop 或达到时长后，服务停止 Inventory、排空已接收报告、写入 Inventory Run/Tag Log，并断开 Reader；
+4. 点击 Stop 或达到时长后，服务停止 Inventory、排空已接收报告、写入 Inventory Run/最终快照，并断开 Reader；若应用设置选择 `RawReports`，还会写入原始 JSONL Tag Log；
 5. Clear 只清除当前展示和内存聚合，不删除历史 Inventory Runs。
 
 若没有标签报告，按顺序检查：标签是否在天线有效范围内、天线是否接好、设备是否启用、Inventory 天线集合和区域设置、Reader 是否真的进入运行状态；随后查看 SDK 日志确认设备是否发出了 TagReport。自动化测试中的 FakeSession 报告不能替代真实标签验收。
+
+### 盘存数据记录模式
+
+应用设置中的盘存数据记录模式有三种：`Off` 不生成盘存数据文件；`FinalSnapshot` 为默认模式，
+停止后保存最终聚合标签快照；`RawReports` 同时保存最终快照和原始报告 JSONL，适合短时间现场诊断。
 
 ## 5. Tag Memory 与 Tag Lists
 

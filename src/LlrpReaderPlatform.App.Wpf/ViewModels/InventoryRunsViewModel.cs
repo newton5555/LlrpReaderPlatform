@@ -4,6 +4,8 @@ using CommunityToolkit.Mvvm.Input;
 using LlrpReaderPlatform.Contracts.Errors;
 using LlrpReaderPlatform.Contracts.Persistence;
 using LlrpReaderPlatform.Contracts.Tagging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Windows.Threading;
 
 namespace LlrpReaderPlatform.App.Wpf.ViewModels;
@@ -12,6 +14,7 @@ namespace LlrpReaderPlatform.App.Wpf.ViewModels;
 public partial class InventoryRunsViewModel : ObservableObject, IPageOperationOwner, IDisposable
 {
     private readonly IInventoryRunStore store;
+    private readonly ILogger<InventoryRunsViewModel> logger;
     private readonly IInventoryService? inventory;
     private readonly Dispatcher dispatcher;
     private readonly CancellationTokenSource lifetimeCts = new();
@@ -21,9 +24,13 @@ public partial class InventoryRunsViewModel : ObservableObject, IPageOperationOw
     private long loadGeneration;
     private bool disposed;
 
-    public InventoryRunsViewModel(IInventoryRunStore store, IInventoryService? inventory = null)
+    public InventoryRunsViewModel(
+        IInventoryRunStore store,
+        IInventoryService? inventory = null,
+        ILogger<InventoryRunsViewModel>? logger = null)
     {
         this.store = store;
+        this.logger = logger ?? NullLogger<InventoryRunsViewModel>.Instance;
         this.inventory = inventory;
         dispatcher = System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
         lifetimeToken = lifetimeCts.Token;
@@ -78,16 +85,23 @@ public partial class InventoryRunsViewModel : ObservableObject, IPageOperationOw
         }
 
         long generation = Interlocked.Increment(ref loadGeneration);
+        Guid operationId = Guid.NewGuid();
+        logger.LogInformation(
+            "WPF operation {Operation} started: {OperationId}, reader {ReaderId}.",
+            "LoadInventoryRuns",
+            operationId,
+            id);
         CancellationTokenSource loadCts = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
         CancellationTokenSource? previous = Interlocked.Exchange(ref activeLoadCts, loadCts);
         previous?.Cancel();
         IsBusy = true;
-        return LoadWithGateAsync(id, generation, loadCts);
+        return LoadWithGateAsync(id, generation, operationId, loadCts);
     }
 
     private async Task LoadWithGateAsync(
         Guid? id,
         long generation,
+        Guid operationId,
         CancellationTokenSource loadCts)
     {
         try
@@ -95,7 +109,7 @@ public partial class InventoryRunsViewModel : ObservableObject, IPageOperationOw
             await loadGate.WaitAsync(loadCts.Token);
             try
             {
-                await LoadCoreAsync(id, generation, loadCts.Token);
+                await LoadCoreAsync(id, generation, operationId, loadCts.Token);
             }
             finally
             {
@@ -117,7 +131,11 @@ public partial class InventoryRunsViewModel : ObservableObject, IPageOperationOw
         }
     }
 
-    private async Task LoadCoreAsync(Guid? id, long generation, CancellationToken ct)
+    private async Task LoadCoreAsync(
+        Guid? id,
+        long generation,
+        Guid operationId,
+        CancellationToken ct)
     {
         Guid? target = id ?? ReaderId;
         if (target is null)
@@ -152,6 +170,12 @@ public partial class InventoryRunsViewModel : ObservableObject, IPageOperationOw
             OnPropertyChanged(nameof(LatestStopReason));
 
             Status = $"已加载 {Runs.Count} 条运行记录。";
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, reader {ReaderId}, runs {RunCount}.",
+                "LoadInventoryRuns",
+                operationId,
+                target,
+                Runs.Count);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -159,6 +183,7 @@ public partial class InventoryRunsViewModel : ObservableObject, IPageOperationOw
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "WPF operation {Operation} failed: {OperationId}, reader {ReaderId}.", "LoadInventoryRuns", operationId, target);
             if (IsCurrentLoad(target, generation, ct))
             {
                 Status = PlatformErrorDisplay.Failure("读取运行记录", PlatformErrorCode.PersistenceFailed, ex.Message);

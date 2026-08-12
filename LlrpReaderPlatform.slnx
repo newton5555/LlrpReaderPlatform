@@ -36,6 +36,7 @@
     <File Path="docs/decisions/ADR-0004-ef-sqlite-persistence.md" />
     <File Path="docs/decisions/ADR-0005-inventory-lifecycle-events.md" />
     <File Path="docs/decisions/ADR-0006-local-sdk-project-reference.md" />
+    <File Path="docs/decisions/ADR-0007-layered-logging-and-inventory-snapshots.md" />
   </Folder>
   <Folder Name="/docs/templates/">
     <File Path="docs/templates/ADR-template.md" />

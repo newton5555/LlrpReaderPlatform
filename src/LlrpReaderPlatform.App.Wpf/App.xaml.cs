@@ -67,7 +67,16 @@ public partial class App : Application
             // Warning+ while preserving platform/service diagnostics.
             builder.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
             builder.AddDebug();
-            builder.AddSerilog(CreateRollingLogger(logDirectory, "platform-.log", excludeSdkCategories: true), dispose: true);
+            builder.AddSerilog(CreateRollingLogger(
+                logDirectory,
+                "platform-.log",
+                static logEvent => !IsSdkLogEvent(logEvent) && !IsUiLogEvent(logEvent)),
+                dispose: true);
+            builder.AddSerilog(CreateRollingLogger(
+                logDirectory,
+                "ui-.log",
+                static logEvent => IsUiLogEvent(logEvent)),
+                dispose: true);
         });
 
         sdkLoggerFactory = LoggerFactory.Create(builder =>
@@ -78,7 +87,11 @@ public partial class App : Application
             // make Visual Studio's output listener starve the WPF dispatcher.
             builder.SetMinimumLevel(LogLevel.Information);
             builder.AddDebug();
-            builder.AddSerilog(CreateRollingLogger(logDirectory, "sdk-.log", excludeSdkCategories: false), dispose: true);
+            builder.AddSerilog(CreateRollingLogger(
+                logDirectory,
+                "sdk-.log",
+                static logEvent => IsSdkLogEvent(logEvent)),
+                dispose: true);
         });
 
         // 组合根：显式注册共享服务层、基础设施与已启用的厂商扩展。
@@ -98,10 +111,10 @@ public partial class App : Application
     private static Serilog.ILogger CreateRollingLogger(
         string logDirectory,
         string fileName,
-        bool excludeSdkCategories) =>
+        Func<LogEvent, bool> includeEvent) =>
         new LoggerConfiguration()
             .MinimumLevel.Is(DefaultLogLevel)
-            .Filter.ByExcluding(logEvent => excludeSdkCategories && IsSdkLogEvent(logEvent))
+            .Filter.ByIncludingOnly(includeEvent)
             .WriteTo.Async(configuration => configuration.File(
                 Path.Combine(logDirectory, fileName),
                 outputTemplate: LogOutputTemplate,
@@ -120,7 +133,19 @@ public partial class App : Application
 
         string category = sourceContext.ToString().Trim('"');
         return category.StartsWith("LlrpSdk", StringComparison.Ordinal)
-            || category.StartsWith("LlrpNet", StringComparison.Ordinal);
+            || category.StartsWith("LlrpNet", StringComparison.Ordinal)
+            || category.StartsWith("LlrpReaderPlatform.Services.Sdk", StringComparison.Ordinal);
+    }
+
+    private static bool IsUiLogEvent(LogEvent logEvent)
+    {
+        if (!logEvent.Properties.TryGetValue("SourceContext", out LogEventPropertyValue? sourceContext))
+        {
+            return false;
+        }
+
+        string category = sourceContext.ToString().Trim('"');
+        return category.StartsWith("LlrpReaderPlatform.App.Wpf", StringComparison.Ordinal);
     }
 
     protected override void OnExit(ExitEventArgs e)

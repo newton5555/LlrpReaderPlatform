@@ -48,6 +48,27 @@ public interface IInventoryRunStore
     Task SaveAsync(InventoryRunRecord run, CancellationToken ct = default);
 }
 
+/// <summary>盘存数据记录策略。RawReports 会同时保留停止后的最终快照。</summary>
+public enum InventoryLoggingMode
+{
+    Off = 0,
+    FinalSnapshot = 1,
+    RawReports = 2,
+}
+
+public static class InventoryLoggingSettings
+{
+    public const string ModeKey = "inventory-logging-mode";
+    public const string LegacyEnabledKey = "tag-logging-enabled";
+    public const string RawDirectoryKey = "tag-log-directory";
+}
+
+/// <summary>共享层读取盘存数据记录策略的 UI/实现无关边界。</summary>
+public interface IInventoryLoggingPolicy
+{
+    Task<InventoryLoggingMode> GetModeAsync(CancellationToken ct = default);
+}
+
 /// <summary>一次盘存停止后生成的最终聚合快照。实时 TagObserved 不属于日志路径。</summary>
 public sealed record InventoryRunSnapshot
 {

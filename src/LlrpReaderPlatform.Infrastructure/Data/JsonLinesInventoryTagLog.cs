@@ -7,29 +7,41 @@ namespace LlrpReaderPlatform.Infrastructure.Data;
 /// <summary>按 Inventory Run 写入 JSONL 的可选标签日志实现，便于后续导入/回放。</summary>
 public sealed class JsonLinesInventoryTagLog : IInventoryTagLog
 {
-    private const string EnabledKey = "tag-logging-enabled";
-    private const string DirectoryKey = "tag-log-directory";
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly SemaphoreSlim writeGate = new(1, 1);
     private readonly Dictionary<Guid, string> paths = [];
     private readonly IAppSettingsStore appSettings;
+    private readonly IInventoryLoggingPolicy loggingPolicy;
     private readonly string? fallbackRoot;
 
-    public JsonLinesInventoryTagLog(IAppSettingsStore appSettings, string? fallbackRoot = null)
+    public JsonLinesInventoryTagLog(
+        IAppSettingsStore appSettings,
+        IInventoryLoggingPolicy? loggingPolicy = null,
+        string? fallbackRoot = null)
     {
         ArgumentNullException.ThrowIfNull(appSettings);
         this.appSettings = appSettings;
+        this.loggingPolicy = loggingPolicy
+            ?? new AppSettingsInventoryLoggingPolicy(appSettings);
         this.fallbackRoot = fallbackRoot;
+    }
+
+    public JsonLinesInventoryTagLog(IAppSettingsStore appSettings, string fallbackRoot)
+        : this(appSettings, loggingPolicy: null, fallbackRoot)
+    {
     }
 
     public async Task<string?> StartAsync(InventoryRunRecord run, CancellationToken ct = default)
     {
-        if (!await IsEnabledAsync(ct).ConfigureAwait(false))
+        if (await loggingPolicy.GetModeAsync(ct).ConfigureAwait(false)
+            != InventoryLoggingMode.RawReports)
         {
             return null;
         }
 
-        string? configuredRoot = await appSettings.GetAsync(DirectoryKey, ct).ConfigureAwait(false);
+        string? configuredRoot = await appSettings
+            .GetAsync(InventoryLoggingSettings.RawDirectoryKey, ct)
+            .ConfigureAwait(false);
         string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         string defaultRoot = string.IsNullOrWhiteSpace(fallbackRoot)
             ? Path.Combine(
@@ -92,9 +104,6 @@ public sealed class JsonLinesInventoryTagLog : IInventoryTagLog
             gate.Release();
         }
     }
-
-    private async Task<bool> IsEnabledAsync(CancellationToken ct) =>
-        bool.TryParse(await appSettings.GetAsync(EnabledKey, ct).ConfigureAwait(false), out bool enabled) && enabled;
 
     private async Task<string?> GetPathAsync(Guid runId, CancellationToken ct)
     {

@@ -17,9 +17,21 @@ public sealed class JsonInventorySnapshotStore : IInventorySnapshotStore
     };
 
     private readonly string rootDirectory;
+    private readonly IInventoryLoggingPolicy loggingPolicy;
 
     public JsonInventorySnapshotStore(string? rootDirectory = null)
+        : this(
+            new LlrpReaderPlatform.Services.Persistence.DefaultInventoryLoggingPolicy(),
+            rootDirectory)
     {
+    }
+
+    public JsonInventorySnapshotStore(
+        IInventoryLoggingPolicy loggingPolicy,
+        string? rootDirectory = null)
+    {
+        ArgumentNullException.ThrowIfNull(loggingPolicy);
+        this.loggingPolicy = loggingPolicy;
         string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         this.rootDirectory = string.IsNullOrWhiteSpace(rootDirectory)
             ? Path.Combine(
@@ -33,6 +45,10 @@ public sealed class JsonInventorySnapshotStore : IInventorySnapshotStore
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ct.ThrowIfCancellationRequested();
+        if (await loggingPolicy.GetModeAsync(ct).ConfigureAwait(false) == InventoryLoggingMode.Off)
+        {
+            return null;
+        }
 
         string directory = Path.Combine(rootDirectory, snapshot.Run.ReaderId.ToString("N"));
         Directory.CreateDirectory(directory);

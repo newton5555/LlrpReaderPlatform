@@ -1,5 +1,6 @@
 using System.IO;
 using LlrpReaderPlatform.App.Wpf.ViewModels;
+using LlrpReaderPlatform.Contracts.Persistence;
 using LlrpReaderPlatform.Services.Persistence;
 using Xunit;
 
@@ -29,5 +30,23 @@ public sealed class AppSettingsViewModelTests
 
         Assert.Equal(expected, await store.GetAsync("tag-log-directory"));
         Assert.Equal(expected, vm.LogDirectory);
+    }
+
+    [Fact]
+    public async Task Logging_mode_defaults_to_final_snapshot_and_saves_explicit_mode()
+    {
+        var store = new InMemoryAppSettingsStore();
+        using var vm = new AppSettingsViewModel(store);
+
+        await vm.LoadAsync();
+
+        Assert.Equal(InventoryLoggingMode.FinalSnapshot, vm.LoggingMode);
+        vm.LoggingMode = InventoryLoggingMode.RawReports;
+        await vm.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            nameof(InventoryLoggingMode.RawReports),
+            await store.GetAsync(InventoryLoggingSettings.ModeKey));
+        Assert.Equal("True", await store.GetAsync(InventoryLoggingSettings.LegacyEnabledKey));
     }
 }

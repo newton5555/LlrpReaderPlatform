@@ -1,10 +1,13 @@
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 #nullable disable
 
 namespace LlrpReaderPlatform.Infrastructure.Data.Migrations;
 
 /// <inheritdoc />
+[DbContext(typeof(PlatformDbContext))]
+[Migration("20260812190000_InventorySnapshotPath")]
 public partial class InventorySnapshotPath : Migration
 {
     /// <inheritdoc />
