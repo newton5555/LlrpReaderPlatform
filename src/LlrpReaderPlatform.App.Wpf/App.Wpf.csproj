@@ -11,6 +11,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="artifacts\**" />
+    <EmbeddedResource Remove="artifacts\**" />
+    <None Remove="artifacts\**" />
+    <Page Remove="artifacts\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="Assets\LlrpReader_Pro_Icon.png" />
     <Resource Include="Assets\LlrpReader_Pro_Icon_Light.png" />
     <Resource Include="Assets\LlrpReader_Pro_Icon_Light_Title.png" />
