@@ -10,7 +10,7 @@
 
 LlrpReaderPlatform 的首个交付物是一个可以连接 Reader、读取设备能力、修改配置、启动寻卡和执行 Tag Access 的 Windows WPF 应用。界面沿用旧 `LlrpReaderStudio` 的操作习惯，同时由新的服务层、SDK 和 SQLite 数据层提供实现。
 
-当前正式版本：**v1.0.0** · Windows x64 · .NET 10 Desktop Runtime
+当前版本基线：**1.0.0** · Windows x64 · 自包含单文件便携发布
 
 ## 应用界面
 
@@ -61,16 +61,20 @@ LlrpReaderPlatform 的首个交付物是一个可以连接 Reader、读取设备
 
 ## 下载与运行
 
-正式发布由 GitHub Actions 生成：
+正式发布由 GitHub Actions 生成，ZIP 内包含自包含的单文件应用以及 README/发布说明：
 
 - `LlrpReaderPlatform-v1.0.0-win-x64.zip`
 - 对应的 `.sha256` 校验文件
 
+`v1.0.0` 发布说明保留该 Tag 当时的历史运行要求；当前源码的发布命令和后续流水线已经
+统一为下面的自包含单文件模式。
+
 运行要求：
 
 - Windows x64；
-- .NET 10 Desktop Runtime；
 - Reader 网络可达，默认 LLRP 端口为 `5084`。
+
+当前源码也可以生成只包含 EXE 的本地便携包。单文件已经包含 .NET 运行时，目标机器不需要另外安装 .NET Desktop Runtime。
 
 应用首次运行会在 `%LocalAppData%\LlrpReaderPlatform\` 创建 SQLite 数据库、日志和盘存快照目录。
 
@@ -83,10 +87,18 @@ dotnet restore LlrpReaderPlatform.slnx -p:UseLocalLlrpSdk=false
 dotnet build LlrpReaderPlatform.slnx -c Release --no-restore -p:UseLocalLlrpSdk=false
 dotnet test LlrpReaderPlatform.slnx -c Release --no-build --no-restore -p:UseLocalLlrpSdk=false
 dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj `
-  -c Release -r win-x64 --self-contained false `
+  -c Release -r win-x64 --self-contained true `
+  -p:PublishSingleFile=true `
+  -p:IncludeNativeLibrariesForSelfExtract=true `
+  -p:EnableCompressionInSingleFile=true `
+  -p:DebugType=None -p:DebugSymbols=false `
   -p:UseLocalLlrpSdk=false `
   -o artifacts/publish/win-x64 --no-restore
 ```
+
+发布结果为 `LlrpReaderPlatform.exe`。本地便携包的推荐输出结构为
+`src/LlrpReaderPlatform.App.Wpf/bin/Portable/LLRPReaderPlatform-win-x64/`，该目录只保留
+EXE 时可以直接复制运行；WPF 单文件运行时可能会把 native 组件临时解压到系统临时目录，这是正常行为。
 
 默认使用 `LlrpSdk` `1.3.0` 和 `LlrpSdk.Extensions.Impinj` `1.3.0` NuGet 包。本地 SDK 联调时，才通过 `UseLocalLlrpSdk=true` 切换到相邻 `LLRPCSharp` 源码；正式 CI 和发布始终使用 NuGet 模式。
 

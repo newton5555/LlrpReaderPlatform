@@ -270,9 +270,11 @@
                                                 <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,6,0,0">
                                                     <Button Content="ALL" Width="60" Height="28" Margin="0,0,6,0"
                                                             Command="{Binding FillAllAntennasCommand}"
+                                                            FontSize="{DynamicResource MahApps.Font.Size.Button}"
                                                             Style="{StaticResource FlatActionButtonStyle}" />
                                                     <Button Content="CLEAR" Width="60" Height="28"
                                                             Command="{Binding ClearAntennasCommand}"
+                                                            FontSize="{DynamicResource MahApps.Font.Size.Button}"
                                                             Style="{StaticResource FlatActionButtonStyle}" />
                                                 </StackPanel>
                                                 <TextBox Text="{Binding AntennasRow.ValueText, UpdateSourceTrigger=PropertyChanged}"

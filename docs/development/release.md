@@ -4,7 +4,8 @@
 
 `LlrpReaderPlatform` 当前是 WPF 应用，不发布平台 NuGet 包。正式发布产物为：
 
-- `LlrpReaderPlatform-v<version>-win-x64.zip`：WPF 应用及其依赖；
+- `LlrpReaderPlatform-v<version>-win-x64.zip`：包含自包含单文件
+  `LlrpReaderPlatform.exe`、README 和发布说明；
 - 对应的 `.sha256` 校验文件；
 - GitHub Release 页面和版本说明。
 
@@ -72,22 +73,30 @@ NuGet。发布前还应确认：
 
 ## 发布命令
 
-验证通过后执行 WPF 发布：
+验证通过后执行 WPF 自包含单文件发布：
 
 ```powershell
 dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj `
-  -c Release -r win-x64 --self-contained false `
+  -c Release -r win-x64 --self-contained true `
+  -p:PublishSingleFile=true `
+  -p:IncludeNativeLibrariesForSelfExtract=true `
+  -p:EnableCompressionInSingleFile=true `
+  -p:DebugType=None -p:DebugSymbols=false `
   -p:UseLocalLlrpSdk=false `
   -o artifacts/publish/win-x64 --no-restore
 ```
+
+发布目录的主文件名由 `App.Wpf.csproj` 的 `AssemblyName` 控制，当前为
+`LlrpReaderPlatform.exe`。`ApplicationIcon` 只控制 EXE 图标，不控制文件名。
+本地只含 EXE 的便携 ZIP 不属于 GitHub Release 的额外资产，可按需从发布目录另行压缩。
 
 ## 正式发布步骤
 
 以 `1.0.0` 为例：
 
-1. 在 `release/1.0.0` 分支确认 `Directory.Build.props` 的版本为 `1.0.0`；
-2. 补齐 `docs/releases/v1.0.0.md`，并确认本地构建、测试和 WPF 发布成功；
-3. 合并到 `master` 后推送 `v1.0.0` Tag：
+1. 从目标基线创建 `release/1.0.0` 分支，确认 `Directory.Build.props` 的版本为 `1.0.0`；
+2. 补齐 `docs/releases/v1.0.0.md`，并确认本地构建、测试和自包含单文件发布成功；
+3. 在 `release/1.0.0` 分支推送匹配的 `v1.0.0` Tag：
 
    ```powershell
    git tag v1.0.0

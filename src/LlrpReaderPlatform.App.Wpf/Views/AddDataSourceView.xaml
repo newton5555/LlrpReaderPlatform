@@ -82,7 +82,7 @@
                              IsEnabled="{Binding IsInputEnabled}"
                              Padding="10,8" BorderThickness="1" Margin="0,0,0,24" />
 
-                    <Expander Header="LLRP PORT" FontWeight="Bold" FontSize="13" Margin="0,0,0,24">
+                    <Expander Header="CONNECTION OPTIONS" FontWeight="Bold" FontSize="13" Margin="0,0,0,24">
                         <Border Padding="16" Margin="0,8,0,0" BorderThickness="1" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}" CornerRadius="4">
                             <StackPanel>
                                 <Grid Margin="0,4">

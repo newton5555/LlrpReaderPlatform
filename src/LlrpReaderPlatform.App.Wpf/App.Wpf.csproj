@@ -6,6 +6,7 @@
     <UseWPF>true</UseWPF>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <RootNamespace>LlrpReaderPlatform.App.Wpf</RootNamespace>
+    <AssemblyName>LlrpReaderPlatform</AssemblyName>
     <ApplicationIcon>Assets\LlrpReader_Pro_Icon.ico</ApplicationIcon>
   </PropertyGroup>
 

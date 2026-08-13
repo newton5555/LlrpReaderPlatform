@@ -5,6 +5,12 @@
 > 生成日期：以提交时为准。
 > 本文档供接手的开发者在短时间内了解项目现状、关键设计、已知边界与下一步。
 
+2026-08-13 当前交付收口：WPF 程序集名称已固定为 `LlrpReaderPlatform`，发布文件为
+`LlrpReaderPlatform.exe`；About 页使用与程序集名称一致的 Pack URI，单文件发布中会正确
+嵌入并显示亮色产品图标；添加数据源页将同时包含端口和协议版本的分组标题改为
+`CONNECTION OPTIONS`。当前本地便携发布使用 Windows x64、自包含、单文件模式，目标机不需要
+预装 .NET Desktop Runtime。当前源码自动化基线仍为 336 项全绿。
+
 当前现场端点记录：Impinj R420 的新平台 Profile 当前为 `192.168.40.87:5084`；文中 `192.168.41.134:5084` 是此前现场验收时使用的历史地址，不代表当前网络地址。标准 1.0.1 Reader 仍为 `192.168.41.148:5084`。端点变化本身未被当作新的硬件验收结论，重新连接/寻卡结果仍需现场复测。
 
 2026-08-13 统一 SDK 引用模式：Services 与 Impinj 扩展默认使用中央版本管理的 NuGet 包；设置 `UseLocalLlrpSdk=true` 时通过 `LlrpSdkSourceRoot` 切换到相邻 `LLRPCSharp` 的 SDK/LlrpNet 项目。Visual Studio 可使用 Git 忽略的 `Directory.Build.local.props` 保存本机选择，不再通过长期分支或手工改项目文件切换；详细边界见 [ADR-0008](../decisions/ADR-0008-switchable-sdk-references.md)。
@@ -21,7 +27,7 @@
 
 2026-08-11 追加取消后恢复回归：新增测试证明 `ActivateAsync` 在扩展 Probe 被取消后，下一次激活会重新 Probe、重新捕获能力并回到非陈旧 `Disconnected`；当前 Services 基线为 162 项，总基线为 312 项。
 
-2026-08-11 追加当前源码发布冒烟：使用当前源码重新生成 `artifacts/publish/win-x64/App.Wpf.exe`，WPF 进程成功进入消息循环并通过正常窗口关闭退出，退出码为 0；该证据确认本轮取消清理改动已进入可交付 WPF 包，不替代现场 Reader/标签验收。
+2026-08-11 追加当前源码发布冒烟：使用当前源码重新生成 `artifacts/publish/win-x64/LlrpReaderPlatform.exe`，WPF 进程成功进入消息循环并通过正常窗口关闭退出，退出码为 0；该证据确认本轮取消清理改动已进入可交付 WPF 包，不替代现场 Reader/标签验收。
 
 2026-08-11 追加发布配置收口：`App.Wpf.csproj` 明确声明 `RuntimeIdentifiers=win-x64`；在完整 restore 后，按交付手册执行 `dotnet publish ... -r win-x64 --no-restore` 已成功，避免干净环境因 RID 资产未生成而无法发布。
 
@@ -29,7 +35,7 @@
 
 2026-08-11 再追加启动恢复证据：使用同一最新 `win-x64` 发布包、现有新平台 SQLite 数据库启动 WPF，SDK 日志记录对 `192.168.41.134:5084` 建立 LLRP 会话、设备拒绝 1.1 后回落到 1.0.1，并完成能力/配置短连接；通过正常关闭窗口结束进程，退出码为 0，验证从新库恢复 Reader 到 `DisposeAsync` 的发布运行时路径。
 
-2026-08-11 再追加发布包冒烟证据：重新发布后的 `artifacts/publish/win-x64/App.Wpf.exe` 启动后窗口保持响应，标题为 `LLRP Reader Studio`，正常关闭后无残留 WPF 进程；本轮同时将设置、GPI/GPO、Tag Memory、Tag List、运行记录、发现和主设备入口的未结构化异常统一投影为 `PlatformErrorCode` 文本，保留底层详情。
+2026-08-11 再追加发布包冒烟证据：重新发布后的 `artifacts/publish/win-x64/LlrpReaderPlatform.exe` 启动后窗口保持响应，标题为 `LLRP Reader Studio`，正常关闭后无残留 WPF 进程；本轮同时将设置、GPI/GPO、Tag Memory、Tag List、运行记录、发现和主设备入口的未结构化异常统一投影为 `PlatformErrorCode` 文本，保留底层详情。
 
 2026-08-11 再追加当前版本连接证据：最新发布包启动期间 SDK 日志再次记录与 `192.168.41.134:5084` 建立 LLRP TCP 会话并启动接收循环，窗口保持响应，正常关闭后退出码为 0；本次 GPIO 能力降级修改未影响真实 R420 的连接/释放路径。
 
@@ -85,7 +91,7 @@ dotnet build LlrpReaderPlatform.slnx   # 0 警告 0 错误
 
 测试分布：Contracts.Tests 5、Services.Tests 176、Infrastructure.Tests 10、App.Wpf.Tests 125、Architecture.Tests 7、Extensions.Impinj.Tests 13。
 
-WPF 发布：`dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj -c Release -r win-x64 --self-contained false -o artifacts/publish/win-x64`，然后运行 `artifacts/publish/win-x64/App.Wpf.exe`；发布目录已加入 `.gitignore`。
+WPF 发布：`dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false -p:UseLocalLlrpSdk=false -o artifacts/publish/win-x64`，然后运行 `artifacts/publish/win-x64/LlrpReaderPlatform.exe`；发布目录已加入 `.gitignore`。
 
 协议诊断：Services 将 SDK 实际协商的 LLRP 1.0.1/1.1 版本映射到 Contracts 的 `ReaderProbeResult`、`ReaderRuntimeSnapshot` 和 `ReaderCapabilityCapture`；设置页设备信息会显示该实际版本。尚未识别的未来协议版本保留为空，不会误报为已支持版本。
 
@@ -187,7 +193,7 @@ LlrpReaderPlatform.slnx
 - 架构：`docs/architecture/`（overview / reader-runtime / extensions-and-settings）
 - 兼容性：`docs/compatibility/device-matrix.md`
 - 开发：`docs/development/roadmap.md`、`docs/development/testing-strategy.md`、`docs/development/legacy-feature-matrix.md`、`docs/development/hardware-validation-runbook.md`
-- 决策：`docs/decisions/`（ADR 0001~0007）
+- 决策：`docs/decisions/`（ADR 0001~0009）
 - 冻结仓库参考：`docs/legacy/README.md`
 
 ## 9. 交接注意事项
@@ -196,7 +202,7 @@ LlrpReaderPlatform.slnx
 - 新增文档/移动文档时，同步更新 `docs/README.md`、根 `README.md` 与 `LlrpReaderPlatform.slnx`；
 - 真机相关结论（厂商 ID、能力字段、扩展字段）必须来自实测，勿从 SDK 包名或接口推断；
 - 本仓库当前阶段：P0～P7 首版代码已落地，P8 真机与多设备验收进行中；旧 WPF 主要功能入口和服务链路已迁移，剩余是硬件结论、少量专用编辑器和扩展设备覆盖。
-- 本轮代码边界：Contracts 新增 Reader 端点归一化和 `PlatformOperationException`，程序化添加、SQLite、SDK 会话构造和 WPF IPv6 展示共享同一 Host 规则；同时保护 Start 返回与早到终止生命周期事件之间的状态竞态；Tag Logging 关闭时不会创建 Run 文件；全局寻卡部分失败状态按 Reader 名称和错误摘要定位；本轮针对 App.Wpf 的回归为 114 项通过，完整基线为 304 项，构建 0 警告 0 错误，格式校验通过。
+- 本轮代码边界：Contracts 新增 Reader 端点归一化和 `PlatformOperationException`，程序化添加、SQLite、SDK 会话构造和 WPF IPv6 展示共享同一 Host 规则；同时保护 Start 返回与早到终止生命周期事件之间的状态竞态；Tag Logging 关闭时不会创建 Run 文件；全局寻卡部分失败状态按 Reader 名称和错误摘要定位。文中按日期保留的 304/307/311/312/318 等数字是历史阶段基线；当前 App.Wpf 回归为 125 项通过，完整基线为 336 项，构建 0 警告 0 错误。
 - 本轮 WPF 补充：主设备页发现与添加数据源页发现共用归一化/去重逻辑，主设备页的非法端口会回退 5084，IPv6 会统一使用无方括号 Host 和带方括号的端点展示；设置 Tab1 的旧分组按实际语义行显隐，Tab2 的 GPO/GPI 区域按端口能力降级，不再显示空的伪控件；所有页面的设备、连接和持久化异常统一经过 `PlatformErrorCode` 投影，现场可区分设备错误与本地保存失败。
 - 本轮 WPF 生命周期补充：Tag Memory 读写、设置加载和其它页面异步操作在页面销毁后会静默收口晚到的非取消异常，不再把已关闭页面的底层失败变成未观察异常；未销毁页面仍按原有状态文本显示失败。
 - 本轮设备入口补充：添加数据源页和主设备页对 Probe、添加、激活的未结构化异常统一使用稳定设备错误分类，保留底层详细信息供现场诊断。

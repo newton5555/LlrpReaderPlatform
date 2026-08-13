@@ -29,18 +29,19 @@
 - [旧 WPF 功能迁移矩阵](development/legacy-feature-matrix.md)
 - [真机验收运行手册](development/hardware-validation-runbook.md)
 - [WPF 用户操作与故障排查](development/wpf-user-and-troubleshooting.md)
-- [发布规范与 NuGet SDK 切换](development/release.md)
+- [发布规范、单文件交付与 SDK 切换](development/release.md)
 
 ### 4.1 已发布版本
 
-- [v1.0.0](releases/v1.0.0.md)
+- [v1.0.0（历史发布说明）](releases/v1.0.0.md)
 
 ### 5. 决策记录
 
 - [ADR 索引](decisions/README.md)
 - 当前 Inventory 生命周期事件的权威来源见 [ADR-0005](decisions/ADR-0005-inventory-lifecycle-events.md)；
   日志分类和盘存快照规则见 [ADR-0007](decisions/ADR-0007-layered-logging-and-inventory-snapshots.md)；
-  SDK 引用切换规则见 [ADR-0008](decisions/ADR-0008-switchable-sdk-references.md)。
+  SDK 引用切换规则见 [ADR-0008](decisions/ADR-0008-switchable-sdk-references.md)；
+  Windows 单文件交付规则见 [ADR-0009](decisions/ADR-0009-windows-self-contained-single-file.md)。
 
 ### 6. 冻结项目参考
 

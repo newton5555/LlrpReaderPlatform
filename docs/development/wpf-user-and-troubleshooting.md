@@ -10,6 +10,15 @@
 dotnet run --project src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj
 ```
 
+现场便携运行：
+
+```text
+src/LlrpReaderPlatform.App.Wpf/bin/Portable/LLRPReaderPlatform-win-x64/LlrpReaderPlatform.exe
+```
+
+当前便携包为 Windows x64 自包含单文件，不需要目标机预装 .NET Desktop Runtime；正式 Release
+ZIP 还包含 README 和发布说明。单文件启动时 native 组件可能临时解压到系统临时目录，属于正常行为。
+
 默认数据和日志位置：
 
 - SQLite：`%LocalAppData%\LlrpReaderPlatform\llrp-reader-platform.db`；首次访问持久化服务时自动执行 EF Core migration；

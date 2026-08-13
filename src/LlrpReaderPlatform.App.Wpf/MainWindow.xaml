@@ -9,7 +9,7 @@
     xmlns:views="clr-namespace:LlrpReaderPlatform.App.Wpf.Views"
     xmlns:vm="clr-namespace:LlrpReaderPlatform.App.Wpf.ViewModels"
     Title="LLRP Reader Studio"
-    Icon="Assets/LlrpReader_Pro_Icon_Light_Title.png"
+    Icon="Assets/LlrpReader_Pro_Icon_Light.png"
     Width="1240"
     Height="780"
     MinWidth="1000"
@@ -17,6 +17,17 @@
     GlowBrush="{DynamicResource MahApps.Brushes.Accent}"
     WindowStartupLocation="CenterScreen"
     mc:Ignorable="d">
+
+    <mah:MetroWindow.IconTemplate>
+        <DataTemplate>
+            <Image
+                RenderOptions.BitmapScalingMode="HighQuality"
+                Width="20"
+                Height="20"
+                Stretch="Uniform"
+                Source="Assets/LlrpReader_Pro_Icon_Light.png" />
+        </DataTemplate>
+    </mah:MetroWindow.IconTemplate>
 
     <mah:MetroWindow.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />

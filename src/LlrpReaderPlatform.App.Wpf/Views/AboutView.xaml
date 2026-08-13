@@ -7,7 +7,7 @@
                     CornerRadius="4" Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
                     Padding="32">
                 <StackPanel>
-                    <Image Source="/LlrpReaderPlatform.App.Wpf;component/Assets/LlrpReader_Pro_Icon.png"
+                    <Image Source="/LlrpReaderPlatform;component/Assets/LlrpReader_Pro_Icon_Light.png"
                            Width="132" Height="132" HorizontalAlignment="Left"
                            Stretch="Uniform" Margin="0,0,0,18"
                            RenderOptions.BitmapScalingMode="HighQuality" />

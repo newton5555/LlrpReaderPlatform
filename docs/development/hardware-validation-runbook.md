@@ -15,6 +15,11 @@ dotnet test LlrpReaderPlatform.slnx --no-build
 dotnet run --project src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj
 ```
 
+现场也可以直接使用当前 Windows x64 自包含单文件包：运行
+`src/LlrpReaderPlatform.App.Wpf/bin/Portable/LLRPReaderPlatform-win-x64/LlrpReaderPlatform.exe`。
+该包不要求目标机预装 .NET Desktop Runtime；单文件运行时可能会将 native 组件临时解压到系统
+临时目录。正式 GitHub Release 的 ZIP 还会附带 README 和发布说明。
+
 真实验收的唯一交互入口是 `LlrpReaderPlatform.App.Wpf`；不要求、不引入独立硬件验收 CLI。寻卡停止后，优先查看主窗口底部状态栏的 `Inventory.Status` 和 Inventory Runs 中的 `StopReason`，再结合平台/SDK 日志记录原因。
 
 5. 为本次验收复制 `docs/templates/device-validation-template.md`，使用设备和日期命名记录文件。

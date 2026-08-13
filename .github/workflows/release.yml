@@ -76,7 +76,7 @@ jobs:
         run: dotnet test LlrpReaderPlatform.slnx --no-build --no-restore --configuration Release -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false --logger "trx;LogFileName=platform-tests.trx"
 
       - name: Publish WPF application
-        run: dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj --configuration Release --runtime win-x64 --self-contained false --no-restore -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false --output ./artifacts/release/publish/win-x64
+        run: dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj --configuration Release --runtime win-x64 --self-contained true --no-restore -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ./artifacts/release/publish/win-x64
 
       - name: Create Windows application archive
         shell: pwsh
