@@ -89,7 +89,7 @@
 
         <Border Grid.Row="1" Margin="0,16,0,14" Padding="16,14"
                 BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
-                BorderThickness="1"
+                BorderThickness="1" CornerRadius="4"
                 Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -124,11 +124,12 @@
         </Border>
 
         <Border Grid.Row="2" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
-                BorderThickness="1" Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
+                BorderThickness="1" CornerRadius="4" Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
             <DataGrid ItemsSource="{Binding Entries, Mode=OneWay}"
                       SelectedItem="{Binding SelectedEntry, Mode=TwoWay}"
                       AutoGenerateColumns="False" CanUserAddRows="False"
-                      RowHeight="44" GridLinesVisibility="Horizontal"
+                      RowHeight="48" GridLinesVisibility="Horizontal"
+                      HorizontalGridLinesBrush="{DynamicResource MahApps.Brushes.Gray8}"
                       EnableRowVirtualization="True" EnableColumnVirtualization="True">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="EPC" Width="2*"

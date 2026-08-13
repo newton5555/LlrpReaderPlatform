@@ -13,6 +13,7 @@
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="mah:ControlsHelper.CornerRadius" Value="4" />
         </Style>
     </UserControl.Resources>
     <Grid>
@@ -65,7 +66,9 @@
 
         <Grid Grid.Row="1">
             <DataGrid ItemsSource="{Binding Tags}" AutoGenerateColumns="False" IsReadOnly="True"
-                      CanUserAddRows="False" GridLinesVisibility="Horizontal" RowHeight="32"
+                      CanUserAddRows="False" GridLinesVisibility="Horizontal"
+                      HorizontalGridLinesBrush="{DynamicResource MahApps.Brushes.Gray8}"
+                      RowHeight="38"
                       FontSize="12" Margin="16" BorderThickness="1"
                       EnableRowVirtualization="True" EnableColumnVirtualization="True"
                       ScrollViewer.CanContentScroll="True"

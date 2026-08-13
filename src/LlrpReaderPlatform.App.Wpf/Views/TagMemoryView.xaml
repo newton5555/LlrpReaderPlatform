@@ -10,6 +10,7 @@
             <Setter Property="MinWidth" Value="132" />
             <Setter Property="Padding" Value="16,9" />
             <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="mah:ControlsHelper.CornerRadius" Value="4" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsBusy}" Value="True">
                     <Setter Property="IsEnabled" Value="False" />
@@ -41,6 +42,7 @@
 
         <Style x:Key="TagAccessFieldLabelStyle" TargetType="TextBlock">
             <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.6" />
             <Setter Property="Margin" Value="0,0,0,6" />
         </Style>
 
