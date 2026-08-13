@@ -1,4 +1,23 @@
-# 发布规范
+# 发布规范与应用流水线
+
+## 交付边界
+
+`LlrpReaderPlatform` 当前是 WPF 应用，不发布平台 NuGet 包。正式发布产物为：
+
+- `LlrpReaderPlatform-v<version>-win-x64.zip`：WPF 应用及其依赖；
+- 对应的 `.sha256` 校验文件；
+- GitHub Release 页面和版本说明。
+
+平台使用的 `LlrpSdk` NuGet 包属于输入依赖，不是本仓库的发布产物。
+
+## GitHub Actions
+
+仓库包含两条自动流程：
+
+- `.github/workflows/ci.yml`：`master`、`release/*` 的 push/PR，以及手动触发时执行 NuGet 模式还原、Release 构建和自动化测试；
+- `.github/workflows/release.yml`：推送 `vMAJOR.MINOR.PATCH` Tag 或手动触发时，重复执行构建和测试，然后发布 `win-x64` ZIP、SHA256 和 GitHub Release。
+
+发布流程会校验 Tag、`Directory.Build.props` 中的版本号和 `docs/releases/v<version>.md` 是否一致；任一不一致都会停止发布。
 
 ## SDK 引用模式
 
@@ -62,4 +81,20 @@ dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj `
   -o artifacts/publish/win-x64 --no-restore
 ```
 
-发布完成后创建版本 Tag；只有需要维护已发布版本时才从对应 Tag 创建短期维护分支。
+## 正式发布步骤
+
+以 `1.0.0` 为例：
+
+1. 在 `release/1.0.0` 分支确认 `Directory.Build.props` 的版本为 `1.0.0`；
+2. 补齐 `docs/releases/v1.0.0.md`，并确认本地构建、测试和 WPF 发布成功；
+3. 合并到 `master` 后推送 `v1.0.0` Tag：
+
+   ```powershell
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+
+4. GitHub Actions 自动运行发布流程；成功后在 GitHub Release 下载 ZIP 和 SHA256 文件；
+5. 解压 ZIP，在现场 Windows 机器上启动应用并按[真机验收运行手册](hardware-validation-runbook.md)完成最后验收。
+
+也可以在 GitHub Actions 页面手动运行 `WPF Release`，输入与项目版本一致的 Tag。手动运行同样不会跳过构建、测试和版本说明校验。

@@ -1,0 +1,117 @@
+name: WPF Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, for example v1.0.0
+        required: true
+        default: v1.0.0
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: 'true'
+
+jobs:
+  release:
+    name: Build, Test and Package WPF App
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate release version
+        id: release_metadata
+        shell: pwsh
+        env:
+          RELEASE_TAG_INPUT: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          $releaseTag = $env:RELEASE_TAG_INPUT
+          if ($releaseTag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') {
+            throw "Release tag must match vMAJOR.MINOR.PATCH, got: $releaseTag"
+          }
+
+          $version = $releaseTag.Substring(1)
+          $props = Get-Content -LiteralPath 'Directory.Build.props' -Raw
+          $projectVersion = [regex]::Match($props, '<Version>([^<]+)</Version>').Groups[1].Value
+          if ([string]::IsNullOrWhiteSpace($projectVersion) -or $projectVersion -ne $version) {
+            throw "Tag $releaseTag does not match Directory.Build.props version $projectVersion"
+          }
+
+          $releaseDoc = "docs/releases/$releaseTag.md"
+          if (-not (Test-Path -LiteralPath $releaseDoc -PathType Leaf)) {
+            throw "Missing release notes: $releaseDoc"
+          }
+
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "tag=$releaseTag"
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "version=$version"
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "release_doc=$releaseDoc"
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore solution in NuGet mode
+        run: dotnet restore LlrpReaderPlatform.slnx -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false
+
+      - name: Build solution in Release configuration
+        run: dotnet build LlrpReaderPlatform.slnx --no-restore --configuration Release -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false
+
+      - name: Run automated tests
+        run: dotnet test LlrpReaderPlatform.slnx --no-build --no-restore --configuration Release -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false --logger "trx;LogFileName=platform-tests.trx"
+
+      - name: Publish WPF application
+        run: dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj --configuration Release --runtime win-x64 --self-contained false --no-restore -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false --output ./artifacts/release/publish/win-x64
+
+      - name: Create Windows application archive
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ steps.release_metadata.outputs.tag }}
+          RELEASE_DOC: ${{ steps.release_metadata.outputs.release_doc }}
+        run: |
+          $publishDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts/release/publish/win-x64'
+          Copy-Item -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'README.md') -Destination $publishDir
+          Copy-Item -LiteralPath (Join-Path $env:GITHUB_WORKSPACE $env:RELEASE_DOC) -Destination (Join-Path $publishDir 'RELEASE-NOTES.md')
+
+          $archive = Join-Path $env:GITHUB_WORKSPACE "artifacts/release/LlrpReaderPlatform-$($env:RELEASE_TAG)-win-x64.zip"
+          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $archive -Force
+          $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $(Split-Path -Leaf $archive)" | Set-Content -LiteralPath "$archive.sha256" -NoNewline
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-test-results
+          path: '**/TestResults/*.trx'
+          if-no-files-found: ignore
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_metadata.outputs.tag }}
+          name: LlrpReaderPlatform ${{ steps.release_metadata.outputs.tag }}
+          files: |
+            ./artifacts/release/LlrpReaderPlatform-*.zip
+            ./artifacts/release/LlrpReaderPlatform-*.zip.sha256
+          draft: false
+          prerelease: false
+          body_path: ${{ steps.release_metadata.outputs.release_doc }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

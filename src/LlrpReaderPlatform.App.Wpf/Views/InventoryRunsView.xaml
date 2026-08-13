@@ -24,6 +24,10 @@
             <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
         </Style>
+        <Style x:Key="CenteredTableTextStyle" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="28,24">
@@ -97,16 +101,41 @@
                 Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
             <DataGrid ItemsSource="{Binding Runs}" SelectedItem="{Binding SelectedRun}"
                       AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
-                      GridLinesVisibility="Horizontal" RowHeight="38"
+                      GridLinesVisibility="Horizontal" RowHeight="38" FontSize="12" Margin="8" BorderThickness="1"
                       HorizontalGridLinesBrush="{DynamicResource MahApps.Brushes.Gray8}"
-                      EnableRowVirtualization="True" EnableColumnVirtualization="True">
+                      EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                      ScrollViewer.CanContentScroll="True"
+                      VirtualizingPanel.IsVirtualizing="True"
+                      VirtualizingPanel.VirtualizationMode="Recycling">
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="FontWeight" Value="Bold" />
+                        <Setter Property="Padding" Value="10,8" />
+                        <Setter Property="BorderThickness" Value="0,0,1,1" />
+                    </Style>
+                    <Style TargetType="DataGridCell">
+                        <Setter Property="Padding" Value="8,4" />
+                        <Setter Property="VerticalContentAlignment" Value="Center" />
+                    </Style>
+                </DataGrid.Resources>
+                <DataGrid.RowStyle>
+                    <Style TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource MahApps.Styles.DataGridRow}">
+                        <Setter Property="mah:DataGridHelper.CellPadding" Value="8,4" />
+                    </Style>
+                </DataGrid.RowStyle>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Started (local)" Binding="{Binding StartedLocal, Mode=OneWay}" Width="1.35*" />
-                    <DataGridTextColumn Header="Ended (local)" Binding="{Binding EndedLocal, Mode=OneWay}" Width="1.35*" />
-                    <DataGridTextColumn Header="Duration" Binding="{Binding Duration, Mode=OneWay}" Width="100" />
-                    <DataGridTextColumn Header="Result" Binding="{Binding StopReasonDisplay, Mode=OneWay}" Width="1.1*" />
-                    <DataGridTextColumn Header="Reads" Binding="{Binding TotalReadCount, Mode=OneWay}" Width="90" />
-                    <DataGridTextColumn Header="Unique" Binding="{Binding UniqueTagCount, Mode=OneWay}" Width="90" />
+                    <DataGridTextColumn Header="Started (local)" Binding="{Binding StartedLocal, Mode=OneWay}" Width="1.35*"
+                                        ElementStyle="{StaticResource CenteredTableTextStyle}" />
+                    <DataGridTextColumn Header="Ended (local)" Binding="{Binding EndedLocal, Mode=OneWay}" Width="1.35*"
+                                        ElementStyle="{StaticResource CenteredTableTextStyle}" />
+                    <DataGridTextColumn Header="Duration" Binding="{Binding Duration, Mode=OneWay}" Width="100"
+                                        ElementStyle="{StaticResource CenteredTableTextStyle}" />
+                    <DataGridTextColumn Header="Result" Binding="{Binding StopReasonDisplay, Mode=OneWay}" Width="1.1*"
+                                        ElementStyle="{StaticResource CenteredTableTextStyle}" />
+                    <DataGridTextColumn Header="Reads" Binding="{Binding TotalReadCount, Mode=OneWay}" Width="90"
+                                        ElementStyle="{StaticResource CenteredTableTextStyle}" />
+                    <DataGridTextColumn Header="Unique" Binding="{Binding UniqueTagCount, Mode=OneWay}" Width="90"
+                                        ElementStyle="{StaticResource CenteredTableTextStyle}" />
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

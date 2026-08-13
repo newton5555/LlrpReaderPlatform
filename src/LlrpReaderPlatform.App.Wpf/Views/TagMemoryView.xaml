@@ -60,7 +60,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" MaxWidth="1080" HorizontalAlignment="Stretch">
+        <Grid Grid.Row="0" HorizontalAlignment="Stretch">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -105,7 +105,7 @@
             </Border>
         </Grid>
 
-        <Border Grid.Row="1" MaxWidth="1080" HorizontalAlignment="Stretch"
+        <Border Grid.Row="1" HorizontalAlignment="Stretch"
                 Margin="0,16,0,0" Padding="12,9"
                 BorderThickness="1" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
                 Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
@@ -125,8 +125,9 @@
         </Border>
 
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <Grid MaxWidth="1080" HorizontalAlignment="Stretch" Margin="0,16,0,24">
+                      HorizontalScrollBarVisibility="Disabled"
+                      HorizontalContentAlignment="Left">
+            <Grid HorizontalAlignment="Stretch" Margin="0,16,0,24">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />

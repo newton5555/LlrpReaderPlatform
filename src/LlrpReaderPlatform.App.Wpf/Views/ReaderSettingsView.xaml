@@ -1,7 +1,8 @@
 <UserControl x:Class="LlrpReaderPlatform.App.Wpf.Views.ReaderSettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls">
+             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             xmlns:fa="clr-namespace:FontAwesome.Sharp;assembly=FontAwesome.Sharp">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <Style x:Key="FieldLabelStyle" TargetType="TextBlock">
@@ -199,13 +200,17 @@
                 </WrapPanel>
             </StackPanel>
             <WrapPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Top">
-                <Button Content="REFRESH SETTINGS" Command="{Binding LoadCommand}"
+                <Button Command="{Binding LoadCommand}"
                         CommandParameter="{Binding ReaderId}"
-                        Style="{StaticResource SettingsActionStyle}"
-                        Margin="4,0,0,0" />
-                <Button Content="LOAD DEFAULTS" Command="{Binding LoadDefaultsCommand}"
-                        Style="{StaticResource SettingsActionStyle}"
-                        Margin="4,0,0,0" />
+                        Style="{StaticResource FlatCircleButtonStyle}"
+                        Margin="4,0,0,0" ToolTip="REFRESH SETTINGS">
+                    <fa:IconBlock Icon="ArrowsRotate" IconFont="Solid" FontSize="13" />
+                </Button>
+                <Button Command="{Binding LoadDefaultsCommand}"
+                        Style="{StaticResource FlatCircleButtonStyle}"
+                        Margin="4,0,0,0" ToolTip="LOAD DEFAULTS">
+                    <fa:IconBlock Icon="Download" IconFont="Solid" FontSize="13" />
+                </Button>
             </WrapPanel>
         </Grid>
 
@@ -263,10 +268,10 @@
                                             <TextBlock Grid.Row="0" Text="Antennas:" Style="{StaticResource FieldLabelStyle}" />
                                             <DockPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,6">
                                                 <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,6,0,0">
-                                                    <Button Content="ALL" Width="60" Margin="0,0,6,0"
+                                                    <Button Content="ALL" Width="60" Height="28" Margin="0,0,6,0"
                                                             Command="{Binding FillAllAntennasCommand}"
                                                             Style="{StaticResource FlatActionButtonStyle}" />
-                                                    <Button Content="CLEAR" Width="70"
+                                                    <Button Content="CLEAR" Width="60" Height="28"
                                                             Command="{Binding ClearAntennasCommand}"
                                                             Style="{StaticResource FlatActionButtonStyle}" />
                                                 </StackPanel>
@@ -816,13 +821,15 @@
                                             <TextBlock Text="GPI STATUS" Style="{StaticResource SectionHeaderTextStyle}"
                                                        VerticalAlignment="Center" />
                                             <Button Grid.Column="1"
-                                                    Content="REFRESH GPI/GPO STATUS"
                                                     Command="{Binding Diagnostics.RefreshGpioCommand}"
                                                     CommandParameter="{Binding DataContext.ReaderId, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
-                                                    Style="{StaticResource DiagnosticsRefreshStyle}"
-                                                    Padding="10,3"
-                                                    FontSize="11"
-                                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                                    Style="{StaticResource FlatCircleButtonStyle}"
+                                                    Width="28" Height="28"
+                                                    ToolTip="REFRESH GPI/GPO STATUS"
+                                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                                                    BorderBrush="{DynamicResource MahApps.Brushes.IdealForeground}">
+                                                <fa:IconBlock Icon="ArrowsRotate" IconFont="Solid" FontSize="12" />
+                                            </Button>
                                         </Grid>
                                     </Border>
                                     <Grid Margin="12,10,12,0"

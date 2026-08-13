@@ -9,6 +9,7 @@
     xmlns:views="clr-namespace:LlrpReaderPlatform.App.Wpf.Views"
     xmlns:vm="clr-namespace:LlrpReaderPlatform.App.Wpf.ViewModels"
     Title="LLRP Reader Studio"
+    Icon="Assets/LlrpReader_Pro_Icon_Light_Title.png"
     Width="1240"
     Height="780"
     MinWidth="1000"
@@ -78,6 +79,12 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <Style x:Key="DangerCircleButtonStyle" TargetType="Button"
+               BasedOn="{StaticResource FlatCircleButtonStyle}">
+            <Setter Property="BorderBrush" Value="#DC2626" />
+            <Setter Property="Foreground" Value="#DC2626" />
         </Style>
 
         <Style
@@ -271,11 +278,7 @@
                                 FontWeight="Bold"
                                 Style="{StaticResource FlatCircleButtonStyle}"
                                 ToolTip="Add Data Source">
-                                <TextBlock
-                                    VerticalAlignment="Center"
-                                    FontSize="16"
-                                    FontWeight="Bold"
-                                    Text="+" />
+                                <fa:IconBlock Icon="Plus" IconFont="Solid" FontSize="14" />
                             </Button>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -321,7 +324,10 @@
                                 </ListBox.ItemContainerStyle>
                                 <ListBox.ItemTemplate>
                                     <DataTemplate DataType="{x:Type vm:ReaderItemViewModel}">
-                                        <Border MinHeight="38" Padding="4,3">
+                                        <Border MinHeight="38"
+                                                Padding="4,3,4,6"
+                                                BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
+                                                BorderThickness="0,0,0,1">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="58" />
@@ -397,14 +403,9 @@
                                                     VerticalAlignment="Center"
                                                     Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                                     CommandParameter="{Binding ReaderId}"
-                                                    Style="{StaticResource FlatMiniButtonStyle}"
+                                                    Style="{StaticResource DangerCircleButtonStyle}"
                                                     ToolTip="Remove data source">
-                                                    <TextBlock
-                                                        HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center"
-                                                        FontSize="14"
-                                                        FontWeight="Bold"
-                                                        Text="×" />
+                                                    <fa:IconBlock Icon="Trash" IconFont="Solid" FontSize="13" />
                                                 </Button>
                                                 <Button
                                                     Grid.Column="3"
@@ -412,14 +413,9 @@
                                                     VerticalAlignment="Center"
                                                     Command="{Binding DataContext.ActivateCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                                     CommandParameter="{Binding}"
-                                                    Style="{StaticResource FlatMiniButtonStyle}"
+                                                    Style="{StaticResource FlatCircleButtonStyle}"
                                                     ToolTip="Reconnect and refresh capabilities">
-                                                    <TextBlock
-                                                        HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center"
-                                                        FontSize="14"
-                                                        FontWeight="Bold"
-                                                        Text="↻" />
+                                                    <fa:IconBlock Icon="ArrowsRotate" IconFont="Solid" FontSize="13" />
                                                 </Button>
 
                                                 <Border

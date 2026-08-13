@@ -30,6 +30,9 @@
     <File Path="docs/development/wpf-user-and-troubleshooting.md" />
     <File Path="docs/development/release.md" />
   </Folder>
+  <Folder Name="/docs/releases/">
+    <File Path="docs/releases/v1.0.0.md" />
+  </Folder>
   <Folder Name="/docs/decisions/">
     <File Path="docs/decisions/README.md" />
     <File Path="docs/decisions/ADR-0001-new-repository-and-frozen-baseline.md" />

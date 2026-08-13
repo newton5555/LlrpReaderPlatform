@@ -31,6 +31,10 @@
 - [WPF 用户操作与故障排查](development/wpf-user-and-troubleshooting.md)
 - [发布规范与 NuGet SDK 切换](development/release.md)
 
+### 4.1 已发布版本
+
+- [v1.0.0](releases/v1.0.0.md)
+
 ### 5. 决策记录
 
 - [ADR 索引](decisions/README.md)

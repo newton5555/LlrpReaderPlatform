@@ -6,7 +6,14 @@
     <UseWPF>true</UseWPF>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <RootNamespace>LlrpReaderPlatform.App.Wpf</RootNamespace>
+    <ApplicationIcon>Assets\LlrpReader_Pro_Icon.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\LlrpReader_Pro_Icon.png" />
+    <Resource Include="Assets\LlrpReader_Pro_Icon_Light.png" />
+    <Resource Include="Assets\LlrpReader_Pro_Icon_Light_Title.png" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\LlrpReaderPlatform.Contracts\Contracts.csproj" />
