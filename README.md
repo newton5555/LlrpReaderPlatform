@@ -25,6 +25,7 @@ LLRP Reader Platform 是面向多种 LLRP Reader 的应用框架：厂商无关�
 
 ```text
 LlrpReaderPlatform.slnx
+├── Directory.Build.local.props.example           VS 本地 SDK 调试配置模板
 ├── src/                       业务实现
 │   ├── LlrpReaderPlatform.Contracts/          平台契约（UI/SDK/厂商无关）
 │   ├── LlrpReaderPlatform.Services/           生命周期、设置、盘存、扩展模块抽象
@@ -65,5 +66,11 @@ dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj `
   -o artifacts/publish/win-x64
 & .\artifacts\publish\win-x64\App.Wpf.exe
 ```
+
+默认构建使用中央版本管理中的 `LlrpSdk` NuGet 包。需要联调相邻 `LLRPCSharp` 源码时，
+可在命令行增加 `-p:UseLocalLlrpSdk=true`，或复制
+`Directory.Build.local.props.example` 为 Git 忽略的 `Directory.Build.local.props` 后重新加载
+Visual Studio 解决方案。完整说明见[发布规范](docs/development/release.md)和
+[ADR-0008](docs/decisions/ADR-0008-switchable-sdk-references.md)。
 
 应用首次运行会在 `%LocalAppData%\LlrpReaderPlatform\llrp-reader-platform.db` 创建新平台 SQLite 数据库；早期 schema 变化允许清空数据库重建。WPF 操作、平台服务和 SDK/LLRP 日志分别写入 `%LocalAppData%\LlrpReaderPlatform\logs\ui-*.log`、`platform-*.log` 与 `sdk-*.log`；默认盘存模式只在停止后写入 `%LocalAppData%\LlrpReaderPlatform\inventory-snapshots` 的最终 JSON 快照，原始 JSONL 报告需在应用设置中显式选择 `RawReports`。`artifacts/`、`bin/` 和 `obj/` 均为本地生成物，不应提交。

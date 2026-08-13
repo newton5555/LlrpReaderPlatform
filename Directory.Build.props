@@ -1,4 +1,8 @@
 <Project>
+  <!-- Optional, machine-local overrides. See Directory.Build.local.props.example. -->
+  <Import Project="$(MSBuildThisFileDirectory)Directory.Build.local.props"
+          Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.local.props')" />
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <!-- Unified version for all LlrpReaderPlatform assemblies and future packages. -->
@@ -16,6 +20,16 @@
     <NoWarn>$(NoWarn);NU1903</NoWarn>
     <Deterministic>true</Deterministic>
 
+    <!-- NuGet is the reproducible default. Opt in to source projects for SDK debugging. -->
+    <UseLocalLlrpSdk Condition="'$(UseLocalLlrpSdk)' == ''">false</UseLocalLlrpSdk>
+    <LlrpSdkSourceRoot Condition="'$(LlrpSdkSourceRoot)' == ''">$(MSBuildThisFileDirectory)..\LLRPCSharp</LlrpSdkSourceRoot>
+
   </PropertyGroup>
+
+  <Target Name="ValidateLocalLlrpSdkSourceRoot"
+          BeforeTargets="PrepareForBuild"
+          Condition="'$(UseLocalLlrpSdk)' == 'true' and !Exists('$(LlrpSdkSourceRoot)\src\LlrpSdk\LlrpSdk.csproj')">
+    <Error Text="UseLocalLlrpSdk=true, but LlrpSdkSourceRoot does not contain src\LlrpSdk\LlrpSdk.csproj: $(LlrpSdkSourceRoot)" />
+  </Target>
 </Project>
 

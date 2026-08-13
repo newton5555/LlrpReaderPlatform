@@ -7,7 +7,7 @@
 
 当前现场端点记录：Impinj R420 的新平台 Profile 当前为 `192.168.40.87:5084`；文中 `192.168.41.134:5084` 是此前现场验收时使用的历史地址，不代表当前网络地址。标准 1.0.1 Reader 仍为 `192.168.41.148:5084`。端点变化本身未被当作新的硬件验收结论，重新连接/寻卡结果仍需现场复测。
 
-2026-08-12 切换 SDK 本地项目引用：Services 与 Impinj 扩展现在通过 `LlrpSdkSourceRoot` 直接引用相邻 `LLRPCSharp` 仓库的 SDK/LlrpNet 项目，平台不再使用同版本 NuGet 缓存包；详细边界见 [ADR-0006](../decisions/ADR-0006-local-sdk-project-reference.md)。
+2026-08-13 统一 SDK 引用模式：Services 与 Impinj 扩展默认使用中央版本管理的 NuGet 包；设置 `UseLocalLlrpSdk=true` 时通过 `LlrpSdkSourceRoot` 切换到相邻 `LLRPCSharp` 的 SDK/LlrpNet 项目。Visual Studio 可使用 Git 忽略的 `Directory.Build.local.props` 保存本机选择，不再通过长期分支或手工改项目文件切换；详细边界见 [ADR-0008](../decisions/ADR-0008-switchable-sdk-references.md)。
 
 2026-08-12 修复新 SDK 的 Inventory 报告出口适配：平台不再注册 `TagsReported` 回调，而是在 `StartInventoryAsync` 返回 `InventorySession` 后由后台持续消费 `ReadReportsAsync()`，再投影为 Services 的 `TagReported` 事件；Stop、断开和 Dispose 会正确完成或取消该消费者，避免高频报告堵塞 SDK 接收线程。该修复已通过全量 Debug 构建和 318 项自动化测试，真机复测仍待本轮现场验证。
 

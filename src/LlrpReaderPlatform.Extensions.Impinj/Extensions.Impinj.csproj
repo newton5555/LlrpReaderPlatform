@@ -8,6 +8,16 @@
   <ItemGroup>
     <ProjectReference Include="..\LlrpReaderPlatform.Contracts\Contracts.csproj" />
     <ProjectReference Include="..\LlrpReaderPlatform.Services\Services.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalLlrpSdk)' == 'true'">
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpSdk.Extensions.Impinj\LlrpSdk.Extensions.Impinj.csproj" />
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpSdk.Extensions.Abstractions\LlrpSdk.Extensions.Abstractions.csproj" />
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpNet\LlrpNet.Core\LlrpNet.Core.csproj" />
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpNet\LlrpNet.Protocol.Impinj\LlrpNet.Protocol.Impinj.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalLlrpSdk)' != 'true'">
     <PackageReference Include="LlrpSdk.Extensions.Impinj" />
   </ItemGroup>
 

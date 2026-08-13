@@ -9,8 +9,17 @@
     <ProjectReference Include="..\LlrpReaderPlatform.Contracts\Contracts.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(UseLocalLlrpSdk)' == 'true'">
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpSdk\LlrpSdk.csproj" />
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpNet\LlrpNet.Core\LlrpNet.Core.csproj" />
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpNet\LlrpNet.Protocol\LlrpNet.Protocol.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalLlrpSdk)' != 'true'">
     <PackageReference Include="LlrpSdk" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>

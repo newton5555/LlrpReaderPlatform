@@ -17,8 +17,8 @@
 
 | 前提 | 事实 |
 |---|---|
-| 底层 SDK | 相邻 `LLRPCSharp` 仓库中的 `LlrpSdk`、`LlrpNet` 和 Impinj 扩展项目提供标准 LLRP API；`LlrpSdk.Extensions.Abstractions` 由本地 SDK 项目提供 |
-| SDK 引用方式 | 当前开发构建通过 `LlrpSdkSourceRoot` 使用本地 `ProjectReference`，避免同版本包缓存掩盖 SDK 源码变更；发布包模式待 SDK API 稳定后另行切换 |
+| 底层 SDK | `LlrpSdk` 与 `LlrpSdk.Extensions.Impinj` 提供标准 LLRP API 和 Impinj 扩展；相邻 `LLRPCSharp` 仓库用于可选源码联调 |
+| SDK 引用方式 | 默认使用中央版本管理的 NuGet 包；设置 `UseLocalLlrpSdk=true` 时通过 `LlrpSdkSourceRoot` 切换为本地 `ProjectReference`，不通过长期分支切换 |
 | 标准 LLRP 支持 | 已实测标准 LLRP 1.0.1；Auto/Force101/Force11 仅表示连接策略代码路径，Force11 仍需真实 1.1 设备验收 |
 | Impinj 支持 | 已实测 Impinj R420；R700、Speedway 或其他型号不能仅凭 SDK 支持声明视为已验收 |
 | 冻结项目角色 | 现有实现是**行为和经验基线**。可选择性迁移生命周期、防卡死、状态隔离等实现，但新仓库不引用旧项目，也不把旧项目的 Impinj 耦合带入新服务层 |
@@ -51,7 +51,7 @@ LlrpReaderPlatform.slnx（新仓库）
 │     目标框架：net10.0；不引用 WPF、SDK 或厂商扩展
 ├── LlrpReaderPlatform.Services/          ★ 应用服务层（独立类库，正式产品）
 │     定位：多个 UI 消费者共享的生命周期、能力、设置和盘存服务
-│     目标框架：net10.0；依赖 Contracts + 本地 LLRPCSharp SDK 项目
+│     目标框架：net10.0；依赖 Contracts + LlrpSdk（默认 NuGet，可选本地项目）
 │     ├── Lifecycle/      Reader 注册 / 激活 / 短连接 / Enable 语义
 │     ├── Settings/       能力驱动设置模型（ReaderFeatureCatalog / EffectiveSettingsLayout / SettingsCompiler）
 │     ├── Inventory/      标准 Inventory / TagReport / TagAccess 协调层
@@ -61,7 +61,7 @@ LlrpReaderPlatform.slnx（新仓库）
 ├── LlrpReaderPlatform.Infrastructure/   ★ 持久化、发现、日志等基础设施实现
 │     目标框架：net10.0；依赖 Contracts + Services + EF Core/SQLite/Zeroconf 等
 ├── LlrpReaderPlatform.Extensions.Impinj/ ★ Impinj R420 首个扩展模块
-│     目标框架：net10.0；依赖 Contracts + Services + 本地 Impinj SDK 扩展项目
+│     目标框架：net10.0；依赖 Contracts + Services + Impinj SDK 扩展（默认 NuGet，可选本地项目）
 ├── LlrpReaderPlatform.App.Wpf/          ★ 第一个 WPF 消费者
 │     目标框架：net10.0-windows；依赖 Contracts + Services + Infrastructure + 已启用的扩展模块 + WPF/MVVM/UI 库
 │     ├── Views/          页面视图（纯 UI）
@@ -78,7 +78,7 @@ LlrpReaderPlatform.slnx（新仓库）
 
 **设计铁律**：
 - Contracts 是 UI 与服务之间的稳定边界，**不暴露任何 `LlrpSdk`、`LlrpNet.Protocol`、WPF 控件、Dispatcher 或 ViewModel 类型**；
-- Services 只依赖 Contracts 和本地 LLRPCSharp SDK 项目（不依赖 UI 框架）；服务层本身不引用 `UseWPF`；
+- Services 只依赖 Contracts 和 LlrpSdk（默认 NuGet、可选本地项目，不依赖 UI 框架）；服务层本身不引用 `UseWPF`；
 - 服务层**不直接依赖** `LlrpSdk.Extensions.Impinj/.Seuic`，厂商能力通过注册 `IReaderExtensionModule` 加载，避免冻结项目中 Core 直接依赖 Impinj 类型的问题；
 - Infrastructure 负责 Profile、Snapshot、Preset、发现和日志等外部资源；Services 只依赖接口；
 - 每个 UI 应用只负责展示与交互，设备生命周期/能力聚合/设置编译全部在共享服务层；**ViewModel 不直接碰 SDK、数据库或具体 Store 实现**，也不使用 Service Locator 或直接 new Service/ViewModel。应用级设置、Tag List、Inventory Run 等持久化契约由组合根注入。
@@ -271,7 +271,7 @@ Views/  +  ViewModels/
 | Inventory / TagMemory / 设备设置 Tab2 | **可迁移**，随 UI 重构落位 |
 | DataSourceSettingsViewModel（1613 行） | **不迁移**，重写为能力驱动设置模型（EffectiveSettingsLayout） |
 | MainWindow/导航/MahApps 风格 | 可沿用主题与导航模式，结构重构 |
-| LlrpSdk 引用 | 当前开发期使用相邻 LLRPCSharp SDK 的 ProjectReference；不引用旧 WPF 项目的 DLL 或源码 |
+| LlrpSdk 引用 | 默认使用 NuGet；跨仓库联调时通过 MSBuild 属性切换为相邻 LLRPCSharp SDK 的 ProjectReference；不引用旧 WPF 项目的 DLL 或源码 |
 | SQLite Profile/Preset | 由新仓库建立新数据目录；早期版本不承诺历史数据兼容 |
 | mDNS Discovery/日志 | 迁移到 Infrastructure；不放入 WPF ViewModel |
 
@@ -280,7 +280,7 @@ Views/  +  ViewModels/
 ### F1：新仓库骨架、契约与依赖验证（1~2 人日）
 - 建 `LlrpReaderPlatform.slnx`、Contracts、Services、Infrastructure、App.Wpf、Tests 和 Impinj 扩展项目；
 - 固定 Contracts/Services/Infrastructure/Extensions 为 `r`net10.0`，App.Wpf 为 `r`net10.0-windows`；
-- `Services` 通过 `LlrpSdkSourceRoot` 引用本地 LLRPCSharp SDK 项目及其必要的 LlrpNet 项目；
+- `Services` 默认引用 LlrpSdk NuGet；通过 `UseLocalLlrpSdk` 和 `LlrpSdkSourceRoot` 可切换到本地 SDK/LlrpNet 项目；
 - 在 Contracts 定义 `IReaderManager`、`ReaderRuntimeSnapshot`、Settings Layout/Snapshot/Draft、稳定的 `SettingsKeys`、`IReaderSettingsService` 和状态 DTO；在 Services 内部定义 `CompiledSettings`；
 - 定义扩展模块注册接口和 `IReaderProfileStore` 等服务边界；
 - 建立可控的 `LlrpReaderPlatform.TestKit/FakeSession`，先验证不依赖旧项目和 SDK 源码即可构建；
@@ -660,7 +660,7 @@ ViewModel 不得：
 
 | 风险 | 对策 |
 |---|---|
-| SDK 源码仓库缺失或路径不同 | 默认从相邻 `LLRPCSharp` 仓库读取；构建时覆盖 `LlrpSdkSourceRoot`，SDK 稳定后再恢复发布包模式 |
+| SDK 源码仓库缺失或路径不同 | 默认 NuGet 构建不依赖源码仓库；仅启用本地模式时要求有效的 `LlrpSdkSourceRoot` |
 | Seuic 等厂商扩展未发 NuGet | 不在首版验收范围；服务层只提供模块接口，按实际 SDK 包和设备逐一接入 |
 | 标准 LLRP 设备实机差异大（不同厂商实现偏差） | 用 L1~L4 能力分级 + 实测矩阵（冻结项目已验证 1.0.1 基本链路） |
 | 能力驱动 UI 过度设计 | 首版只抽象实际需要的 EditorKind；天线、Filter、频率集合允许专用语义编辑器，不追求所有设置都由通用文本字段生成 |

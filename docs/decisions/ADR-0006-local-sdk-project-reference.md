@@ -1,6 +1,6 @@
 # ADR-0006：开发期直接引用本地 LLRPCSharp SDK 项目
 
-- 状态：Accepted
+- 状态：Superseded by [ADR-0008](ADR-0008-switchable-sdk-references.md)
 - 日期：2026-08-12
 
 ## 决策

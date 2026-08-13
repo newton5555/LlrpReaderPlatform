@@ -2,6 +2,7 @@
 .vs/
 *.user
 *.suo
+Directory.Build.local.props
 
 # Build output
 bin/

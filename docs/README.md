@@ -35,7 +35,8 @@
 
 - [ADR 索引](decisions/README.md)
 - 当前 Inventory 生命周期事件的权威来源见 [ADR-0005](decisions/ADR-0005-inventory-lifecycle-events.md)；
-  日志分类和盘存快照规则见 [ADR-0007](decisions/ADR-0007-layered-logging-and-inventory-snapshots.md)。
+  日志分类和盘存快照规则见 [ADR-0007](decisions/ADR-0007-layered-logging-and-inventory-snapshots.md)；
+  SDK 引用切换规则见 [ADR-0008](decisions/ADR-0008-switchable-sdk-references.md)。
 
 ### 6. 冻结项目参考
 

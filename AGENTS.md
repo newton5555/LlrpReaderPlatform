@@ -60,6 +60,19 @@ UI consumer -> Services -> Contracts
 - 遵循现有 WPF 模板约定：CommunityToolkit.Mvvm、Microsoft.Extensions.DependencyInjection、MahApps.Metro 和 FontAwesome.Sharp 仅在实际创建 WPF 消费者项目时引入。
 - 不提交 `bin/`、`obj/`、临时 `*_wpftmp.csproj` 或本地生成物。
 
+## SDK 引用与发布分支
+
+- 平台默认使用中央版本管理的 `LlrpSdk` NuGet 包；仅在本地 SDK 联调时设置
+  `UseLocalLlrpSdk=true`，并通过 `LlrpSdkSourceRoot` 指向相邻 `LLRPCSharp` 仓库。
+- Agent 收到“切到本地 SDK”请求时，可以创建或更新 Git 忽略的
+  `Directory.Build.local.props`；收到“切回 NuGet”请求时，应删除该文件或将
+  `UseLocalLlrpSdk` 设为 `false`，然后重新 restore/build。
+- 发布版本在 `release/*` 分支完成。进入或准备发布分支时，必须先确认
+  `Directory.Build.local.props` 不会启用本地 SDK，并以
+  `-p:UseLocalLlrpSdk=false` 显式执行 restore、Release build、test 和 publish。
+- 发布产物必须来自 NuGet 引用模式；不得从本地 `LLRPCSharp` 项目引用模式发布，也不得
+  通过提交两套 csproj 或长期依赖分支维护两种引用方式。
+
 ## 验证要求
 
 当前文档阶段至少验证：

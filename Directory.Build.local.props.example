@@ -1,0 +1,10 @@
+<Project>
+  <!--
+    Copy this file to Directory.Build.local.props to let Visual Studio and dotnet
+    use the local LLRPCSharp source projects. The copied file is ignored by Git.
+  -->
+  <PropertyGroup>
+    <UseLocalLlrpSdk>true</UseLocalLlrpSdk>
+    <LlrpSdkSourceRoot>F:\Projects\LLRP\LLRPCSharp</LlrpSdkSourceRoot>
+  </PropertyGroup>
+</Project>
