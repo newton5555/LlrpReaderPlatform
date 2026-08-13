@@ -27,3 +27,4 @@ logs/
 # Local design drafts and source assets
 DraftAssets/
 src/LlrpReaderPlatform.App.Wpf/Assets/LlrpReader_Pro_Icon_Dark_Title.png
+docs/development/自研设备LLRP协议.md
