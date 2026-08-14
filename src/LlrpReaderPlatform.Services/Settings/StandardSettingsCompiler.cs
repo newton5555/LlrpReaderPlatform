@@ -1318,16 +1318,28 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             sensitivities.Max(static r => (decimal)r.Index));
     }
 
-    private static IReadOnlyList<SettingsOption> BuildRxSensitivityOptions(ReaderCapabilities? capabilities) =>
-        capabilities?.RxSensitivities is { Count: > 0 } sensitivities
-            ? sensitivities
-                .Select(sensitivity => new SettingsOption(
+    private static IReadOnlyList<SettingsOption> BuildRxSensitivityOptions(ReaderCapabilities? capabilities)
+    {
+        if (capabilities?.RxSensitivities is not { Count: > 0 } sensitivities)
+        {
+            return [];
+        }
+
+        // 1.1/2.0 设备提供 MaximumReceiveSensitivityDbm 时显示实际灵敏度（Max + 偏移）；
+        // 1.0.1 无该参数（null），保留 "offset dB offset" 描述。写入值始终是能力表 index。
+        short? maxDbm = capabilities.MaximumReceiveSensitivityDbm;
+        return sensitivities
+            .Select(sensitivity =>
+            {
+                string description = maxDbm is { } max
+                    ? $"{sensitivity.ReceiveSensitivityDb.ToString(CultureInfo.InvariantCulture)} ({(max + sensitivity.ReceiveSensitivityDb).ToString(CultureInfo.InvariantCulture)} dBm)"
+                    : $"{sensitivity.ReceiveSensitivityDb.ToString(CultureInfo.InvariantCulture)} dB offset";
+                return new SettingsOption(
                     sensitivity.Index,
-                    FormatTableOption(
-                        sensitivity.Index,
-                        $"{sensitivity.ReceiveSensitivityDb.ToString(CultureInfo.InvariantCulture)} dB offset")))
-                .ToArray()
-            : [];
+                    FormatTableOption(sensitivity.Index, description));
+            })
+            .ToArray();
+    }
 
     private static ushort ToUshortRangeValue(decimal value) =>
         checked((ushort)Math.Clamp(value, 0, ushort.MaxValue));

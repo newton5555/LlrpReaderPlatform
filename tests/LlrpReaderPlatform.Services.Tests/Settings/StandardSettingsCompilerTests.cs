@@ -226,6 +226,42 @@ public sealed class StandardSettingsCompilerTests
     }
 
     [Fact]
+    public void Runtime_layout_rx_sensitivity_shows_absolute_dbm_when_maximum_is_known()
+    {
+        // 1.1/2.0 提供 MaximumReceiveSensitivityDbm 时，Rx 显示实际灵敏度（Max + 偏移）。
+        var compiler = new StandardSettingsCompiler();
+        ReaderRuntimeSnapshot snapshot = Snapshot(new ReaderAntennaInfo { AntennaId = 1, Name = "A1" });
+        var inventory = new InventorySettings
+        {
+            AntennaIds = [1],
+            AntennaConfigurations =
+            [
+                new InventoryAntennaConfiguration
+                {
+                    AntennaId = 1,
+                    TransmitPowerIndex = 7,
+                    ReceiverSensitivityIndex = 2,
+                },
+            ],
+        };
+        var capabilities = CreateCapabilities(
+            txPowers: [new TxPowerEntry(7, 3050)],
+            rxSensitivities: [new RxSensitivityEntry(1, 0), new RxSensitivityEntry(2, 6)],
+            maxRxSensitivityDbm: -80);
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(new ReaderSettings(), new ManagedRoSpecSnapshot(
+                inventory, InventoryRuntimeState.Disabled)),
+            capabilities);
+
+        EffectiveSettingsLayout layout = compiler.BuildLayout(snapshot, runtime);
+
+        SettingsEntry rx = Assert.Single(layout.Entries, static entry => entry.Key == SettingsKeys.RxSensitivityIndex);
+        Assert.Equal(new object?[] { (ushort)1, (ushort)2 }, rx.Options.Select(static option => option.Value));
+        // Max=-80 dBm；index 1 → -80 dBm，index 2 → -74 dBm。写入值仍为 index。
+        Assert.Equal(new[] { "1 (0 (-80 dBm))", "2 (6 (-74 dBm))" }, rx.Options.Select(static option => option.Display));
+    }
+
+    [Fact]
     public void CompileSdk_writes_capability_table_indices_without_physical_value_conversion()
     {
         var compiler = new StandardSettingsCompiler();
@@ -606,7 +642,8 @@ public sealed class StandardSettingsCompilerTests
         IEnumerable<TxPowerEntry>? txPowers = null,
         IEnumerable<RxSensitivityEntry>? rxSensitivities = null,
         IEnumerable<FrequencyHopTableEntry>? hopTables = null,
-        IEnumerable<C1G2RfModeEntry>? rfModes = null)
+        IEnumerable<C1G2RfModeEntry>? rfModes = null,
+        short? maxRxSensitivityDbm = null)
     {
         return (ReaderCapabilities)Activator.CreateInstance(
             typeof(ReaderCapabilities),
@@ -632,7 +669,7 @@ public sealed class StandardSettingsCompilerTests
                 false,
                 false,
                 false,
-                null,
+                maxRxSensitivityDbm,
             ],
             culture: null)!;
     }
