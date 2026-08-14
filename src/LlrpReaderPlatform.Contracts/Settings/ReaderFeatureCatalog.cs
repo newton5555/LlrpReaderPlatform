@@ -1,14 +1,46 @@
+using LlrpReaderPlatform.Contracts.Readers;
+
 namespace LlrpReaderPlatform.Contracts.Settings;
 
 /// <summary>
 /// 能力标识（厂商无关）。由标准 LLRP 能力或厂商扩展模块贡献，
-/// 用于表达"该设备支持什么"，从而驱动设置布局的显示/只读/可选值。
+/// 用于表达"该设备支持了什么"，从而驱动设置布局的显示/只读/可选值。
+/// 相等性仅基于 <see cref="Id"/> + <see cref="Vendor"/>，语义键与毕业元数据不参与比较。
+/// （ADR-0012：语义能力键 + 标准优先仲裁 + 毕业机制）
 /// </summary>
-public readonly record struct Feature(string Id, string? Vendor = null)
+public readonly record struct Feature
 {
+    public Feature(
+        string id,
+        string? vendor = null,
+        string? semanticId = null,
+        LlrpProtocolVersion? standardizedSince = null)
+    {
+        Id = id;
+        Vendor = vendor;
+        SemanticId = semanticId ?? id;
+        StandardizedSince = standardizedSince;
+    }
+
+    /// <summary>能力 ID（在同一厂商命名空间内唯一）。</summary>
+    public string Id { get; }
+
+    /// <summary>贡献厂商；null 表示标准轴。</summary>
+    public string? Vendor { get; }
+
+    /// <summary>跨厂商、跨协议版本的稳定语义键；UI 与仲裁只认该键。</summary>
+    public string SemanticId { get; }
+
+    /// <summary>吸收该语义的标准协议版本；厂商在设备协商版本 ≥ 此值时让位给标准轴。尚无标准化的为 null。</summary>
+    public LlrpProtocolVersion? StandardizedSince { get; }
+
     public bool IsVendor => !string.IsNullOrEmpty(Vendor);
 
     public override string ToString() => IsVendor ? $"{Vendor}:{Id}" : Id;
+
+    public bool Equals(Feature other) => Id == other.Id && Vendor == other.Vendor;
+
+    public override int GetHashCode() => HashCode.Combine(Id, Vendor);
 }
 
 /// <summary>
@@ -25,7 +57,9 @@ public static class ReaderFeatures
     public static readonly Feature StandardRf = new("standard.rf");
     public static readonly Feature StandardFrequency = new("standard.frequency");
     public static readonly Feature StandardStateAwareSingulation = new("standard.state-aware-singulation");
+    public static readonly Feature StandardBlockTagAccess = new("standard.block-tag-access", semanticId: "block-tag-access");
 
+    // Impinj 厂商扩展（厂商轴；语义键按各自命名空间，暂不对应标准项）。
     public static readonly Feature ImpinjFastId = new("fast-id", "impinj");
     public static readonly Feature ImpinjRfPhase = new("rf-phase", "impinj");
     public static readonly Feature ImpinjDoppler = new("doppler", "impinj");
@@ -33,6 +67,13 @@ public static class ReaderFeatures
     public static readonly Feature ImpinjLowDutyCycle = new("low-duty-cycle", "impinj");
     public static readonly Feature ImpinjFixedFrequency = new("fixed-frequency", "impinj");
     public static readonly Feature ImpinjGpiDebounce = new("gpi-debounce", "impinj");
+
+    // Zebra 扩展（实验性；XPC 语义对应 LLRP 2.0 标准 C1G2_XPC，StandardizedSince=Version20）。
+    public static readonly Feature ZebraConfiguration = new("configuration", "zebra", semanticId: "zebra-configuration");
+    public static readonly Feature ZebraReportPhase = new("report-phase", "zebra", semanticId: "phase-report");
+    public static readonly Feature ZebraReportGps = new("report-gps", "zebra", semanticId: "gps-report");
+    public static readonly Feature ZebraReportXpc = new("report-xpc", "zebra", semanticId: "xpc-report", standardizedSince: LlrpProtocolVersion.Version20);
+    public static readonly Feature ZebraInventoryOptions = new("inventory-options", "zebra", semanticId: "zebra-inventory-options");
 }
 
 /// <summary>

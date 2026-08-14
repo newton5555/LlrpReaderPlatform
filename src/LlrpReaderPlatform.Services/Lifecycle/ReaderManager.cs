@@ -2647,9 +2647,14 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
             }
         }
 
+        // ADR-0011/0012：双轴门控（毕业门 + 标准优先仲裁）统一收敛到 FeatureGating。
+        IReadOnlyList<Feature> arbitrated = FeatureGating.Arbitrate(
+            features,
+            ToContractProtocolVersion(handle.Session.NegotiatedVersion));
+
         return new ReaderFeatureCatalog
         {
-            SupportedFeatures = features.Distinct().ToArray(),
+            SupportedFeatures = arbitrated.ToArray(),
         };
     }
 
