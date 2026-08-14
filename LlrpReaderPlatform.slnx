@@ -62,6 +62,7 @@
     <Project Path="src/LlrpReaderPlatform.Services/Services.csproj" />
     <Project Path="src/LlrpReaderPlatform.Infrastructure/Infrastructure.csproj" />
     <Project Path="src/LlrpReaderPlatform.Extensions.Impinj/Extensions.Impinj.csproj" />
+    <Project Path="src/LlrpReaderPlatform.Extensions.Zebra/ZebraExtensions.csproj" />
     <Project Path="src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj" />
   </Folder>
 

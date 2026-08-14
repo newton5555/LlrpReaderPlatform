@@ -36,6 +36,7 @@
     <!-- LLRPCSharp NuGets -->
     <PackageVersion Include="LlrpSdk" Version="1.4.0" />
     <PackageVersion Include="LlrpSdk.Extensions.Impinj" Version="1.4.0" />
+    <PackageVersion Include="LlrpSdk.Extensions.Zebra" Version="1.4.0" />
   </ItemGroup>
 </Project>
 

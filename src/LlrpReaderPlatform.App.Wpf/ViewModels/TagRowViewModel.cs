@@ -58,6 +58,11 @@ public sealed class TagRowViewModel : ObservableObject
     public ushort? LastAntenna => tag.LastAntenna;
     public ushort? LastChannelIndex => tag.LastChannelIndex;
 
+    /// <summary>Zebra 报告扩展字段（来自 TagObservation.ExtensionFields；无则空）。</summary>
+    public string? Phase => tag.ExtensionFields.TryGetValue("zebra.phase", out string? v) ? v : null;
+    public string? Gps => tag.ExtensionFields.TryGetValue("zebra.gps", out string? v) ? v : null;
+    public string? Xpc => tag.ExtensionFields.TryGetValue("zebra.xpc", out string? v) ? v : null;
+
     public void Update(
         string nextReaderName,
         TagObservation nextTag,

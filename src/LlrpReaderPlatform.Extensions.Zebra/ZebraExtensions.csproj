@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>LlrpReaderPlatform.Extensions.Zebra</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LlrpReaderPlatform.Contracts\Contracts.csproj" />
+    <ProjectReference Include="..\LlrpReaderPlatform.Services\Services.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalLlrpSdk)' == 'true'">
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpSdk.Extensions.Zebra\LlrpSdk.Extensions.Zebra.csproj" />
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpSdk.Extensions.Abstractions\LlrpSdk.Extensions.Abstractions.csproj" />
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpNet\LlrpNet.Core\LlrpNet.Core.csproj" />
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpNet\LlrpNet.Protocol.Zebra\LlrpNet.Protocol.Zebra.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalLlrpSdk)' != 'true'">
+    <PackageReference Include="LlrpSdk.Extensions.Zebra" />
+  </ItemGroup>
+
+</Project>

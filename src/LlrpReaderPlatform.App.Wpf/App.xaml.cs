@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Threading;
 using LlrpReaderPlatform.App.Wpf.ViewModels;
 using LlrpReaderPlatform.Extensions.Impinj;
+using LlrpReaderPlatform.Extensions.Zebra;
 using LlrpReaderPlatform.Infrastructure;
 using LlrpReaderPlatform.Services;
 using LlrpReaderPlatform.Services.Sdk;
@@ -72,6 +73,7 @@ public partial class App : Application
         services.AddLlrpReaderPlatform();
         services.AddLlrpInfrastructure();
         services.AddImpinjExtension();
+        services.AddZebraExtension();
 
         // The reader stack receives the same application logger factory as every other
         // component. Serilog then routes SDK categories to sdk-*.log.
