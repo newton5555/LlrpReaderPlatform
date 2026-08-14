@@ -80,9 +80,10 @@ public partial class AddDataSourceViewModel : ObservableObject, IPageOperationOw
 
     public IReadOnlyList<LlrpVersionOptionItem> LlrpVersions { get; } =
     [
-        new(LlrpProtocolVersionOption.Auto, "Auto (1.1 → 1.0.1)"),
+        new(LlrpProtocolVersionOption.Auto, "Auto"),
         new(LlrpProtocolVersionOption.Force101, "LLRP 1.0.1"),
         new(LlrpProtocolVersionOption.Force11, "LLRP 1.1"),
+        new(LlrpProtocolVersionOption.Force20, "LLRP 2.0"),
     ];
 
     /// <summary>提交成功时触发（携带新 ReaderId）。</summary>

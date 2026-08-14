@@ -123,13 +123,15 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
         {
             LlrpProtocolVersion.Version101 => "LLRP 1.0.1",
             LlrpProtocolVersion.Version11 => "LLRP 1.1",
+            LlrpProtocolVersion.Version20 => "LLRP 2.0",
             _ => reader is null ? "-" : "未协商",
         };
         ReaderProtocolPolicy = reader?.Snapshot.Profile.LlrpVersion switch
         {
-            LlrpProtocolVersionOption.Auto => "Auto (1.1 → 1.0.1)",
+            LlrpProtocolVersionOption.Auto => "Auto",
             LlrpProtocolVersionOption.Force101 => "Force LLRP 1.0.1",
             LlrpProtocolVersionOption.Force11 => "Force LLRP 1.1",
+            LlrpProtocolVersionOption.Force20 => "Force LLRP 2.0",
             _ => reader is null ? "-" : "未知策略",
         };
         ReaderConnection = reader?.ConnectionSummary ?? "-";

@@ -520,6 +520,7 @@ public sealed class MainViewModelSmokeTests
     [InlineData(LlrpProtocolVersionOption.Auto, "Policy Auto")]
     [InlineData(LlrpProtocolVersionOption.Force101, "Policy Force 1.0.1")]
     [InlineData(LlrpProtocolVersionOption.Force11, "Policy Force 1.1")]
+    [InlineData(LlrpProtocolVersionOption.Force20, "Policy Force 2.0")]
     public void Reader_item_keeps_configured_protocol_policy_visible_when_offline(
         LlrpProtocolVersionOption policy,
         string expectedPolicy)

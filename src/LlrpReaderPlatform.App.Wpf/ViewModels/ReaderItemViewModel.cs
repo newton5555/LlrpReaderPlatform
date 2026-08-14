@@ -74,12 +74,14 @@ public sealed partial class ReaderItemViewModel : ObservableObject
         LlrpProtocolVersionOption.Auto => "Policy Auto",
         LlrpProtocolVersionOption.Force101 => "Policy Force 1.0.1",
         LlrpProtocolVersionOption.Force11 => "Policy Force 1.1",
+        LlrpProtocolVersionOption.Force20 => "Policy Force 2.0",
         _ => "Policy Unknown",
     };
     public string? Protocol => Snapshot.NegotiatedProtocolVersion switch
     {
         LlrpProtocolVersion.Version101 => "LLRP 1.0.1",
         LlrpProtocolVersion.Version11 => "LLRP 1.1",
+        LlrpProtocolVersion.Version20 => "LLRP 2.0",
         _ => null,
     };
     public string? Model => Snapshot.Model;

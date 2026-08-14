@@ -3,7 +3,7 @@ namespace LlrpReaderPlatform.Contracts.Readers;
 /// <summary>LLRP 协议版本选择策略（厂商无关的连接参数）。</summary>
 public enum LlrpProtocolVersionOption
 {
-    /// <summary>自动探测：优先 1.1，若 Reader 拒绝则回退 1.0.1（推荐）。</summary>
+    /// <summary>自动探测：询问设备支持的最高版本并选用（2.0 → 1.1 → 1.0.1，推荐）。</summary>
     Auto = 0,
 
     /// <summary>强制 LLRP 1.0.1。</summary>
@@ -11,6 +11,9 @@ public enum LlrpProtocolVersionOption
 
     /// <summary>强制 LLRP 1.1，协商失败则连接失败。</summary>
     Force11 = 2,
+
+    /// <summary>强制 LLRP 2.0，协商失败则连接失败。</summary>
+    Force20 = 3,
 }
 
 /// <summary>连接后由 Reader 实际协商出的标准 LLRP 协议版本。</summary>
@@ -18,6 +21,7 @@ public enum LlrpProtocolVersion
 {
     Version101 = 1,
     Version11 = 2,
+    Version20 = 3,
 }
 
 /// <summary>

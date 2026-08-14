@@ -2386,6 +2386,7 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
         {
             LlrpProtocolVersion.Version101 => LlrpNet.Core.Protocol.LlrpProtocolVersion.Version101,
             LlrpProtocolVersion.Version11 => LlrpNet.Core.Protocol.LlrpProtocolVersion.Version11,
+            LlrpProtocolVersion.Version20 => LlrpNet.Core.Protocol.LlrpProtocolVersion.Version20,
             _ => null,
         };
 
@@ -2394,6 +2395,7 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
         {
             LlrpNet.Core.Protocol.LlrpProtocolVersion.Version101 => LlrpProtocolVersion.Version101,
             LlrpNet.Core.Protocol.LlrpProtocolVersion.Version11 => LlrpProtocolVersion.Version11,
+            LlrpNet.Core.Protocol.LlrpProtocolVersion.Version20 => LlrpProtocolVersion.Version20,
             _ => null,
         };
 

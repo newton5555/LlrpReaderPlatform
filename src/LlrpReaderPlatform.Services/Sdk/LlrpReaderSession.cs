@@ -488,6 +488,7 @@ public sealed class LlrpReaderSessionFactory : IReaderSessionFactory
             {
                 LlrpProtocolVersionOption.Force101 => LlrpProtocolVersionPolicy.Force101,
                 LlrpProtocolVersionOption.Force11 => LlrpProtocolVersionPolicy.Force11,
+                LlrpProtocolVersionOption.Force20 => LlrpProtocolVersionPolicy.Force20,
                 _ => LlrpProtocolVersionPolicy.Auto,
             });
         builder.WithLoggerFactory(loggerFactory);
