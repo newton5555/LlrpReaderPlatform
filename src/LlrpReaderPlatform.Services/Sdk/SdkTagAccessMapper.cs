@@ -77,21 +77,27 @@ public static class SdkTagAccessMapper
         };
     }
 
-    public static uint ParseAccessPassword(string? passwordHex)
+    /// <summary>
+    /// 把平台层的访问密码文本规范化为 SDK 1.4.0 要求的“恰好 8 位十六进制”表示。
+    /// 空/空白输入返回 SDK 默认 {@code 00000000}；已有输入做数字语义左补零到 8 位，
+    /// 与旧版（uint 密码）保持同一数值含义。
+    /// </summary>
+    public static string ParseAccessPassword(string? passwordHex)
     {
         if (string.IsNullOrWhiteSpace(passwordHex))
         {
-            return 0;
+            return "00000000";
         }
 
         string value = NormalizeHex(passwordHex);
 
-        if (value.Length > 8 || value.Length == 0 || !uint.TryParse(value, System.Globalization.NumberStyles.HexNumber, null, out uint password))
+        if (value.Length == 0 || value.Length > 8
+            || !uint.TryParse(value, System.Globalization.NumberStyles.HexNumber, null, out uint password))
         {
             throw new FormatException("Access password must be up to 8 hexadecimal characters.");
         }
 
-        return password;
+        return password.ToString("X8", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     /// <summary>
