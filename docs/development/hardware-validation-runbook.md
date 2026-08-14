@@ -20,7 +20,14 @@ dotnet run --project src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj
 该包不要求目标机预装 .NET Desktop Runtime；单文件运行时可能会将 native 组件临时解压到系统
 临时目录。正式 GitHub Release 的 ZIP 还会附带 README 和发布说明。
 
-真实验收的唯一交互入口是 `LlrpReaderPlatform.App.Wpf`；不要求、不引入独立硬件验收 CLI。寻卡停止后，优先查看主窗口底部状态栏的 `Inventory.Status` 和 Inventory Runs 中的 `StopReason`，再结合平台/SDK 日志记录原因。
+现场可以先用硬件测试命令行快速确认 mDNS 发现，再启动 WPF 执行完整验收：
+
+```powershell
+dotnet run --project tests/LlrpReaderPlatform.Hardware.Tests/LlrpReaderPlatform.Hardware.Tests.csproj
+dotnet run --project tests/LlrpReaderPlatform.Hardware.Tests/LlrpReaderPlatform.Hardware.Tests.csproj -- --all-services --scan-seconds 5
+```
+
+命令行只执行发现和诊断，不连接 Reader、不修改设备设置、不启动 Inventory；完整硬件验收仍以 `LlrpReaderPlatform.App.Wpf` 为交互入口。寻卡停止后，优先查看主窗口底部状态栏的 `Inventory.Status` 和 Inventory Runs 中的 `StopReason`，再结合平台/SDK 日志记录原因。
 
 5. 为本次验收复制 `docs/templates/device-validation-template.md`，使用设备和日期命名记录文件。
 

@@ -110,6 +110,7 @@ EXE 时可以直接复制运行；WPF 单文件运行时可能会把 native 组�
 
 - [WPF 用户操作与故障排查](docs/development/wpf-user-and-troubleshooting.md)
 - [真机验收运行手册](docs/development/hardware-validation-runbook.md)
+- [硬件测试命令行项目](tests/LlrpReaderPlatform.Hardware.Tests/LlrpReaderPlatform.Hardware.Tests.csproj)
 - [设备兼容性矩阵](docs/compatibility/device-matrix.md)
 - [v1.0.0 发布说明](docs/releases/v1.0.0.md)
 - [发布规范与应用流水线](docs/development/release.md)

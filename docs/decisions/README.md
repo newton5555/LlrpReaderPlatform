@@ -11,3 +11,4 @@ ADR 用于记录会影响多个项目或未来 UI 消费者的架构决定。已
 - [ADR-0007：分层日志与盘存最终快照](ADR-0007-layered-logging-and-inventory-snapshots.md)
 - [ADR-0008：NuGet 默认与本地 SDK 项目可选切换](ADR-0008-switchable-sdk-references.md)
 - [ADR-0009：Windows x64 自包含单文件交付](ADR-0009-windows-self-contained-single-file.md)
+- [ADR-0010：增加硬件验证命令行入口](ADR-0010-hardware-validation-cli.md)

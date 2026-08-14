@@ -44,6 +44,7 @@
     <File Path="docs/decisions/ADR-0007-layered-logging-and-inventory-snapshots.md" />
     <File Path="docs/decisions/ADR-0008-switchable-sdk-references.md" />
     <File Path="docs/decisions/ADR-0009-windows-self-contained-single-file.md" />
+    <File Path="docs/decisions/ADR-0010-hardware-validation-cli.md" />
   </Folder>
   <Folder Name="/docs/templates/">
     <File Path="docs/templates/ADR-template.md" />
@@ -71,5 +72,6 @@
     <Project Path="tests/LlrpReaderPlatform.Infrastructure.Tests/Infrastructure.Tests.csproj" />
     <Project Path="tests/LlrpReaderPlatform.App.Wpf.Tests/App.Wpf.Tests.csproj" />
     <Project Path="tests/LlrpReaderPlatform.Architecture.Tests/Architecture.Tests.csproj" />
+    <Project Path="tests/LlrpReaderPlatform.Hardware.Tests/LlrpReaderPlatform.Hardware.Tests.csproj" />
   </Folder>
 </Solution>

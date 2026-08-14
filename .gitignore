@@ -3,6 +3,8 @@
 *.user
 *.suo
 Directory.Build.local.props
+zebra.txt
+tests/LlrpReaderPlatform.ZebraAnalysis/zebra.txt
 
 # Build output
 bin/
