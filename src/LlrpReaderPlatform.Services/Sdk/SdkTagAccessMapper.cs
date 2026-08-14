@@ -35,6 +35,20 @@ public static class SdkTagAccessMapper
         _ = ParseAccessPassword(request.AccessPasswordHex);
     }
 
+    /// <summary>在建立 Reader 短连接前校验块擦除请求。</summary>
+    public static void ValidateBlockEraseRequest(Tagging.TagBlockEraseRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ValidateMemoryBank(request.MemoryBank);
+        ValidateTarget(request.Epc, request.SelectionBank);
+        if (request.WordCount == 0)
+        {
+            throw new FormatException("Block erase word count must be greater than zero.");
+        }
+
+        _ = ParseAccessPassword(request.AccessPasswordHex);
+    }
+
     /// <summary>按 EPC 十六进制构造 TagSelection（BitPointer=32 跳过 EPC 段头）。</summary>
     public static LlrpSdk.TagSelection BuildEpcSelection(string epcHex)
         => BuildSelection(epcHex, Tagging.TagMemoryBank.Epc);

@@ -25,6 +25,20 @@ public sealed record TagReadRequest
     public string? AccessPasswordHex { get; init; }
 }
 
+/// <summary>块擦除标签内存请求（平台 DTO；对应 SDK C1G2 BlockErase，能力可用时提供）。</summary>
+public sealed record TagBlockEraseRequest
+{
+    /// <summary>目标匹配数据。默认按 EPC 十六进制值解释，兼容旧调用方。</summary>
+    public required string Epc { get; init; }
+    /// <summary>目标匹配所在的标签存储区；EPC 从 bit 32 开始，TID 从 bit 0 开始。</summary>
+    public TagMemoryBank SelectionBank { get; init; } = TagMemoryBank.Epc;
+    public TagMemoryBank MemoryBank { get; init; } = TagMemoryBank.User;
+    public ushort OffsetWords { get; init; }
+    public ushort WordCount { get; init; } = 1;
+    public ushort? AntennaId { get; init; }
+    public string? AccessPasswordHex { get; init; }
+}
+
 /// <summary>写标签内存请求（平台 DTO）。</summary>
 public sealed record TagWriteRequest
 {

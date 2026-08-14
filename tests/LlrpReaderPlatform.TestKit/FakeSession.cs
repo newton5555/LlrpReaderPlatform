@@ -40,7 +40,8 @@ public sealed class FakeSession : IReaderSession
         bool canDoRfSurvey = false,
         ushort? gpiCount = null,
         ushort? gpoCount = null,
-        bool useProtocol11 = false)
+        bool useProtocol11 = false,
+        bool isMultiwordBlockEraseAvailable = false)
     {
         IEnumerable<LlrpNet.Protocol.Parameters.ILlrpParameter> generalDeviceParameters = [];
         if (gpiCount is not null || gpoCount is not null)
@@ -101,7 +102,7 @@ public sealed class FakeSession : IReaderSession
                 Array.Empty<C1G2RfModeEntry>(),
                 isTagAccessAvailable,
                 false,
-                false,
+                isMultiwordBlockEraseAvailable,
                 false,
                 false,
                 canDoRfSurvey,
@@ -344,6 +345,17 @@ public sealed class FakeSession : IReaderSession
 
         WriteTagMemoryCount++;
         LastTagWriteRequest = request;
+        return TagAccessResult ?? new Tagging.TagAccessResult(true);
+    }
+
+    public Tagging.TagBlockEraseRequest? LastBlockEraseRequest { get; private set; }
+    public int BlockEraseTagMemoryCount { get; private set; }
+
+    public async Task<Tagging.TagAccessResult> BlockEraseTagMemoryAsync(Tagging.TagBlockEraseRequest request, CancellationToken cancellationToken)
+    {
+        IfDisposed();
+        BlockEraseTagMemoryCount++;
+        LastBlockEraseRequest = request;
         return TagAccessResult ?? new Tagging.TagAccessResult(true);
     }
 

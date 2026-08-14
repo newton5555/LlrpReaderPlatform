@@ -193,6 +193,27 @@ internal sealed class LlrpReaderSession : IReaderSession
         return SdkTagAccessMapper.MapOperationResult(result.Operation);
     }
 
+    public async Task<Tagging.TagAccessResult> BlockEraseTagMemoryAsync(Tagging.TagBlockEraseRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        await SynchronizeIfNeededAsync(cancellationToken).ConfigureAwait(false);
+        await EnsureTagAccessConfigurationAsync(cancellationToken).ConfigureAwait(false);
+
+        var sdkRequest = new LlrpSdk.BlockEraseTagRequest
+        {
+            MemoryBank = (LlrpSdk.TagMemoryBank)request.MemoryBank,
+            WordPointer = request.OffsetWords,
+            WordCount = request.WordCount,
+            Selection = SdkTagAccessMapper.BuildSelection(request.Epc, request.SelectionBank),
+            AntennaId = request.AntennaId ?? 0,
+            AccessPassword = SdkTagAccessMapper.ParseAccessPassword(request.AccessPasswordHex),
+        };
+
+        LlrpSdk.TagAccessResult result = await reader.BlockEraseTagMemoryAsync(
+            sdkRequest, TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
+        return SdkTagAccessMapper.MapOperationResult(result.Operation);
+    }
+
     public async Task SetGpoAsync(ushort portNumber, bool state, CancellationToken cancellationToken)
     {
         await SynchronizeIfNeededAsync(cancellationToken).ConfigureAwait(false);

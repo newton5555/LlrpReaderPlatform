@@ -78,6 +78,9 @@ public interface IReaderSession : IAsyncDisposable
 
     Task<Tagging.TagAccessResult> WriteTagMemoryAsync(Tagging.TagWriteRequest request, CancellationToken cancellationToken);
 
+    /// <summary>在执行块的 Sdk 块擦除。仅当 Reader 支持块擦除时调用。</summary>
+    Task<Tagging.TagAccessResult> BlockEraseTagMemoryAsync(Tagging.TagBlockEraseRequest request, CancellationToken cancellationToken);
+
     Task SetGpoAsync(ushort portNumber, bool state, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<Tagging.GpiPortStatus>> GetGpiStatusAsync(CancellationToken cancellationToken);

@@ -73,6 +73,10 @@ public partial class TagMemoryViewModel : ObservableObject, IPageOperationOwner,
     [ObservableProperty]
     private bool isTagAccessAvailable = true;
 
+    /// <summary>Reader 是否声明支持块擦除；能力未知时默认 true（交给服务层按明确 false 拒绝）。</summary>
+    [ObservableProperty]
+    private bool isBlockEraseAvailable = true;
+
     private int operationInFlight;
 
     /// <summary>Tag Memory 的按钮只有在页面已经绑定到一个 Reader 时才应呈现为可用。</summary>
@@ -205,6 +209,7 @@ public partial class TagMemoryViewModel : ObservableObject, IPageOperationOwner,
         ReaderId = nextReaderId;
         ReaderName = reader?.Name ?? "No reader selected";
         IsTagAccessAvailable = nextContext.TagAccessAvailable;
+        IsBlockEraseAvailable = reader?.Snapshot?.FeatureCatalog.SupportsOrUnknown(ReaderFeatures.StandardBlockTagAccess) ?? false;
         RefreshTargetMatches();
     }
 
@@ -464,6 +469,107 @@ public partial class TagMemoryViewModel : ObservableObject, IPageOperationOwner,
             if (!disposed && ReaderId == readerId)
             {
                 Result = PlatformErrorDisplay.Failure("写入", ex);
+            }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref activeOperationCts, null)?.Dispose();
+            EndOperation();
+        }
+    }
+
+    [RelayCommand]
+    private async Task BlockEraseAsync(Guid? id)
+    {
+        if (disposed || !IsBlockEraseAvailable)
+        {
+            return;
+        }
+
+        if (id is not { } readerId)
+        {
+            Result = "请先从左侧选择 Reader。";
+            return;
+        }
+
+        ReaderId = readerId;
+        if (!IsTagAccessAvailable)
+        {
+            Result = "当前 Reader 未声明标准 Tag Access 能力。";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Epc))
+        {
+            Result = "请先填写 EPC。";
+            return;
+        }
+
+        if (!TryReadWordRange(out ushort offsetWords, out ushort count))
+        {
+            return;
+        }
+
+        if (!TryBeginOperation())
+        {
+            Result = "Tag 操作进行中，请稍候。";
+            return;
+        }
+
+        try
+        {
+            Result = "正在块擦除标签内存...";
+            Guid operationId = Guid.NewGuid();
+            logger.LogInformation(
+                "WPF operation {Operation} started: {OperationId}, reader {ReaderId}, bank {MemoryBank}, words {WordCount}.",
+                "BlockEraseTagMemory",
+                operationId,
+                readerId,
+                MemoryBank,
+                count);
+            long contextVersion = Volatile.Read(ref readerContextVersion);
+            using CancellationTokenSource operationCts = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
+            CancellationTokenSource? previousOperationCts = Interlocked.Exchange(ref activeOperationCts, operationCts);
+            previousOperationCts?.Cancel();
+            var request = new TagBlockEraseRequest
+            {
+                Epc = Epc.Trim(),
+                SelectionBank = SelectionBank,
+                MemoryBank = MemoryBank,
+                OffsetWords = offsetWords,
+                WordCount = count,
+                AccessPasswordHex = AccessPassword,
+            };
+            TagAccessResult res = await inventory.BlockEraseTagMemoryAsync(readerId, request, operationCts.Token);
+            if (!IsCurrentReaderContext(readerId, contextVersion, operationCts))
+            {
+                return;
+            }
+
+            Result = res.Succeeded
+                ? "块擦除成功。"
+                : res.ErrorCode == PlatformErrorCode.NotFound
+                    ? res.Error ?? "未找到匹配标签，操作超时。"
+                    : PlatformErrorDisplay.Failure("块擦除", res.ErrorCode, res.Error);
+            logger.LogInformation(
+                "WPF operation {Operation} completed: {OperationId}, reader {ReaderId}, succeeded {Succeeded}, error code {ErrorCode}.",
+                "BlockEraseTagMemory",
+                operationId,
+                readerId,
+                res.Succeeded,
+                res.ErrorCode);
+        }
+        catch (OperationCanceledException) when (
+            lifetimeCts.IsCancellationRequested
+            || activeOperationCts?.IsCancellationRequested == true)
+        {
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "WPF operation {Operation} failed for reader {ReaderId}.", "BlockEraseTagMemory", readerId);
+            if (!disposed && ReaderId == readerId)
+            {
+                Result = PlatformErrorDisplay.Failure("块擦除", ex);
             }
         }
         finally

@@ -689,6 +689,35 @@ public sealed class InventoryReaderManagerTests
         Assert.True(snapshot.CapabilityRevision > 0);
     }
 
+    [Fact]
+    public async Task BlockEraseTagMemory_success_uses_short_operation_and_returns_to_disconnected()
+    {
+        var h = new Harness();
+        FakeSession session = h.Register();
+        session.TagAccessResult = new Tagging.TagAccessResult(true);
+        session.SetCapabilities(isMultiwordBlockEraseAvailable: true);
+
+        Tagging.TagBlockEraseRequest request = new()
+        {
+            Epc = "E201E24F3E0B0E1CFAAF8700",
+            SelectionBank = Tagging.TagMemoryBank.Epc,
+            MemoryBank = Tagging.TagMemoryBank.User,
+            OffsetWords = 4,
+            WordCount = 2,
+            AccessPasswordHex = "00000000",
+        };
+
+        Tagging.TagAccessResult result = await h.Manager.BlockEraseTagMemoryAsync(h.Profile.Id, request);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(1, session.BlockEraseTagMemoryCount);
+        Assert.Equal(request, session.LastBlockEraseRequest);
+        Assert.False(session.IsConnected);
+        ReaderRuntimeSnapshot snapshot = h.Manager.GetSnapshot(h.Profile.Id);
+        Assert.Equal(ReaderState.Disconnected, snapshot.State);
+        Assert.False(snapshot.IsStale);
+    }
+
     [Theory]
     [InlineData(Tagging.TagMemoryBank.Reserved)]
     [InlineData(Tagging.TagMemoryBank.Epc)]

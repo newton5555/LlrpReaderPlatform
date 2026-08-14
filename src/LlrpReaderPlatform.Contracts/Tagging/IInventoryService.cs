@@ -105,6 +105,12 @@ public interface IInventoryService
     Task<TagAccessResult> WriteTagMemoryAsync(Guid readerId, TagWriteRequest request, CancellationToken ct = default);
 
     /// <summary>
+    /// 按 EPC 目标执行一次 C1G2 块擦除（清除一块连续字）。
+    /// 默认实现抛出 <see cref="NotSupportedException"/>：只有真实 Reader 会话与支持它的实现（ReaderManager）覆写。</summary>
+    Task<TagAccessResult> BlockEraseTagMemoryAsync(Guid readerId, TagBlockEraseRequest request, CancellationToken ct = default)
+        => throw new NotSupportedException("Block erase is not available through this IInventoryService implementation.");
+
+    /// <summary>
     /// 设置 GPO。Inventory 运行时抛出服务层的 busy 异常，表示 ReaderBusy；
     /// 具体异常类型不下沉到 Contracts，以保持契约项目不依赖服务实现。
     /// </summary>

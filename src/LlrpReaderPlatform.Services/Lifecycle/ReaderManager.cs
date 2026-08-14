@@ -1873,6 +1873,90 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
         }
     }
 
+    public async Task<Tagging.TagAccessResult> BlockEraseTagMemoryAsync(
+        Guid readerId,
+        Tagging.TagBlockEraseRequest request,
+        CancellationToken ct = default)
+    {
+        ReaderHandle handle = await AcquireHandleAsync(readerId, ct).ConfigureAwait(false);
+        try
+        {
+            if (handle.InventoryRunning)
+            {
+                return new Tagging.TagAccessResult(false, "Reader busy: inventory is running. Stop inventory first.")
+                { ErrorCode = PlatformErrorCode.ReaderBusy };
+            }
+
+            try
+            {
+                SdkTagAccessMapper.ValidateBlockEraseRequest(request);
+            }
+            catch (Exception ex) when (ex is ArgumentException or FormatException)
+            {
+                return new Tagging.TagAccessResult(false, ex.Message)
+                { ErrorCode = PlatformErrorCode.InvalidSettings };
+            }
+
+            try
+            {
+                return await ExecuteShortSessionOperationAsync(
+                    handle,
+                    ct,
+                    async () =>
+                    {
+                        if (handle.Session.Capabilities?.IsTagAccessAvailable == false)
+                        {
+                            return new Tagging.TagAccessResult(
+                                false,
+                                "Reader does not advertise standard Tag Access capability.")
+                            { ErrorCode = PlatformErrorCode.Unsupported };
+                        }
+
+                        if (handle.Session.Capabilities?.IsMultiwordBlockEraseAvailable != true)
+                        {
+                            return new Tagging.TagAccessResult(
+                                false,
+                                "Reader does not advertise block erase capability.")
+                            { ErrorCode = PlatformErrorCode.Unsupported };
+                        }
+
+                        return await handle.Session.BlockEraseTagMemoryAsync(request, ct).ConfigureAwait(false);
+                    },
+                    static exception => exception is TimeoutException).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (TimeoutException)
+            {
+                return new Tagging.TagAccessResult(false, "未找到匹配标签，操作超时。")
+                { ErrorCode = PlatformErrorCode.NotFound };
+            }
+            catch (ReaderBusyException ex)
+            {
+                return new Tagging.TagAccessResult(false, ex.Message)
+                { ErrorCode = PlatformErrorCode.ReaderBusy };
+            }
+            catch (Exception ex)
+            {
+                return new Tagging.TagAccessResult(false, ex.Message)
+                { ErrorCode = PlatformErrorCode.DeviceFailed };
+            }
+        }
+        finally
+        {
+            try
+            {
+                await DisconnectShortOperationAsync(handle).ConfigureAwait(false);
+            }
+            finally
+            {
+                handle.Gate.Release();
+            }
+        }
+    }
+
     public async Task SetGpoAsync(Guid readerId, GpioCommand command, CancellationToken ct = default)
     {
         ReaderHandle handle = await AcquireHandleAsync(readerId, ct).ConfigureAwait(false);
@@ -2624,6 +2708,11 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
         if (handle.Session.Capabilities?.CanDoTagInventoryStateAwareSingulation == true)
         {
             features.Add(ReaderFeatures.StandardStateAwareSingulation);
+        }
+
+        if (handle.Session.Capabilities?.IsMultiwordBlockEraseAvailable == true)
+        {
+            features.Add(ReaderFeatures.StandardBlockTagAccess);
         }
 
         ReaderProbeInfo info = ReaderProbeInfo.FromIdentity(
