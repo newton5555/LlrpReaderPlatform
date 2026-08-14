@@ -735,6 +735,32 @@ Tab2 状态投影补充：主窗口状态刷新会重复向 Diagnostics 投影�
 - 直接从寻卡页启动成功后，同一长连接会刷新身份、天线能力、CapabilityRevision 和 FeatureCatalog，再进入 `Inventorying`；因此“寻卡先于设置”不会留下能力陈旧的运行时快照。
 - Tag Memory、GPI/GPO 等短操作对启动恢复或故障后的陈旧 Session 也执行必要的标准 Probe、扩展匹配和能力捕获；页面不依赖用户先打开设置页，成功后仍按短租约断开并回到 `Disconnected`。
 
+### 9.1 多版本与多厂商推进计划（1.1 / 2.0 / 1.0.1+Zebra）
+
+> 决策依据：[ADR-0011](decisions/ADR-0011-settings-page-dual-axis-gating.md)（一页 UI、双轴正交门控：标准轴按 `NegotiatedProtocolVersion`、厂商轴按 `ManufacturerId` + 能力画像）与 [ADR-0012](decisions/ADR-0012-semantic-feature-keys-and-graduation.md)（语义能力键 + `StandardizedSince` 毕业机制 + 标准优先仲裁）。本小节是本仓库当前唯一的多版本推进计划，不另建第二份阶段计划。
+
+**SDK 1.4.0 能力边界**（已核实，决定平台可做范围）：
+
+- 三版本协议适配器（26 成员接口）齐全：Settings Query/Apply、Inventory、Tag Access、报告、事件均可经 SDK 托管层按协商版本下发；
+- 块级 Tag Access：`BlockErase` 与块写（`useBlockWrite`）三版本托管；`BlockPermalock`/Recommission 未托管；
+- `ReaderCapabilities.MaximumReceiveSensitivityDbm` 已托管（1.1/2.0 适配器填充；1.0.1 规范无此参数 → null），实际灵敏度 dBm = Max + 偏移；
+- 2.0 安全 Tag Access（Authenticate 族）、标准 XPC 投影（C1G2XPCW1/W2）未托管；
+- Zebra 扩展：`UseZebra()` + 7 个配置字段 + 6 个报告开关 + phase/gps/xpc 报告投影；SDK 自述可信度风险（官方 ICG 与固件字节系统性偏移，仅 FX9600 部分参数标定），平台按实验性门控。
+
+**执行顺序**（阶段间依赖，每阶段结束保持构建 0 警告 0 错误与全量测试全绿）：
+
+1. **阶段 D：2.0 策略与版本模型**（双轴门控的前置输入）——Contracts 枚举增 `Force20`/`Version20`；`ReaderManager` 双向版本映射；`LlrpReaderSession` 策略映射；WPF 下拉增「LLRP 2.0」、Auto 文案统一为 “Auto”（协商链路为询问设备支持版本后取最高，不写死链路）；设备矩阵 2.0 标 `PendingHardware`。
+2. **阶段 A：双轴门控与语义键基础设施**（ADR-0011/0012 落地）——`Feature` 增稳定语义键与 `StandardizedSince` 元数据（现有 Feature 全部补齐语义键）；版本作用域标准 Feature 按协商版本聚合；同语义标准优先仲裁唯一收口在 `ReaderFeatureCatalog`；守护测试覆盖语义键唯一、仲裁与版本过滤。
+3. **阶段 C0：Rx 灵敏度实际值显示**（1.1+）——`BuildRxSensitivityOptions` 按 `MaximumReceiveSensitivityDbm` 双分支：非空显示 “offset (实际 dBm)”，null 保持 “offset dB offset”；写入值始终是能力表 index（与 Tx Power “33 (33 dBm)” 同款模式）；纯显示增强，补 WPF 回写测试。
+4. **阶段 B：1.0.1+Zebra 扩展模块（实验性）**——新项目镜像 Impinj 四件套（本地 ProjectReference `LlrpNet.Protocol.Zebra`/`LlrpSdk.Extensions.Zebra`，NuGet 包双模式）；模块适用性 = 厂商 161 且 Version101；`UseZebra()`；报告投影 phase/gps/xpc 挂语义键；7+6 设置行仅 FX9600 画像（161/96008 + 固件 3.32.37.0）门控，未知 Zebra 只投影不给设置行；设置页 Zebra 分组标注 Experimental；寻卡页 Phase/GPS/XPC 三个可选列（默认隐藏，走列头选择器）；配套测试；未标定前不声明支持。
+5. **阶段 C：块级 Tag Access**（版本无关，1.0.1/1.1/2.0 通用）——Contracts 增块擦除/块写请求模型与 `StandardBlockTagAccess` 能力；Services 映射 `BlockEraseTagRequest` 与 `useBlockWrite`；Tag Memory UI 操作区按能力显隐；R420 真机验收块擦除/块写后回填矩阵。
+6. **阶段 E：厂商轴扩展性**——厂商模块 `IsApplicable` 统一带协商版本判定；新厂商接入步骤清单写入 [架构文档](architecture/extensions-and-settings.md)，为未来 1.1+其他厂商、2.0+厂商组合做准备。
+7. **阶段 F：验证收口**——本地 SDK 与 NuGet 1.4.0 双模式 build/test 全绿；R420 真机回归（含块级操作与 Rx 显示回读）；Zebra 如有 FX9600 按 [真机验收运行手册](development/hardware-validation-runbook.md) 逐参数标定；设备矩阵与文档回填。
+
+**SDK 未托管项的三层纪律**（“上层先做、留接口给 SDK”）：Contracts 契约与语义键先落地；Services 只留方法挂点；UI 行按 Feature 隐藏，不得以“页面可操作”冒充完成。**SDK 缺口跟踪清单**：BlockPermalock/Recommission、2.0 安全 Tag Access、标准 XPC——SDK 托管后按语义键点亮，不做迁移。
+
+**不在本轮**：1.1/2.0 专属参数的实机验收（无对应设备，矩阵保持 `PendingHardware`）；任何未经实机验收的支持声明。
+
 ## 10. WPF 消费者对齐旧项目（UI 迭代回填）
 
 在初版三页 Tab 基础上，为对齐旧 `LlrpReaderStudio.Wpf` 的功能面已补充：
