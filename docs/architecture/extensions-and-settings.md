@@ -100,4 +100,28 @@ Apply 前必须重新验证：
 
 Reader 的当前配置与 managed ROSpec 是两个查询范围。设备没有初始 ROSpec 时，设置编译器
 会以新的默认 `InventorySettings` 作为待部署 ROSpec；这不代表设备配置为空，`GET_READER_CONFIG`
+Reader 的当前配置与 managed ROSpec 是两个查询范围。设备没有初始 ROSpec 时，设置编译器
+会以新的默认 `InventorySettings` 作为待部署 ROSpec；这不代表设备目前已空，`GET_READER_CONFIG`
 返回的 `ReaderConfiguration.Antennas`、事件、GPO 等仍作为 `SET_READER_CONFIG` 基线保留并回写。
+
+## 新厂商模块接入清单（面向 1.1/2.0 与多厂商）
+
+接入一个新厂商（或既有厂商在更高协议版本上的扩展）时，按以下清单逐项核对；参照现有
+`Extensions.Impinj` / `Extensions.Zebra` 两个已接入模块的结构。
+
+1. **新项目**：新建 `src/LlrpReaderPlatform.Extensions.<Vendor>/`，csproj 采用双模式引用
+   （本地 `ProjectReference` 条件 `UseLocalLlrpSdk == 'true'`；否则 `PackageReference`）
+   `LlrpSdk.Extensions.<Vendor>`），并登记进 `LlrpReaderPlatform.slnx` 与 `Directory.Packages.props`。
+2. **模块适用性**（两轴门控）：厂商轴按 `ManufacturerId` + 能力画像判定；标准轴需要时按
+   `info.ProtocolVersion` 判定（与 SDK matcher 一致）；两轴取交集，避免在错误协议版本上配扩展。
+3. **语义键与毕业元数据**：每个 `Feature` 必须有稳定 `SemanticId`；语义会被标准吸收时立即标
+   `StandardizedSince`（ADR-0012）。
+4. **设置贡献者**：实现 `ISettingsExtensionContributor`，只在 `Supports(feature)` 时贡献行；
+   UI 行走泛型 `SettingsEntryRowViewModel`，渲染层零感知。
+5. **报告投影**：实现 `ProjectTagReport` 把扩展字段投影为稳定字符串，落 `ReaderTagReportProjection.Fields`；
+   寻卡页如需专属列再补列头选择器开关。
+6. **组合根**：宿主显式 `services.Add<Vendor>Extension()` 注册，不扫描 / 不硬编码。
+7. **测试与验证门槛**：厂商模块测试（适用性、门控、layout/Apply/投影往返）+ 至少一台真机按设备矩阵 L4 验收。
+   未真机验收前声明为实验性（如 Zebra），不提升支持等级。
+8. **对版本组合的准备**：不假设厂商只匹配 1.0.1；通过 `ProtocolVersion` 显式声明，天然支持
+   未来 1.1/2.0 + 厂商组合，不产生按版本拆 UI 的组合爆炸。
