@@ -24,8 +24,8 @@
 
 主分支、CI 和发布默认使用 NuGet：
 
-- `LlrpSdk`：`1.3.0`
-- `LlrpSdk.Extensions.Impinj`：`1.3.0`
+- `LlrpSdk`：`1.4.0`
+- `LlrpSdk.Extensions.Impinj`：`1.4.0`
 
 版本统一维护在仓库根部的 `Directory.Packages.props`。`LlrpSdk` 包含平台所需的
 LlrpNet 和 SDK 扩展抽象依赖，`LlrpSdk.Extensions.Impinj` 传递依赖同版本的
@@ -67,7 +67,7 @@ dotnet test LlrpReaderPlatform.slnx -c Release -p:UseLocalLlrpSdk=false --no-bui
 命令行属性优先于本地 props，因此即使开发机保留本地联调配置，上述命令仍强制使用
 NuGet。发布前还应确认：
 
-- Release 资产清单中的 `LlrpSdk/1.3.0` 类型为 `package`，不是 `project`；
+- Release 资产清单中的 `LlrpSdk/1.4.0` 类型为 `package`，不是 `project`；
 - 发布版本号与平台版本声明一致；
 - `bin/`、`obj/` 和 `artifacts/` 等本地生成物不提交。
 

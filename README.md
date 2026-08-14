@@ -100,7 +100,7 @@ dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj `
 `src/LlrpReaderPlatform.App.Wpf/bin/Portable/LLRPReaderPlatform-win-x64/`，该目录只保留
 EXE 时可以直接复制运行；WPF 单文件运行时可能会把 native 组件临时解压到系统临时目录，这是正常行为。
 
-默认使用 `LlrpSdk` `1.3.0` 和 `LlrpSdk.Extensions.Impinj` `1.3.0` NuGet 包。本地 SDK 联调时，才通过 `UseLocalLlrpSdk=true` 切换到相邻 `LLRPCSharp` 源码；正式 CI 和发布始终使用 NuGet 模式。
+默认使用 `LlrpSdk` `1.4.0` 和 `LlrpSdk.Extensions.Impinj` `1.4.0` NuGet 包。本地 SDK 联调时，才通过 `UseLocalLlrpSdk=true` 切换到相邻 `LLRPCSharp` 源码；正式 CI 和发布始终使用 NuGet 模式。
 
 当前验证基线：**构建 0 警告、0 错误；自动化测试 336 项全绿**。这些测试不包含持续运行的真机测试。
 
