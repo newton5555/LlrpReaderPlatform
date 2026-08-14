@@ -45,6 +45,8 @@
     <File Path="docs/decisions/ADR-0008-switchable-sdk-references.md" />
     <File Path="docs/decisions/ADR-0009-windows-self-contained-single-file.md" />
     <File Path="docs/decisions/ADR-0010-hardware-validation-cli.md" />
+    <File Path="docs/decisions/ADR-0011-settings-page-dual-axis-gating.md" />
+    <File Path="docs/decisions/ADR-0012-semantic-feature-keys-and-graduation.md" />
   </Folder>
   <Folder Name="/docs/templates/">
     <File Path="docs/templates/ADR-template.md" />
