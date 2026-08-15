@@ -39,6 +39,13 @@
 - TagReport 投影；
 - Preset 版本兼容性。
 
+### Extensions.Zebra.Tests
+
+- LLRP 1.0.1 + Zebra 厂商身份匹配和未知型号降级；
+- FX9600 固件能力画像与报告字段门控；
+- `SettingsEntry` 语义/分组元数据和 Zebra 设置编译；
+- Phase/GPS/XPC 报告投影到 `ReportFieldSemantics`，并保留原始诊断字段。
+
 ### App.Wpf.Tests
 
 - DI 容器能创建 MainWindow；

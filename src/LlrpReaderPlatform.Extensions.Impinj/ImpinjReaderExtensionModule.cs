@@ -48,17 +48,17 @@ public sealed class ImpinjReaderExtensionModule : IReaderExtensionModule
         var features = new List<Feature>();
         if (capabilities.SupportsSerializedTid)
         {
-            features.Add(ReaderFeatures.ImpinjFastId);
+            features.Add(ImpinjFeatures.FastId);
         }
 
         if (capabilities.SupportsRfPhaseAngle)
         {
-            features.Add(ReaderFeatures.ImpinjRfPhase);
+            features.Add(ImpinjFeatures.RfPhase);
         }
 
         if (capabilities.SupportsRfDopplerFrequency)
         {
-            features.Add(ReaderFeatures.ImpinjDoppler);
+            features.Add(ImpinjFeatures.Doppler);
         }
 
         // The current SDK capability catalog has no separate flags for these settings.
@@ -67,10 +67,10 @@ public sealed class ImpinjReaderExtensionModule : IReaderExtensionModule
         if (capabilities.SupportsTagReportContentSelector)
         {
             features.AddRange([
-                ReaderFeatures.ImpinjSearchMode,
-                ReaderFeatures.ImpinjLowDutyCycle,
-                ReaderFeatures.ImpinjFixedFrequency,
-                ReaderFeatures.ImpinjGpiDebounce,
+                ImpinjFeatures.SearchMode,
+                ImpinjFeatures.LowDutyCycle,
+                ImpinjFeatures.FixedFrequency,
+                ImpinjFeatures.GpiDebounce,
             ]);
         }
 
@@ -120,7 +120,7 @@ public sealed class ImpinjReaderExtensionModule : IReaderExtensionModule
         ArgumentNullException.ThrowIfNull(settings);
         // 能力门控（ADR-0013）：仅当该 Reader 已仲裁支持 RF Phase 时才写开关；
         // 请求集合含 phase-report 则开启，否则显式关闭，避免“取消请求”被静默忽略。
-        if (catalog is null || !catalog.Supports(ReaderFeatures.ImpinjRfPhase))
+        if (catalog is null || !catalog.Supports(ImpinjFeatures.RfPhase))
         {
             return settings;
         }
@@ -169,6 +169,12 @@ public sealed class ImpinjReaderExtensionModule : IReaderExtensionModule
                     fields[key] = formatted;
                 }
             }
+        }
+
+        if (fields.TryGetValue("impinj.rfPhaseAngle", out string? phase)
+            || fields.TryGetValue("impinj.phaseAngle", out phase))
+        {
+            fields[LlrpReaderPlatform.Contracts.Tagging.ReportFieldSemantics.Phase] = phase;
         }
 
         if (!string.IsNullOrWhiteSpace(tid))

@@ -53,11 +53,11 @@ public sealed class ImpinjReaderExtensionModuleTests
         IReadOnlyList<Feature> features = module.GetFeatures(new ReaderProbeInfo(
             ImpinjReaderExtensionModule.ImpinjManufacturerId, 2001002, "6.4.1.240", "R420"));
 
-        Assert.Contains(ReaderFeatures.ImpinjFastId, features);
-        Assert.Contains(ReaderFeatures.ImpinjSearchMode, features);
-        Assert.Contains(ReaderFeatures.ImpinjFixedFrequency, features);
-        Assert.Contains(ReaderFeatures.ImpinjRfPhase, features);
-        Assert.DoesNotContain(ReaderFeatures.ImpinjDoppler, features);
+        Assert.Contains(ImpinjFeatures.FastId, features);
+        Assert.Contains(ImpinjFeatures.SearchMode, features);
+        Assert.Contains(ImpinjFeatures.FixedFrequency, features);
+        Assert.Contains(ImpinjFeatures.RfPhase, features);
+        Assert.DoesNotContain(ImpinjFeatures.Doppler, features);
         Assert.DoesNotContain(ReaderFeatures.StandardInventory, features);
         Assert.Empty(module.GetFeatures(new ReaderProbeInfo(0xABCD, null, null, null)));
     }
@@ -113,6 +113,7 @@ public sealed class ImpinjReaderExtensionModuleTests
 
         Assert.Equal("-42", projection.Fields["impinj.peakRssi"]);
         Assert.Equal("12.5", projection.Fields["impinj.phaseAngle"]);
+        Assert.Equal("12.5", projection.Fields[ReportFieldSemantics.Phase]);
         Assert.Null(projection.TidHex);
     }
 
@@ -405,13 +406,13 @@ public sealed class ImpinjReaderExtensionModuleTests
     {
         SupportedFeatures =
         [
-            ReaderFeatures.ImpinjFastId,
-            ReaderFeatures.ImpinjRfPhase,
-            ReaderFeatures.ImpinjDoppler,
-            ReaderFeatures.ImpinjSearchMode,
-            ReaderFeatures.ImpinjLowDutyCycle,
-            ReaderFeatures.ImpinjFixedFrequency,
-            ReaderFeatures.ImpinjGpiDebounce,
+            ImpinjFeatures.FastId,
+            ImpinjFeatures.RfPhase,
+            ImpinjFeatures.Doppler,
+            ImpinjFeatures.SearchMode,
+            ImpinjFeatures.LowDutyCycle,
+            ImpinjFeatures.FixedFrequency,
+            ImpinjFeatures.GpiDebounce,
         ],
     };
 }

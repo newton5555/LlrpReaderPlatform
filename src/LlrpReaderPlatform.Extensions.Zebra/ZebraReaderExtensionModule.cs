@@ -49,16 +49,16 @@ public sealed class ZebraReaderExtensionModule : IReaderExtensionModule
 
         if (!IsVerifiedFx9600(info))
         {
-            return [ReaderFeatures.ZebraReportPhase, ReaderFeatures.ZebraReportGps, ReaderFeatures.ZebraReportXpc];
+            return [ZebraFeatures.ReportPhase, ZebraFeatures.ReportGps, ZebraFeatures.ReportXpc];
         }
 
         return
         [
-            ReaderFeatures.ZebraConfiguration,
-            ReaderFeatures.ZebraInventoryOptions,
-            ReaderFeatures.ZebraReportPhase,
-            ReaderFeatures.ZebraReportGps,
-            ReaderFeatures.ZebraReportXpc,
+            ZebraFeatures.Configuration,
+            ZebraFeatures.InventoryOptions,
+            ZebraFeatures.ReportPhase,
+            ZebraFeatures.ReportGps,
+            ZebraFeatures.ReportXpc,
         ];
     }
 
@@ -78,9 +78,9 @@ public sealed class ZebraReaderExtensionModule : IReaderExtensionModule
         bool wantsGps = semanticFields.Contains(ReportFieldSemantics.Gps);
         bool wantsXpc = semanticFields.Contains(ReportFieldSemantics.Xpc);
         // 能力门控（ADR-0013）：每个语义键都必须由该 Reader 的能力目录明确支持才写入。
-        bool canPhase = catalog is not null && catalog.Supports(ReaderFeatures.ZebraReportPhase);
-        bool canGps = catalog is not null && catalog.Supports(ReaderFeatures.ZebraReportGps);
-        bool canXpc = catalog is not null && catalog.Supports(ReaderFeatures.ZebraReportXpc);
+        bool canPhase = catalog is not null && catalog.Supports(ZebraFeatures.ReportPhase);
+        bool canGps = catalog is not null && catalog.Supports(ZebraFeatures.ReportGps);
+        bool canXpc = catalog is not null && catalog.Supports(ZebraFeatures.ReportXpc);
         // 只要设备能力目录支持任一报告字段就写开关（true/false 都写），不能因“本次未请求”就短路
         // 返回——否则取消勾选相位时设备沿用已开启值，出现“可开不可关”。
         if (!canPhase && !canGps && !canXpc)
@@ -118,19 +118,25 @@ public sealed class ZebraReaderExtensionModule : IReaderExtensionModule
         short? phase = ZebraTagReportExtensions.GetPhase(report);
         if (phase is { } p)
         {
-            fields[PhaseField] = p.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            string value = p.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            fields[PhaseField] = value;
+            fields[ReportFieldSemantics.Phase] = value;
         }
 
         ZebraGpsCoordinates? gps = ZebraTagReportExtensions.GetGps(report);
         if (gps is not null)
         {
-            fields[GpsField] = $"{gps.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture)};{gps.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture)};{gps.Altitude.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+            string value = $"{gps.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture)};{gps.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture)};{gps.Altitude.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+            fields[GpsField] = value;
+            fields[ReportFieldSemantics.Gps] = value;
         }
 
         ZebraExtendedPc? xpc = ZebraTagReportExtensions.GetExtendedPc(report);
         if (xpc is not null)
         {
-            fields[XpcField] = $"{xpc.XPC1:X4}{xpc.XPC2:X4}";
+            string value = $"{xpc.XPC1:X4}{xpc.XPC2:X4}";
+            fields[XpcField] = value;
+            fields[ReportFieldSemantics.Xpc] = value;
         }
 
         IReadOnlyDictionary<string, object?> extensions = report.Extensions

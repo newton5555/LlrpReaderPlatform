@@ -12,6 +12,7 @@
     <ProjectReference Include="..\..\src\LlrpReaderPlatform.Services\Services.csproj" />
     <ProjectReference Include="..\..\src\LlrpReaderPlatform.Infrastructure\Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\LlrpReaderPlatform.Extensions.Impinj\Extensions.Impinj.csproj" />
+    <ProjectReference Include="..\..\src\LlrpReaderPlatform.Extensions.Zebra\Extensions.Zebra.csproj" />
     <ProjectReference Include="..\..\src\LlrpReaderPlatform.App.Wpf\App.Wpf.csproj" />
   </ItemGroup>
 

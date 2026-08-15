@@ -37,8 +37,8 @@ public sealed class ZebraSettingsContributor : ISettingsExtensionContributor
         ReaderRuntimeSnapshot reader,
         ReaderSettingsRuntimeSnapshot runtime)
     {
-        bool supportsConfiguration = reader.FeatureCatalog.SupportsOrUnknown(ReaderFeatures.ZebraConfiguration);
-        bool supportsInventory = reader.FeatureCatalog.SupportsOrUnknown(ReaderFeatures.ZebraInventoryOptions);
+        bool supportsConfiguration = reader.FeatureCatalog.SupportsOrUnknown(ZebraFeatures.Configuration);
+        bool supportsInventory = reader.FeatureCatalog.SupportsOrUnknown(ZebraFeatures.InventoryOptions);
         if (!supportsConfiguration && !supportsInventory)
         {
             return;
@@ -57,23 +57,23 @@ public sealed class ZebraSettingsContributor : ISettingsExtensionContributor
 
         if (supportsConfiguration)
         {
-            AddBool(entries, RadioPowerState, "Zebra radio power state", configuration?.RadioPowerState);
-            AddByte(entries, RadioTransmitDelay, "Zebra radio transmit delay", configuration?.RadioTransmitDelay);
-            AddBool(entries, AutonomousModeState, "Zebra autonomous mode state", configuration?.AutonomousModeState);
-            AddBool(entries, SaveConfiguration, "Zebra save configuration", configuration?.SaveConfiguration);
-            AddBool(entries, SaveTagData, "Zebra save tag data", configuration?.SaveTagData);
-            AddBool(entries, SaveTagEventData, "Zebra save tag event data", configuration?.SaveTagEventData);
-            AddBool(entries, EnableNxpQuietCommands, "Zebra NXP set/reset-quiet (experimental)", configuration?.EnableNxpSetAndResetQuietCommands);
+            AddBool(entries, RadioPowerState, "Zebra radio power state", configuration?.RadioPowerState, groupKey: SettingsGroups.Other);
+            AddByte(entries, RadioTransmitDelay, "Zebra radio transmit delay", configuration?.RadioTransmitDelay, groupKey: SettingsGroups.Other);
+            AddBool(entries, AutonomousModeState, "Zebra autonomous mode state", configuration?.AutonomousModeState, groupKey: SettingsGroups.Other);
+            AddBool(entries, SaveConfiguration, "Zebra save configuration", configuration?.SaveConfiguration, groupKey: SettingsGroups.Other);
+            AddBool(entries, SaveTagData, "Zebra save tag data", configuration?.SaveTagData, groupKey: SettingsGroups.Other);
+            AddBool(entries, SaveTagEventData, "Zebra save tag event data", configuration?.SaveTagEventData, groupKey: SettingsGroups.Other);
+            AddBool(entries, EnableNxpQuietCommands, "Zebra NXP set/reset-quiet (experimental)", configuration?.EnableNxpSetAndResetQuietCommands, groupKey: SettingsGroups.Other);
         }
 
         if (supportsInventory)
         {
             // ADR-0013：报告类字段由寻卡页列开关联动控制，设置页只读并提示。
-            AddBool(entries, IncludePhase, "Zebra report phase", report?.IncludePhase, "由寻卡页联动控制");
-            AddBool(entries, IncludeGps, "Zebra report GPS", report?.IncludeGps, "由寻卡页联动控制");
-            AddBool(entries, IncludeZoneId, "Zebra report zone id", report?.IncludeZoneId);
-            AddBool(entries, IncludeZoneName, "Zebra report zone name", report?.IncludeZoneName);
-            AddBool(entries, IncludeMltReport, "Zebra report MLT (experimental)", report?.IncludeMltReport);
+            AddBool(entries, IncludePhase, "Zebra report phase", report?.IncludePhase, "由寻卡页联动控制", SettingsSemantics.PhaseReport, SettingsGroups.Report);
+            AddBool(entries, IncludeGps, "Zebra report GPS", report?.IncludeGps, "由寻卡页联动控制", SettingsSemantics.GpsReport, SettingsGroups.Report);
+            AddBool(entries, IncludeZoneId, "Zebra report zone id", report?.IncludeZoneId, groupKey: SettingsGroups.Report);
+            AddBool(entries, IncludeZoneName, "Zebra report zone name", report?.IncludeZoneName, groupKey: SettingsGroups.Report);
+            AddBool(entries, IncludeMltReport, "Zebra report MLT (experimental)", report?.IncludeMltReport, groupKey: SettingsGroups.Report);
         }
     }
 
@@ -86,7 +86,7 @@ public sealed class ZebraSettingsContributor : ISettingsExtensionContributor
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        if (reader.FeatureCatalog.SupportsOrUnknown(ReaderFeatures.ZebraConfiguration))
+        if (reader.FeatureCatalog.SupportsOrUnknown(ZebraFeatures.Configuration))
         {
             var configurationExtensions = new Dictionary<string, object?>(settings.Configuration.Extensions, StringComparer.Ordinal);
             ZebraReaderConfiguration existingConfiguration = configurationExtensions.TryGetValue(
@@ -105,7 +105,7 @@ public sealed class ZebraSettingsContributor : ISettingsExtensionContributor
             settings = settings with { Configuration = settings.Configuration with { Extensions = configurationExtensions } };
         }
 
-        if (settings.Inventory is not null && reader.FeatureCatalog.SupportsOrUnknown(ReaderFeatures.ZebraInventoryOptions))
+        if (settings.Inventory is not null && reader.FeatureCatalog.SupportsOrUnknown(ZebraFeatures.InventoryOptions))
         {
             var inventoryExtensions = new Dictionary<string, object?>(settings.Inventory.Extensions, StringComparer.Ordinal);
             ZebraInventoryReportOptions existingReport = inventoryExtensions.TryGetValue(
@@ -125,7 +125,14 @@ public sealed class ZebraSettingsContributor : ISettingsExtensionContributor
         return settings;
     }
 
-    private static void AddBool(IList<SettingsEntry> entries, string key, string title, bool? currentValue, string? readOnlyReason = null)
+    private static void AddBool(
+        IList<SettingsEntry> entries,
+        string key,
+        string title,
+        bool? currentValue,
+        string? readOnlyReason = null,
+        string? semanticId = null,
+        string? groupKey = null)
     {
         if (currentValue is null)
         {
@@ -141,10 +148,12 @@ public sealed class ZebraSettingsContributor : ISettingsExtensionContributor
             CurrentValue = currentValue,
             Source = SettingsSource.VendorExtension,
             ReadOnlyReason = readOnlyReason,
+            SemanticId = semanticId,
+            GroupKey = groupKey,
         });
     }
 
-    private static void AddByte(IList<SettingsEntry> entries, string key, string title, byte? currentValue)
+    private static void AddByte(IList<SettingsEntry> entries, string key, string title, byte? currentValue, string? groupKey = null)
     {
         if (currentValue is null)
         {
@@ -160,6 +169,7 @@ public sealed class ZebraSettingsContributor : ISettingsExtensionContributor
             Range = new SettingsRange(0, byte.MaxValue),
             CurrentValue = currentValue,
             Source = SettingsSource.VendorExtension,
+            GroupKey = groupKey,
         });
     }
 

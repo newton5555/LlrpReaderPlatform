@@ -132,7 +132,7 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
     private bool showEpcColumn = true;
 
     [ObservableProperty]
-    // Zebra 扩展报告字段的可选列（默认隐藏；仅当设备投影出 zebra.phase/gps/xpc 时才有值）。
+    // 扩展报告字段的可选列（默认隐藏；Services 会把厂商字段投影为稳定语义键）。
     private bool showPhaseColumn;
 
     [ObservableProperty]

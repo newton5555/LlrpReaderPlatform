@@ -57,6 +57,9 @@ public partial class SettingsEntryRowViewModel : ObservableObject
 
     public string Key => Entry.Key;
     public string Title => Entry.Title;
+    public string? SemanticId => Entry.SemanticId;
+    public string? GroupKey => Entry.GroupKey;
+    public string? InstanceKey => Entry.InstanceKey;
     public EditorKind EditorKind => Entry.EditorKind;
     public string ValueTypeName => Entry.ValueType.Name;
     public bool IsReadOnly => Entry.IsReadOnly;

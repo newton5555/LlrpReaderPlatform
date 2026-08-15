@@ -52,6 +52,8 @@
     <File Path="docs/decisions/ADR-0010-hardware-validation-cli.md" />
     <File Path="docs/decisions/ADR-0011-settings-page-dual-axis-gating.md" />
     <File Path="docs/decisions/ADR-0012-semantic-feature-keys-and-graduation.md" />
+    <File Path="docs/decisions/ADR-0013-report-capability-ownership.md" />
+    <File Path="docs/decisions/ADR-0014-vendor-feature-ownership-and-ui-semantics.md" />
   </Folder>
   <Folder Name="/docs/templates/">
     <File Path="docs/templates/ADR-template.md" />
@@ -77,6 +79,7 @@
     <Project Path="tests/LlrpReaderPlatform.TestKit/TestKit.csproj" />
     <Project Path="tests/LlrpReaderPlatform.Services.Tests/Services.Tests.csproj" />
     <Project Path="tests/LlrpReaderPlatform.Extensions.Impinj.Tests/Extensions.Impinj.Tests.csproj" />
+    <Project Path="tests/LlrpReaderPlatform.Extensions.Zebra.Tests/Extensions.Zebra.Tests.csproj" />
     <Project Path="tests/LlrpReaderPlatform.Infrastructure.Tests/Infrastructure.Tests.csproj" />
     <Project Path="tests/LlrpReaderPlatform.App.Wpf.Tests/App.Wpf.Tests.csproj" />
     <Project Path="tests/LlrpReaderPlatform.Architecture.Tests/Architecture.Tests.csproj" />

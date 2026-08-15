@@ -79,7 +79,7 @@ public sealed class TagRowViewModelTests
             LastSeen = DateTimeOffset.UtcNow,
             ExtensionFields = new Dictionary<string, string>
             {
-                ["impinj.rfPhaseAngle"] = "3376",
+                [ReportFieldSemantics.Phase] = "3376",
             },
         };
         var row = new TagRowViewModel(first);
@@ -91,7 +91,7 @@ public sealed class TagRowViewModelTests
             ReadCount = 2,
             ExtensionFields = new Dictionary<string, string>
             {
-                ["impinj.rfPhaseAngle"] = "2416",
+                [ReportFieldSemantics.Phase] = "2416",
             },
         }, "Known tag");
 

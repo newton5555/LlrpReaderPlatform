@@ -14,27 +14,28 @@ public sealed class FeatureGateingTests
     public void Graduation_drops_vendor_feature_when_device_matches_standardized_since_version()
     {
         var results = FeatureGating.Arbitrate(
-            [ReaderFeatures.StandardSettings, ReaderFeatures.ZebraReportXpc],
+            [ReaderFeatures.StandardSettings, new Feature("report-xpc", "zebra", semanticId: "xpc-report", standardizedSince: LlrpProtocolVersion.Version20)],
             LlrpProtocolVersion.Version20);
         Assert.Contains(ReaderFeatures.StandardSettings, results);
-        Assert.DoesNotContain(ReaderFeatures.ZebraReportXpc, results);
+        Assert.DoesNotContain(results, feature => feature.Vendor == "zebra" && feature.Id == "report-xpc");
     }
 
     [Fact]
     public void Graduation_keeps_vendor_feature_before_the_standardizing_version()
     {
         var results = FeatureGating.Arbitrate(
-            [ReaderFeatures.StandardSettings, ReaderFeatures.ZebraReportXpc],
+            [ReaderFeatures.StandardSettings, new Feature("report-xpc", "zebra", semanticId: "xpc-report", standardizedSince: LlrpProtocolVersion.Version20)],
             LlrpProtocolVersion.Version101);
         Assert.Contains(ReaderFeatures.StandardSettings, results);
-        Assert.Contains(ReaderFeatures.ZebraReportXpc, results);
+        Assert.Contains(results, feature => feature.Vendor == "zebra" && feature.Id == "report-xpc");
     }
 
     [Fact]
     public void Graduation_is_noop_when_negotiated_version_is_unknown()
     {
-        var results = FeatureGating.Arbitrate([ReaderFeatures.ZebraReportXpc], negotiatedVersion: null);
-        Assert.Contains(ReaderFeatures.ZebraReportXpc, results);
+        var feature = new Feature("report-xpc", "zebra", semanticId: "xpc-report", standardizedSince: LlrpProtocolVersion.Version20);
+        var results = FeatureGating.Arbitrate([feature], negotiatedVersion: null);
+        Assert.Contains(feature, results);
     }
 
     [Fact]
@@ -51,8 +52,9 @@ public sealed class FeatureGateingTests
     [Fact]
     public void Arbitration_keeps_vendor_feature_when_no_standard_claims_same_semantic()
     {
-        var results = FeatureGating.Arbitrate([ReaderFeatures.ZebraReportGps], LlrpProtocolVersion.Version101);
-        Assert.Contains(ReaderFeatures.ZebraReportGps, results);
+        var feature = new Feature("report-gps", "zebra", semanticId: "gps-report");
+        var results = FeatureGating.Arbitrate([feature], LlrpProtocolVersion.Version101);
+        Assert.Contains(feature, results);
         Assert.Single(results);
     }
 }

@@ -39,6 +39,10 @@ AddImpinjExtension()
 
 Services 不扫描程序集，也不硬编码具体厂商模块。
 
+厂商 Feature 常量由对应扩展项目拥有：`ImpinjFeatures` 位于 `Extensions.Impinj`，
+`ZebraFeatures` 位于 `Extensions.Zebra`。Contracts 只定义通用 `Feature` 载体和标准能力，
+因此新增厂商不会扩大 Contracts 的厂商依赖面。
+
 设置贡献由扩展模块通过 Services 的 `ISettingsExtensionContributor` 暴露；宿主只注册模块，
 标准编译器先生成标准布局，再按运行时 `ReaderFeatureCatalog` 判断该模块在当前型号上
 是否真正贡献布局；Impinj 贡献者按 vendor 能力命名空间判断适用，不把某一个可选能力
@@ -118,11 +122,14 @@ Reader 的当前配置与 managed ROSpec 是两个查询范围。设备没有初
    标准/Impinj/Zebra，设置页同一项置为只读 + “由寻车页联动控制”提示；数据能力（如 FastID）仍由
    设置页独占，寻卡页只展示。
 5. **设置贡献者**：实现 `ISettingsExtensionContributor`，只在 `Supports(feature)` 时贡献行；
+   使用 `SettingsEntry.SemanticId`、`GroupKey`、`InstanceKey` 描述跨 UI 语义，
    UI 行走泛型 `SettingsEntryRowViewModel`，渲染层零感知。
 6. **报告投影**：实现 `ProjectTagReport` 把扩展字段投影为稳定字符串，落 `ReaderTagReportProjection.Fields`；
+   Phase/GPS/XPC 等通用列使用 `ReportFieldSemantics`，厂商原始字段只能作为诊断字段保留；
    寻卡页如需专属列再补列头选择器开关。
 7. **组合根**：宿主显式 `services.Add<Vendor>Extension()` 注册，不扫描 / 不硬编码。
-8. **测试与验证门槛**：厂商模块测试（适用性、门控、layout/Apply/投影往返）+ 至少一台真机按设备矩阵 L4 验收。
+8. **测试与验证门槛**：厂商模块测试（适用性、门控、layout/Apply/投影往返）+ 架构依赖测试
+   登记该扩展和 SDK Adapter + 至少一台真机按设备矩阵 L4 验收。
    未真机验收前声明为实验性（如 Zebra），不提升支持等级。
 9. **对版本组合的准备**：不假设厂商只匹配 1.0.1；通过 `ProtocolVersion` 显式声明，天然支持
    未来 1.1/2.0 + 厂商组合，不产生按版本拆 UI 的组合爆炸。

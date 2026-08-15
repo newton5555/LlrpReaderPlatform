@@ -60,21 +60,6 @@ public static class ReaderFeatures
     public static readonly Feature StandardStateAwareSingulation = new("standard.state-aware-singulation");
     public static readonly Feature StandardBlockTagAccess = new("standard.block-tag-access", semanticId: "block-tag-access");
 
-    // Impinj 厂商扩展（厂商轴；语义键按各自命名空间，暂不对应标准项）。
-    public static readonly Feature ImpinjFastId = new("fast-id", "impinj");
-    public static readonly Feature ImpinjRfPhase = new("rf-phase", "impinj", semanticId: "phase-report");
-    public static readonly Feature ImpinjDoppler = new("doppler", "impinj");
-    public static readonly Feature ImpinjSearchMode = new("search-mode", "impinj");
-    public static readonly Feature ImpinjLowDutyCycle = new("low-duty-cycle", "impinj");
-    public static readonly Feature ImpinjFixedFrequency = new("fixed-frequency", "impinj");
-    public static readonly Feature ImpinjGpiDebounce = new("gpi-debounce", "impinj");
-
-    // Zebra 扩展（实验性；XPC 语义对应 LLRP 2.0 标准 C1G2_XPC，StandardizedSince=Version20）。
-    public static readonly Feature ZebraConfiguration = new("configuration", "zebra", semanticId: "zebra-configuration");
-    public static readonly Feature ZebraReportPhase = new("report-phase", "zebra", semanticId: "phase-report");
-    public static readonly Feature ZebraReportGps = new("report-gps", "zebra", semanticId: "gps-report");
-    public static readonly Feature ZebraReportXpc = new("report-xpc", "zebra", semanticId: "xpc-report", standardizedSince: LlrpProtocolVersion.Version20);
-    public static readonly Feature ZebraInventoryOptions = new("inventory-options", "zebra", semanticId: "zebra-inventory-options");
 }
 
 /// <summary>

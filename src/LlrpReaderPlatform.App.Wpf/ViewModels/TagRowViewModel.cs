@@ -60,10 +60,10 @@ public sealed class TagRowViewModel : ObservableObject
     public ushort? LastChannelIndex => tag.LastChannelIndex;
 
     /// <summary>报告扩展字段（来自 TagObservation.ExtensionFields；无则空）。读取语义展示键，
-    /// 回退到厂商投影键，保证 Impinj/Zebra 均能显示相位列（ADR-0013）。</summary>
-    public string? Phase => Field("phase", "zebra.phase", "impinj.rfPhaseAngle");
-    public string? Gps => Field("gps", "zebra.gps");
-    public string? Xpc => Field("xpc", "zebra.xpc");
+    /// 扩展模块在 Services 边界把厂商报告投影到稳定语义键，UI 不识别厂商字段。</summary>
+    public string? Phase => Field(ReportFieldSemantics.Phase);
+    public string? Gps => Field(ReportFieldSemantics.Gps);
+    public string? Xpc => Field(ReportFieldSemantics.Xpc);
 
     private string? Field(params string[] keys)
     {
@@ -152,30 +152,22 @@ public sealed class TagRowViewModel : ObservableObject
 
         // 扩展字段（相位/GPS/XPC）是每 EPC 的最新观测值，必须按变化单独通知；
         // 否则 DataGrid 只读属性列不会刷新，UI 会停留在首次绑定的旧值。
-        string? previousPhase = previous.ExtensionFields.GetValueOrDefault("impinj.rfPhaseAngle")
-            ?? previous.ExtensionFields.GetValueOrDefault("zebra.phase")
-            ?? previous.ExtensionFields.GetValueOrDefault("phase");
-        string? nextPhase = nextTag.ExtensionFields.GetValueOrDefault("impinj.rfPhaseAngle")
-            ?? nextTag.ExtensionFields.GetValueOrDefault("zebra.phase")
-            ?? nextTag.ExtensionFields.GetValueOrDefault("phase");
+        string? previousPhase = previous.ExtensionFields.GetValueOrDefault(ReportFieldSemantics.Phase);
+        string? nextPhase = nextTag.ExtensionFields.GetValueOrDefault(ReportFieldSemantics.Phase);
         if (!string.Equals(previousPhase, nextPhase, StringComparison.Ordinal))
         {
             OnPropertyChanged(nameof(Phase));
         }
 
-        string? previousGps = previous.ExtensionFields.GetValueOrDefault("zebra.gps")
-            ?? previous.ExtensionFields.GetValueOrDefault("gps");
-        string? nextGps = nextTag.ExtensionFields.GetValueOrDefault("zebra.gps")
-            ?? nextTag.ExtensionFields.GetValueOrDefault("gps");
+        string? previousGps = previous.ExtensionFields.GetValueOrDefault(ReportFieldSemantics.Gps);
+        string? nextGps = nextTag.ExtensionFields.GetValueOrDefault(ReportFieldSemantics.Gps);
         if (!string.Equals(previousGps, nextGps, StringComparison.Ordinal))
         {
             OnPropertyChanged(nameof(Gps));
         }
 
-        string? previousXpc = previous.ExtensionFields.GetValueOrDefault("zebra.xpc")
-            ?? previous.ExtensionFields.GetValueOrDefault("xpc");
-        string? nextXpc = nextTag.ExtensionFields.GetValueOrDefault("zebra.xpc")
-            ?? nextTag.ExtensionFields.GetValueOrDefault("xpc");
+        string? previousXpc = previous.ExtensionFields.GetValueOrDefault(ReportFieldSemantics.Xpc);
+        string? nextXpc = nextTag.ExtensionFields.GetValueOrDefault(ReportFieldSemantics.Xpc);
         if (!string.Equals(previousXpc, nextXpc, StringComparison.Ordinal))
         {
             OnPropertyChanged(nameof(Xpc));

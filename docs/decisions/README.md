@@ -15,3 +15,4 @@ ADR 用于记录会影响多个项目或未来 UI 消费者的架构决定。已
 - [ADR-0011：设置页双轴门控——标准轴按协商协议版本、厂商轴按能力画像](ADR-0011-settings-page-dual-axis-gating.md)
 - [ADR-0012：语义能力键与厂商参数毕业机制](ADR-0012-semantic-feature-keys-and-graduation.md)
 - [ADR-0013：报告能力职责归属——联动 vs 分离](ADR-0013-report-capability-ownership.md)
+- [ADR-0014：厂商能力归属与 UI 语义投影](ADR-0014-vendor-feature-ownership-and-ui-semantics.md)

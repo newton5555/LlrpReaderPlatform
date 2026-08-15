@@ -7,14 +7,12 @@
 ## 分层
 
 ```text
-UI Consumer
-  -> Contracts
-  -> Services
-       -> LlrpSdk NuGet packages (default)
-       -> local LLRPCSharp SDK projects (optional development override)
-       -> Registered Extension Modules
-       -> Persistence / Discovery interfaces
-  -> Infrastructure implementations
+App.Wpf composition root
+  -> Services -> Contracts
+  -> Infrastructure -> Services/Contracts
+  -> Extensions.* -> Services/Contracts + vendor SDK adapter
+
+View/ViewModel -> Services -> Contracts
 ```
 
 实际依赖以项目引用为准：
@@ -33,29 +31,38 @@ LlrpReaderPlatform.slnx
 ├── LlrpReaderPlatform.Services
 ├── LlrpReaderPlatform.Infrastructure
 ├── LlrpReaderPlatform.Extensions.Impinj
+├── LlrpReaderPlatform.Extensions.Zebra
 ├── LlrpReaderPlatform.App.Wpf
 ├── LlrpReaderPlatform.Services.Tests
 ├── LlrpReaderPlatform.Extensions.Impinj.Tests
+├── LlrpReaderPlatform.Extensions.Zebra.Tests
 ├── LlrpReaderPlatform.App.Wpf.Tests
 ├── LlrpReaderPlatform.Architecture.Tests
+├── LlrpReaderPlatform.Hardware.Tests
 └── LlrpReaderPlatform.TestKit
 ```
 
 依赖规则：
 
 ```text
-Contracts <── Services ──> LlrpSdk (NuGet default / local projects optional)
-    ▲             ▲
-    │             ├── Extensions.Impinj ──> Impinj SDK package/project
-    │             └── Infrastructure
-    └── App.Wpf ──┘
+App.Wpf (composition root)
+  ├── Services ──> Contracts
+  ├── Infrastructure ──> Services/Contracts
+  └── Extensions.* ──> Services/Contracts + vendor SDK
+
+Services ──> LlrpSdk (NuGet default / local projects optional)
 ```
 
 - `Contracts` 和 `Services` 使用 `net10.0`；`App.Wpf` 使用 `net10.0-windows`；
 - `Contracts` 不引用任何 UI、SDK 或厂商程序集；
 - `Services` 不设置 `UseWPF`，只依赖 Contracts 和 SDK 适配项目；
 - Infrastructure 不把 SQLite、Zeroconf 或日志实现暴露给 Contracts；
-- `Extensions.Impinj` 不得被 Services 反向引用；
+- `Extensions.*` 不得被 Services 反向引用；
+- 厂商 Feature 常量由对应的扩展项目拥有；Contracts 只保存 `Feature` 载体和标准能力；
+- 设置布局使用 `SettingsEntry.SemanticId`/`GroupKey`/`InstanceKey`，报告使用
+  `ReportFieldSemantics`；WPF 不按厂商 Key 读取设置或报告；
+- App.Wpf 作为组合根直接引用并注册启用的 Infrastructure/Extensions 是允许的，
+  不代表共享 Services 反向依赖 UI；
 - Services 内的 `Persistence/` 只放接口和边界模型，SQLite Entity、EF 配置和迁移放在 Infrastructure；
 - Infrastructure 的各 SQLite Store 通过同一 `DbContextFactory` 维度的迁移闸门串行初始化 schema，查询和写入仍各自使用独立 `DbContext`；
 - SDK 类型到 Contracts DTO 的转换集中在 Services/SDK Adapter 内部。

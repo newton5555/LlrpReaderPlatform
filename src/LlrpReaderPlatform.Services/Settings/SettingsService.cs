@@ -758,6 +758,9 @@ public sealed class SettingsService : IReaderSettingsService
         Key = entry.Key,
         Title = entry.Title,
         EditorKind = entry.EditorKind,
+        SemanticId = entry.SemanticId,
+        GroupKey = entry.GroupKey,
+        InstanceKey = entry.InstanceKey,
         ValueType = GetTypeName(entry.ValueType),
         CurrentValue = SerializeNullableCachedValue(entry.CurrentValue),
         DefaultValue = SerializeNullableCachedValue(entry.DefaultValue),
@@ -823,6 +826,9 @@ public sealed class SettingsService : IReaderSettingsService
                     Key = cached.Key,
                     Title = cached.Title ?? cached.Key,
                     EditorKind = cached.EditorKind,
+                    SemanticId = cached.SemanticId,
+                    GroupKey = cached.GroupKey,
+                    InstanceKey = cached.InstanceKey,
                     ValueType = valueType,
                     CurrentValue = current,
                     DefaultValue = defaultValue,
@@ -878,6 +884,9 @@ public sealed class SettingsService : IReaderSettingsService
         public string Key { get; init; } = string.Empty;
         public string? Title { get; init; }
         public EditorKind EditorKind { get; init; }
+        public string? SemanticId { get; init; }
+        public string? GroupKey { get; init; }
+        public string? InstanceKey { get; init; }
         public string ValueType { get; init; } = "System.String";
         public JsonElement? CurrentValue { get; init; }
         public JsonElement? DefaultValue { get; init; }

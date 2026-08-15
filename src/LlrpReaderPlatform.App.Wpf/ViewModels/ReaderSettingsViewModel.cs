@@ -213,24 +213,24 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
     // 让 WPF 保持旧布局，同时不把旧项目的 ReaderSettings 类型带入新架构。
     public SettingsEntryRowViewModel? AntennasRow => FindRow(SettingsKeys.AntennaIds);
     public SettingsEntryRowViewModel? RfModeRow => FindRow(SettingsKeys.RfMode);
-    public SettingsEntryRowViewModel? SearchModeRow => FindRow("impinj.search-mode");
-    public SettingsEntryRowViewModel? FastIdRow => FindRow("impinj.fast-id");
+    public SettingsEntryRowViewModel? SearchModeRow => FindSemanticRow(SettingsSemantics.SearchMode);
+    public SettingsEntryRowViewModel? FastIdRow => FindSemanticRow(SettingsSemantics.FastId);
     public SettingsEntryRowViewModel? PopulationRow => FindRow(SettingsKeys.TagPopulation);
     public SettingsEntryRowViewModel? ReportEveryRow => FindRow(SettingsKeys.ReportEvery);
     public SettingsEntryRowViewModel? SessionRow => FindRow(SettingsKeys.Session);
     public SettingsEntryRowViewModel? TariRow => FindRow(SettingsKeys.Tari);
-    public SettingsEntryRowViewModel? PhaseAngleRow => FindRow("impinj.phase-angle");
-    public SettingsEntryRowViewModel? DopplerRow => FindRow("impinj.doppler");
+    public SettingsEntryRowViewModel? PhaseAngleRow => FindSemanticRow(SettingsSemantics.PhaseReport);
+    public SettingsEntryRowViewModel? DopplerRow => FindSemanticRow(SettingsSemantics.Doppler);
     public SettingsEntryRowViewModel? TxPowerRow => FindRow(SettingsKeys.TxPowerIndex);
     public SettingsEntryRowViewModel? RxSensitivityRow => FindRow(SettingsKeys.RxSensitivityIndex);
     public SettingsEntryRowViewModel? StateAwareFiltersRow => FindRow(SettingsKeys.StateAwareFiltersEnabled);
     public SettingsEntryRowViewModel? StateAwareTargetRow => FindRow(SettingsKeys.StateAwareTarget);
     public SettingsEntryRowViewModel? StateAwareSelectedFlagRow => FindRow(SettingsKeys.StateAwareSelectedFlag);
-    public SettingsEntryRowViewModel? FrequencyModeRow => FindRow("impinj.fixed-frequency-mode");
-    public SettingsEntryRowViewModel? FrequencyChannelsRow => FindRow("impinj.fixed-frequency-channels");
-    public SettingsEntryRowViewModel? LowDutyEnabledRow => FindRow("impinj.low-duty-cycle");
-    public SettingsEntryRowViewModel? EmptyFieldTimeoutRow => FindRow("impinj.empty-field-timeout-ms");
-    public SettingsEntryRowViewModel? FieldPingIntervalRow => FindRow("impinj.field-ping-interval-ms");
+    public SettingsEntryRowViewModel? FrequencyModeRow => FindSemanticRow(SettingsSemantics.FixedFrequency);
+    public SettingsEntryRowViewModel? FrequencyChannelsRow => FindSemanticRow(SettingsSemantics.FixedFrequencyChannels);
+    public SettingsEntryRowViewModel? LowDutyEnabledRow => FindSemanticRow(SettingsSemantics.LowDutyCycle);
+    public SettingsEntryRowViewModel? EmptyFieldTimeoutRow => FindSemanticRow(SettingsSemantics.EmptyFieldTimeout);
+    public SettingsEntryRowViewModel? FieldPingIntervalRow => FindSemanticRow(SettingsSemantics.FieldPingInterval);
     public LegacyFilterSettingsRowViewModel? Filter1 { get; private set; }
     public LegacyFilterSettingsRowViewModel? Filter2 { get; private set; }
 
@@ -695,7 +695,7 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
         {
             var row = new SettingsEntryRowViewModel(entry);
             Rows.Add(row);
-            GetGroup(entry.Key).Add(row);
+            GetGroup(entry).Add(row);
         }
 
         RebuildLegacyLayoutRows();
@@ -851,7 +851,7 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
                 FindRow(SettingsKeys.StopGpiPort),
                 FindRow(SettingsKeys.StopGpiLevel),
                 FindRow(SettingsKeys.StopGpiTimeoutMs),
-                FindRow(ImpinjGpiDebounceKey(checked((ushort)port)))));
+                FindSemanticRow(SettingsSemantics.GpiDebounce, port.ToString(CultureInfo.InvariantCulture))));
         }
 
         Filter1 = BuildFilterRow(1);
@@ -1079,7 +1079,7 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
             Rows.Add(replacement);
         }
 
-        ObservableCollection<SettingsEntryRowViewModel> group = GetGroup(key);
+        ObservableCollection<SettingsEntryRowViewModel> group = GetGroup(newEntry);
         if (group.Contains(old))
         {
             int indexInGroup = group.IndexOf(old);
@@ -1101,9 +1101,71 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
             : null;
     }
 
-    private static string ImpinjGpiDebounceKey(ushort port) => $"impinj.gpi-debounce-ms.{port}";
+    private SettingsEntryRowViewModel? FindSemanticRow(string semanticId, string? instanceKey = null)
+    {
+        SettingsEntryRowViewModel? semantic = Rows.FirstOrDefault(row =>
+            string.Equals(row.SemanticId, semanticId, StringComparison.Ordinal)
+            && (instanceKey is null || string.Equals(row.InstanceKey, instanceKey, StringComparison.Ordinal)));
+        if (semantic is not null || instanceKey is not null)
+        {
+            return semantic ?? FindLegacySemanticRow(semanticId, instanceKey);
+        }
 
-    private ObservableCollection<SettingsEntryRowViewModel> GetGroup(string key)
+        return FindLegacySemanticRow(semanticId, null);
+    }
+
+    /// <summary>
+    /// 兼容早期 SQLite/预设缓存中没有 SemanticId 的布局。新布局永远走上面的
+    /// 元数据路径；这里仅按旧 Key 的尾部识别，不绑定任何厂商前缀。
+    /// </summary>
+    private SettingsEntryRowViewModel? FindLegacySemanticRow(string semanticId, string? instanceKey)
+    {
+        string[] suffixes = semanticId switch
+        {
+            SettingsSemantics.SearchMode => ["search-mode"],
+            SettingsSemantics.FastId => ["fast-id"],
+            SettingsSemantics.PhaseReport => ["phase-angle"],
+            SettingsSemantics.Doppler => ["doppler"],
+            SettingsSemantics.FixedFrequency => ["fixed-frequency-mode"],
+            SettingsSemantics.FixedFrequencyChannels => ["fixed-frequency-channels"],
+            SettingsSemantics.LowDutyCycle => ["low-duty-cycle"],
+            SettingsSemantics.EmptyFieldTimeout => ["empty-field-timeout-ms"],
+            SettingsSemantics.FieldPingInterval => ["field-ping-interval-ms"],
+            SettingsSemantics.GpiDebounce when instanceKey is not null => [$"gpi-debounce-ms.{instanceKey}"],
+            _ => [],
+        };
+
+        return suffixes.Length == 0
+            ? null
+            : Rows.FirstOrDefault(row => suffixes.Any(suffix =>
+                row.Key.Equals(suffix, StringComparison.Ordinal)
+                || row.Key.EndsWith($".{suffix}", StringComparison.Ordinal)
+                || row.Key.EndsWith($"-{suffix}", StringComparison.Ordinal)));
+    }
+
+    private ObservableCollection<SettingsEntryRowViewModel> GetGroup(SettingsEntry entry)
+    {
+        if (entry.GroupKey is not null)
+        {
+            return entry.GroupKey switch
+            {
+                SettingsGroups.Manual => ManualRows,
+                SettingsGroups.Power => PowerRows,
+                SettingsGroups.Gpi => GpiRows,
+                SettingsGroups.Filter => FilterRows,
+                SettingsGroups.StateAware => StateAwareRows,
+                SettingsGroups.Frequency => FrequencyRows,
+                SettingsGroups.LowDuty => LowDutyRows,
+                SettingsGroups.Report => ReportRows,
+                SettingsGroups.Antenna => AntennaRows,
+                _ => OtherRows,
+            };
+        }
+
+        return GetGroupByKey(entry.Key);
+    }
+
+    private ObservableCollection<SettingsEntryRowViewModel> GetGroupByKey(string key)
     {
         if (key.StartsWith("filter-", StringComparison.Ordinal))
         {
@@ -1116,18 +1178,24 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
         }
 
         if (key.StartsWith("start-gpi-", StringComparison.Ordinal)
-            || key.StartsWith("stop-gpi-", StringComparison.Ordinal)
-            || key.StartsWith("impinj.gpi-debounce-", StringComparison.Ordinal))
+            || key.StartsWith("stop-gpi-", StringComparison.Ordinal))
         {
             return GpiRows;
         }
 
-        if (key is "impinj.fixed-frequency-mode" or "impinj.fixed-frequency-channels")
+        if (key.Contains("gpi-debounce-ms.", StringComparison.Ordinal))
+        {
+            return GpiRows;
+        }
+
+        if (key.Contains("fixed-frequency-", StringComparison.Ordinal))
         {
             return FrequencyRows;
         }
 
-        if (key is "impinj.low-duty-cycle" or "impinj.empty-field-timeout-ms" or "impinj.field-ping-interval-ms")
+        if (key.Contains("low-duty-cycle", StringComparison.Ordinal)
+            || key.Contains("empty-field-timeout-ms", StringComparison.Ordinal)
+            || key.Contains("field-ping-interval-ms", StringComparison.Ordinal))
         {
             return LowDutyRows;
         }
@@ -1147,8 +1215,15 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
             return AntennaRows;
         }
 
-        if (key is "antenna" or "session" or "tag-population" or "report-every" or "rf-mode" or "tari"
-            or "impinj.search-mode" or "impinj.fast-id" or "impinj.phase-angle" or "impinj.doppler")
+        if (key is "antenna" or "session" or "tag-population" or "report-every" or "rf-mode" or "tari")
+        {
+            return ManualRows;
+        }
+
+        if (key.EndsWith("-search-mode", StringComparison.Ordinal)
+            || key.EndsWith("-fast-id", StringComparison.Ordinal)
+            || key.EndsWith("-phase-angle", StringComparison.Ordinal)
+            || key.EndsWith("-doppler", StringComparison.Ordinal))
         {
             return ManualRows;
         }

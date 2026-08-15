@@ -13,6 +13,7 @@ public sealed class DependencyDirectionTests
     private static readonly Assembly ServicesAssembly = typeof(LlrpReaderPlatform.Services.ServicesMarker).Assembly;
     private static readonly Assembly InfrastructureAssembly = typeof(LlrpReaderPlatform.Infrastructure.InfrastructureMarker).Assembly;
     private static readonly Assembly ExtensionsAssembly = typeof(LlrpReaderPlatform.Extensions.Impinj.ExtensionsMarker).Assembly;
+    private static readonly Assembly ZebraExtensionsAssembly = typeof(LlrpReaderPlatform.Extensions.Zebra.ZebraExtensionsMarker).Assembly;
     private static readonly Assembly WpfAssembly = typeof(LlrpReaderPlatform.App.Wpf.AppMarker).Assembly;
 
     private static readonly string[] WpfUiAssemblies =
@@ -29,6 +30,7 @@ public sealed class DependencyDirectionTests
         "LlrpNet.Core",
         "LlrpNet.Protocol",
         "LlrpSdk.Extensions.Impinj",
+        "LlrpSdk.Extensions.Zebra",
     ];
 
     public static TheoryData<Assembly> SharedLayers =>
@@ -38,6 +40,7 @@ public sealed class DependencyDirectionTests
             ServicesAssembly,
             InfrastructureAssembly,
             ExtensionsAssembly,
+            ZebraExtensionsAssembly,
         };
 
     [Theory]
@@ -58,4 +61,10 @@ public sealed class DependencyDirectionTests
     [Fact]
     public void Wpf_is_the_only_layer_that_references_ui_frameworks() =>
         Assert.Contains(WpfAssembly.GetReferencedAssemblies(), r => r.Name is "PresentationFramework");
+
+    [Fact]
+    public void Wpf_must_not_reference_sdk_or_vendor_adapter_assemblies() =>
+        Assert.DoesNotContain(
+            WpfAssembly.GetReferencedAssemblies(),
+            reference => reference.Name is not null && SdkAssemblies.Contains(reference.Name));
 }

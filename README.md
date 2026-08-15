@@ -24,7 +24,7 @@ LlrpReaderPlatform is a new LLRP application platform whose first deliverable is
 
 The frozen `../LlrpReaderStudio` repository is reference material only — it documents existing capabilities and migration boundaries and is never a runtime dependency.
 
-**Current baseline:** `1.0.0` · Windows x64 · self-contained single-file portable. The build is clean (0 warnings, 0 errors) and automated tests are green (336 tests). Automated tests use a `FakeSession`; real-device conclusions are recorded separately.
+**Current baseline:** `1.0.0` · Windows x64 · self-contained single-file portable. The build is clean (0 warnings, 0 errors) and automated tests are green (368 tests). Automated tests use a `FakeSession`; real-device conclusions are recorded separately.
 
 ## Architecture
 

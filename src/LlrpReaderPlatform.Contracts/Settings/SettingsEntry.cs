@@ -35,6 +35,18 @@ public sealed record SettingsEntry
     public required string Title { get; init; }
     public required EditorKind EditorKind { get; init; }
 
+    /// <summary>
+    /// 跨扩展的稳定语义键。为空表示该项只在其拥有扩展内部使用；UI 不应根据
+    /// 厂商前缀推断设置含义。
+    /// </summary>
+    public string? SemanticId { get; init; }
+
+    /// <summary>布局分组语义，供不同 UI 消费者投影到各自的页面结构。</summary>
+    public string? GroupKey { get; init; }
+
+    /// <summary>同一语义的重复项标识，例如 GPI debounce 的端口号。</summary>
+    public string? InstanceKey { get; init; }
+
     /// <summary>值的 CLR 类型（如 typeof(bool)、typeof(string)、typeof(int)）。</summary>
     public required Type ValueType { get; init; }
 

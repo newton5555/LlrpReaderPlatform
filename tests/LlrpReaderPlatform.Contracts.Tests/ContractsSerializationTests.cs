@@ -111,7 +111,7 @@ public sealed class ContractsSerializationTests
             SupportedFeatures =
             [
                 ReaderFeatures.StandardInventory,
-                ReaderFeatures.ImpinjFastId,
+                new Feature("fast-id", "impinj", semanticId: "serialized-tid"),
             ],
         };
 
@@ -120,8 +120,8 @@ public sealed class ContractsSerializationTests
 
         Assert.NotNull(restored);
         Assert.True(restored.Supports(ReaderFeatures.StandardInventory));
-        Assert.True(restored.Supports(ReaderFeatures.ImpinjFastId));
-        Assert.False(restored.Supports(ReaderFeatures.ImpinjDoppler));
+        Assert.True(restored.Supports(new Feature("fast-id", "impinj", semanticId: "serialized-tid")));
+        Assert.False(restored.Supports(new Feature("doppler", "impinj", semanticId: "doppler-report")));
     }
 
     [Fact]

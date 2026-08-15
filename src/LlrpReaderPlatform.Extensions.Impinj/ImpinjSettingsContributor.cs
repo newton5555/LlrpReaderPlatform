@@ -54,7 +54,7 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
             ? controlValue as ImpinjInventoryControlOptions
             : null;
 
-        if (Supports(reader, ReaderFeatures.ImpinjFastId))
+        if (Supports(reader, ImpinjFeatures.FastId))
         {
             entries.Add(new SettingsEntry
             {
@@ -65,10 +65,12 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
                 CurrentValue = report?.IncludeSerializedTid ?? false,
                 DefaultValue = false,
                 Source = SettingsSource.VendorExtension,
+                SemanticId = SettingsSemantics.FastId,
+                GroupKey = SettingsGroups.Manual,
             });
         }
 
-        if (Supports(reader, ReaderFeatures.ImpinjGpiDebounce))
+        if (Supports(reader, ImpinjFeatures.GpiDebounce))
         {
             for (int port = 1; port <= ResolveGpiPortCount(reader); port++)
             {
@@ -82,11 +84,14 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
                     CurrentValue = configuration?.GpiDebounce.FirstOrDefault(x => x.GpiPortNumber == port)?.DebounceMilliseconds ?? 0,
                     DefaultValue = 0,
                     Source = SettingsSource.VendorExtension,
+                    SemanticId = SettingsSemantics.GpiDebounce,
+                    GroupKey = SettingsGroups.Gpi,
+                    InstanceKey = port.ToString(CultureInfo.InvariantCulture),
                 });
             }
         }
 
-        if (Supports(reader, ReaderFeatures.ImpinjRfPhase))
+        if (Supports(reader, ImpinjFeatures.RfPhase))
         {
             entries.Add(new SettingsEntry
             {
@@ -97,12 +102,14 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
                 CurrentValue = report?.IncludeRfPhaseAngle ?? false,
                 DefaultValue = false,
                 Source = SettingsSource.VendorExtension,
+                SemanticId = SettingsSemantics.PhaseReport,
+                GroupKey = SettingsGroups.Manual,
                 // ADR-0013：相位已由寻卡页列开关联动控制，设置页只读并提示。
                 ReadOnlyReason = "由寻卡页联动控制",
             });
         }
 
-        if (Supports(reader, ReaderFeatures.ImpinjDoppler))
+        if (Supports(reader, ImpinjFeatures.Doppler))
         {
             entries.Add(new SettingsEntry
             {
@@ -113,10 +120,12 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
                 CurrentValue = report?.IncludeRfDopplerFrequency ?? false,
                 DefaultValue = false,
                 Source = SettingsSource.VendorExtension,
+                SemanticId = SettingsSemantics.Doppler,
+                GroupKey = SettingsGroups.Manual,
             });
         }
 
-        if (Supports(reader, ReaderFeatures.ImpinjSearchMode))
+        if (Supports(reader, ImpinjFeatures.SearchMode))
         {
             entries.Add(new SettingsEntry
             {
@@ -128,10 +137,12 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
                 CurrentValue = control?.InventorySearchMode is { } search ? (int)search : -1,
                 DefaultValue = -1,
                 Source = SettingsSource.VendorExtension,
+                SemanticId = SettingsSemantics.SearchMode,
+                GroupKey = SettingsGroups.Manual,
             });
         }
 
-        if (Supports(reader, ReaderFeatures.ImpinjLowDutyCycle))
+        if (Supports(reader, ImpinjFeatures.LowDutyCycle))
         {
             entries.Add(new SettingsEntry
             {
@@ -142,6 +153,8 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
                 CurrentValue = control?.LowDutyCycle?.Mode == ImpinjLowDutyCycleMode.Enabled,
                 DefaultValue = false,
                 Source = SettingsSource.VendorExtension,
+                SemanticId = SettingsSemantics.LowDutyCycle,
+                GroupKey = SettingsGroups.LowDuty,
             });
             entries.Add(new SettingsEntry
             {
@@ -153,6 +166,8 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
                 CurrentValue = control?.LowDutyCycle?.EmptyFieldTimeoutMilliseconds ?? 500,
                 DefaultValue = 500,
                 Source = SettingsSource.VendorExtension,
+                SemanticId = SettingsSemantics.EmptyFieldTimeout,
+                GroupKey = SettingsGroups.LowDuty,
             });
             entries.Add(new SettingsEntry
             {
@@ -164,10 +179,12 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
                 CurrentValue = control?.LowDutyCycle?.FieldPingIntervalMilliseconds ?? 200,
                 DefaultValue = 200,
                 Source = SettingsSource.VendorExtension,
+                SemanticId = SettingsSemantics.FieldPingInterval,
+                GroupKey = SettingsGroups.LowDuty,
             });
         }
 
-        if (Supports(reader, ReaderFeatures.ImpinjFixedFrequency))
+        if (Supports(reader, ImpinjFeatures.FixedFrequency))
         {
             IReadOnlyList<SettingsOption> frequencyOptions =
             [
@@ -185,6 +202,8 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
                 CurrentValue = control?.FixedFrequency is { } fixedFrequency ? (int)fixedFrequency.Mode : -1,
                 DefaultValue = -1,
                 Source = SettingsSource.VendorExtension,
+                SemanticId = SettingsSemantics.FixedFrequency,
+                GroupKey = SettingsGroups.Frequency,
             });
             entries.Add(new SettingsEntry
             {
@@ -198,6 +217,8 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
                     : string.Empty,
                 DefaultValue = string.Empty,
                 Source = SettingsSource.VendorExtension,
+                SemanticId = SettingsSemantics.FixedFrequencyChannels,
+                GroupKey = SettingsGroups.Frequency,
             });
         }
     }
@@ -219,13 +240,13 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
                 : new ImpinjInventoryReportOptions();
         inventoryExtensions[ImpinjInventoryReportOptions.ExtensionKey] = existingReport with
         {
-            IncludeSerializedTid = Supports(reader, ReaderFeatures.ImpinjFastId)
+            IncludeSerializedTid = Supports(reader, ImpinjFeatures.FastId)
                 ? GetBool(draft, FastId, existingReport.IncludeSerializedTid)
                 : false,
-            IncludeRfPhaseAngle = Supports(reader, ReaderFeatures.ImpinjRfPhase)
+            IncludeRfPhaseAngle = Supports(reader, ImpinjFeatures.RfPhase)
                 ? GetBool(draft, PhaseAngle, existingReport.IncludeRfPhaseAngle)
                 : false,
-            IncludeRfDopplerFrequency = Supports(reader, ReaderFeatures.ImpinjDoppler)
+            IncludeRfDopplerFrequency = Supports(reader, ImpinjFeatures.Doppler)
                 ? GetBool(draft, Doppler, existingReport.IncludeRfDopplerFrequency)
                 : false,
         };
@@ -239,16 +260,16 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
         int frequencyMode = GetInt(draft, FixedFrequencyMode, -1);
         existingControl = existingControl with
         {
-            InventorySearchMode = Supports(reader, ReaderFeatures.ImpinjSearchMode) && searchMode >= 0
+            InventorySearchMode = Supports(reader, ImpinjFeatures.SearchMode) && searchMode >= 0
                 ? (ImpinjInventorySearchType)searchMode
                 : null,
-            LowDutyCycle = Supports(reader, ReaderFeatures.ImpinjLowDutyCycle) && GetBool(draft, LowDutyCycle)
+            LowDutyCycle = Supports(reader, ImpinjFeatures.LowDutyCycle) && GetBool(draft, LowDutyCycle)
                 ? new ImpinjLowDutyCycleSettings(
                     ImpinjLowDutyCycleMode.Enabled,
                     checked((ushort)GetInt(draft, EmptyFieldTimeout, 500)),
                     checked((ushort)GetInt(draft, FieldPingInterval, 200)))
                 : null,
-            FixedFrequency = Supports(reader, ReaderFeatures.ImpinjFixedFrequency)
+            FixedFrequency = Supports(reader, ImpinjFeatures.FixedFrequency)
                 ? BuildFixedFrequency(draft, frequencyMode)
                 : null,
         };

@@ -1,6 +1,6 @@
 # ADR-0013：报告能力职责归属——联动 vs 分离
 
-- 状态：Accepted（R1–R5 已实现并验证；R6 真机验证待设备现场后按[主计划 9.2](../llrp-framework-vision.md)与 planning 文档归档）
+- 状态：Accepted（R1–R5 已实现并由自动化测试覆盖；R6 真机验证仍按[主计划 9.2](../llrp-framework-vision.md)与 planning 文档归档）
 - 日期：2026-08
 
 ## 决策
@@ -16,7 +16,7 @@
 
 ## 背景
 
-- 报告字段（RSSI/天线/信道/PC/时间/SeenCount/Phase 等）当前主要经 `InventorySpec.Report` 在寻卡启动时覆盖到 LLRP；相位等扩展字段（`impinj.phase-angle`、`zebra.report-phase`）目前在设置页独立控制，寻卡页只是列开关，二者脱节。
+- 报告字段（RSSI/天线/信道/PC/时间/SeenCount/Phase 等）经 `InventorySpec.Report` 在寻卡启动时覆盖到 LLRP；扩展报告字段由寻卡页列开关产生语义请求，服务层再按激活扩展编译到厂商参数。
 - 若同时在寻卡页和设置页提供同一能力开关，会出现两个入口、两套联动逻辑，难以保证一致性。
 - 标准 LLRP 1.0.1 没有 RF phase 报告字段；相位必须是厂商扩展（Impinj RF Phase / Zebra report phase）或未来标准版本吸收后的语义路径。
 
@@ -38,4 +38,7 @@
 - `InventoryReportSpec` 需扩展支持扩展字段（按语义键），服务层（ReaderManager）按激活扩展编译到 Impinj/Zebra。
 - **逐项生效**：某项实现真实联动后，设置页对应报告项才由可写改为只读 + “由寻卡页联动控制”提示；尚未联动的项保持现状，不做一次性批量只读。
 - 数据能力（FastID 等）保持设置页控制，寻卡页仅展示。
-- 暂无对应实现，本 ADR 为规划声明；实现时以本文为语义依据。
+- 当前实现：`ReportFieldSemantics` 位于 Contracts；Impinj/Zebra 扩展分别实现
+  `ApplyInventoryReportSpec` 和 `ProjectTagReport`，将 Phase/GPS/XPC 投影为稳定语义字段；
+  WPF `TagRowViewModel` 只读取这些语义字段。设置页的同名报告开关由扩展贡献者标记为只读，
+  并保留“由寻卡页联动控制”提示。厂商原始字段仍可作为诊断扩展字段保留，但不属于 UI 契约。
