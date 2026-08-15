@@ -24,11 +24,13 @@
 
 每个设备至少记录：
 
-- 厂商、型号、固件版本；
+- 厂商、型号（ModelId）、固件版本；
 - LLRP 协议版本和连接策略；
 - 身份、能力、Inventory、Settings、Tag Access、GPI/GPO 结果；
 - 扩展模块和扩展字段结果；
 - 已知限制、错误码、复现步骤和测试日期。
+
+**设备同一性判定**：IP 地址不是稳定标识，可能被 DHCP 或部署变更。判定两条记录是否同一设备，必须依据固件上报的**厂商 ManufacturerId + 型号 ModelId + 固件版本**（能取到 MAC/LUID 时一并记录），不能用 IP 或主机名代替。同一台设备更换 IP 后，应沿用既有验证记录并注明新地址，不因 IP 变化重置或提升兼容性结论。
 
 设备支持等级必须来自实际测试，不能仅由厂商名称、SDK 包或接口实现推导。
 
@@ -51,6 +53,8 @@
 | 设备 | 协议 | 目标等级 | 验收状态 |
 |---|---|---|---|
 | 真机（地址 192.168.41.134） | LLRP / Impinj（型号以 ModelId 记录） | L1～L3 已验证部分；L4 已验证部分 | 标准 Probe、标准 Settings Query、Impinj 扩展 Builder 连接以及有界 Inventory Start→Stop→Disconnect 已成功：ManufacturerId `0x651A`（25882）、ModelId `0x1E886A`（2001002）、固件 `6.4.1.240`、最大天线数 4；WPF Tab1 `Report Every N Tags` 1→2 保存并刷新回读成功，随后恢复 1；WPF Tab2 GPO1 ON→OFF 成功并恢复 OFF；新平台 GPI 4 路状态查询成功；Impinj GPI1 debounce 20→250、FastID/Phase、Search Mode、Low Duty、固定频率均 Apply/回读成功并恢复；新平台 ReaderManager 10 秒真实寻卡收到 1533 条 TagObserved、聚合 8 个唯一 EPC，另一次 FastID/Phase 寻卡聚合 6 个 EPC 并出现 `impinj.serializedTid`、`impinj.rfPhaseAngle`、`impinj.peakRssi`，以 `InventorySpec.Antennas=[1]` 覆盖天线时再次聚合 10 个标签；平台 Tag Access 使用 EPC `E201E24F3E0B0E1CFAAF8700` 读取 EPC/TID/User/Reserved 四个 Memory Bank 成功，其中 TID 返回 `E201E24F3E0B0E1C00008600`、EPC 返回 `3000E201E24F3E0B0E1CFAAF`、User 返回 `0000`、Reserved 返回 `00000000`，User Bank `0000`→`A55A`→`0000` 写入恢复成功；另一次 3 秒 Inventory 以 `StopReason=Duration` 完成 12 次读取并生成 12 行 JSONL TagLog；Doppler 按 SDK 能力画像隐藏；GPI 事件/触发、其它 Memory Bank 写入、多 Reader 和断网/重启现场恢复待验收 |
+| 真机（地址 192.168.40.87；与下方 `.134` 同 identity） | LLRP 1.0.1 / Impinj | R420：L1~L4 | 该地址是此前 `192.168.41.134` 记录中**同一台 R420**（判定依据 ManufacturerId `0x651A`=25882、ModelId `2001002`、固件 `6.4.1.240`，IP 已变更）。2026-08 真机探针确认：连接后以 `ImpinjInventoryReportOptions{ IncludeRfPhaseAngle=true, IncludeSerializedTid=true }` 启动盘报告，真实标签报告每条均含 `impinj.rfPhaseAngle` 与 `impinj.serializedTid`（30 条报告全部命中），证明寻卡相位联动（R2/R3）在真实 R420 生效；不因此 IP 变化重置旧验证结论。未做 GPI 物理触发/多 Reader 同时寻卡等现场剩余项 |
+| 真机（地址 192.168.40.88） | LLRP 1.0.1 / Zebra（实验） | Zebra Experimental，L4 未声明 | 2026-08 真机探针确认：Zebra FX9600（Mfr `161`、Model `96008`、固件 `3.32.37.0`，即平台 `VerifiedFx9600Firmware` 固件基线）TCP 5084 可达并完成标准连接与身份读取。未执行盘存/设置回写；按规划 Zebra 扩展为实验性，未真机画像标定前不提升 L4 支持等级。 |
 | 真机（地址 192.168.41.148） | LLRP 1.0.1（强制） | L1 已验证；L2/L3 部分验证 | TCP 5084 可达；平台强制 `Force101` 的 Probe、Add、Activate 均成功，协商版本为 `Version101`，Model `57690:40`、Firmware `1.0.0.233`；激活后状态 `Disconnected`、能力非陈旧、4 个逻辑天线端口、GPI/GPO 能力为空；Settings Query 成功生成 57 个可编辑语义项；Tab1 语义设置 `Report Every N Tags` 已真实执行 `1→2→1` Apply/回读并恢复原值，且当前 RF Mode 不在能力表时已由兼容选项保留，避免无关设置被误拒。设备当前未接天线，因此未执行 Inventory/TagAccess，不把无标签结果当作失败或通过 |
 
 ### 真机标准 Probe/Settings Query 与 WPF 验证记录（2026-08-09～2026-08-11）
