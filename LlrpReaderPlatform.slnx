@@ -7,10 +7,15 @@
     <File Path="Directory.Packages.props" />
     <File Path="global.json" />
     <File Path="README.md" />
+    <File Path="README.zh-CN.md" />
   </Folder>
   <Folder Name="/docs/">
     <File Path="docs/README.md" />
     <File Path="docs/llrp-framework-vision.md" />
+  </Folder>
+  <Folder Name="/docs/assets/">
+    <File Path="docs/assets/architecture.svg" />
+    <File Path="docs/assets/compatibility.svg" />
   </Folder>
   <Folder Name="/docs/architecture/">
     <File Path="docs/architecture/overview.md" />

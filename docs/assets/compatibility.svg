@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 344" role="img" aria-label="LLRP compatibility layers L1 through L4">
+  <rect x="0" y="0" width="960" height="344" rx="16" fill="#FFFFFF"/>
+  <g font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+
+    <rect x="20" y="20" width="76" height="56" rx="10" fill="#00B894"/>
+    <text x="58" y="54" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">L1</text>
+    <rect x="110" y="20" width="830" height="56" rx="10" fill="#E7F6F2"/>
+    <text x="128" y="44" font-size="14" font-weight="600" fill="#2D3436">Connection &amp; identity</text>
+    <text x="128" y="64" font-size="12" fill="#5A6B7B">TCP、LLRP 握手、协议版本、身份与能力探测</text>
+
+    <rect x="20" y="86" width="76" height="56" rx="10" fill="#0984E3"/>
+    <text x="58" y="120" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">L2</text>
+    <rect x="110" y="86" width="830" height="56" rx="10" fill="#EAF3FC"/>
+    <text x="128" y="110" font-size="14" font-weight="600" fill="#2D3436">Standard inventory</text>
+    <text x="128" y="130" font-size="12" fill="#5A6B7B">EPC、RSSI、天线、信道、SeenCount、时间戳</text>
+
+    <rect x="20" y="152" width="76" height="56" rx="10" fill="#6C5CE7"/>
+    <text x="58" y="186" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">L3</text>
+    <rect x="110" y="152" width="830" height="56" rx="10" fill="#F0EDFC"/>
+    <text x="128" y="176" font-size="14" font-weight="600" fill="#2D3436">Standard settings · Gen2 filters · Tag Access · GPI/GPO</text>
+    <text x="128" y="196" font-size="12" fill="#5A6B7B">标准设置、Gen2 过滤器、Tag Access、GPI/GPO（按能力决定可用性）</text>
+
+    <rect x="20" y="218" width="76" height="56" rx="10" fill="#E17055"/>
+    <text x="58" y="252" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">L4</text>
+    <rect x="110" y="218" width="830" height="56" rx="10" fill="#FBEEEA"/>
+    <text x="128" y="242" font-size="14" font-weight="600" fill="#2D3436">Vendor extensions</text>
+    <text x="128" y="262" font-size="12" fill="#5A6B7B">厂商扩展（如 Impinj Search Mode / FastID / Phase），仅在独立模块与真机验证后声明</text>
+
+    <text x="20" y="318" font-size="12" fill="#5A6B7B">Support level comes from real-device testing, never inferred from vendor name or SDK packages. · 支持等级来自真机测试，不能仅由厂商名称或 SDK 包推导。</text>
+  </g>
+</svg>
