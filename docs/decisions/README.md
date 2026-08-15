@@ -16,3 +16,4 @@ ADR 用于记录会影响多个项目或未来 UI 消费者的架构决定。已
 - [ADR-0012：语义能力键与厂商参数毕业机制](ADR-0012-semantic-feature-keys-and-graduation.md)
 - [ADR-0013：报告能力职责归属——联动 vs 分离](ADR-0013-report-capability-ownership.md)
 - [ADR-0014：厂商能力归属与 UI 语义投影](ADR-0014-vendor-feature-ownership-and-ui-semantics.md)
+- [ADR-0015：Virtual Reader 作为平台级开发替身](ADR-0015-virtual-reader-development-mode.md)

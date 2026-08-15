@@ -33,6 +33,9 @@
     <File Path="docs/development/legacy-feature-matrix.md" />
     <File Path="docs/development/hardware-validation-runbook.md" />
     <File Path="docs/development/wpf-user-and-troubleshooting.md" />
+    <File Path="docs/development/virtual-reader.md" />
+    <File Path="docs/development/samples/virtual-reader.json" />
+    <File Path="docs/development/samples/virtual-tags.jsonl" />
     <File Path="docs/development/release.md" />
   </Folder>
   <Folder Name="/docs/releases/">
@@ -54,6 +57,7 @@
     <File Path="docs/decisions/ADR-0012-semantic-feature-keys-and-graduation.md" />
     <File Path="docs/decisions/ADR-0013-report-capability-ownership.md" />
     <File Path="docs/decisions/ADR-0014-vendor-feature-ownership-and-ui-semantics.md" />
+    <File Path="docs/decisions/ADR-0015-virtual-reader-development-mode.md" />
   </Folder>
   <Folder Name="/docs/templates/">
     <File Path="docs/templates/ADR-template.md" />
@@ -70,6 +74,7 @@
     <Project Path="src/LlrpReaderPlatform.Infrastructure/Infrastructure.csproj" />
     <Project Path="src/LlrpReaderPlatform.Extensions.Impinj/Extensions.Impinj.csproj" />
     <Project Path="src/LlrpReaderPlatform.Extensions.Zebra/Extensions.Zebra.csproj" />
+    <Project Path="src/LlrpReaderPlatform.VirtualReader/VirtualReader.csproj" />
     <Project Path="src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj" />
   </Folder>
 
@@ -84,5 +89,6 @@
     <Project Path="tests/LlrpReaderPlatform.App.Wpf.Tests/App.Wpf.Tests.csproj" />
     <Project Path="tests/LlrpReaderPlatform.Architecture.Tests/Architecture.Tests.csproj" />
     <Project Path="tests/LlrpReaderPlatform.Hardware.Tests/LlrpReaderPlatform.Hardware.Tests.csproj" />
+    <Project Path="tests/LlrpReaderPlatform.VirtualReader.Tests/VirtualReader.Tests.csproj" />
   </Folder>
 </Solution>

@@ -1,12 +1,15 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
+using LlrpReaderPlatform.Contracts.Persistence;
+using LlrpReaderPlatform.Contracts.Readers;
 using LlrpReaderPlatform.App.Wpf.ViewModels;
 using LlrpReaderPlatform.Extensions.Impinj;
 using LlrpReaderPlatform.Extensions.Zebra;
 using LlrpReaderPlatform.Infrastructure;
 using LlrpReaderPlatform.Services;
 using LlrpReaderPlatform.Services.Sdk;
+using LlrpReaderPlatform.VirtualReader;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -18,6 +21,7 @@ public partial class App : Application
 {
     private ServiceProvider? services;
     private ILogger<App>? logger;
+    private VirtualReaderScenario? virtualScenario;
 
     private const string LogOutputTemplate =
         "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}";
@@ -41,6 +45,7 @@ public partial class App : Application
         ServiceCollection collection = new();
         ConfigureServices(collection);
         services = collection.BuildServiceProvider();
+        SeedVirtualReaderProfileIfConfigured();
         logger = services.GetRequiredService<ILogger<App>>();
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
@@ -75,12 +80,51 @@ public partial class App : Application
         services.AddImpinjExtension();
         services.AddZebraExtension();
 
-        // The reader stack receives the same application logger factory as every other
-        // component. Serilog then routes SDK categories to sdk-*.log.
-        services.AddSingleton<IReaderSessionFactory>(provider =>
-            new LlrpReaderSessionFactory(provider.GetRequiredService<ILoggerFactory>()));
+        // The virtual Reader is an explicit development mode. It uses the same
+        // ReaderManager, settings, inventory, Tag Memory and WPF pages; only the
+        // session factory is replaced for the configured scenario.
+        string? virtualScenarioPath = Environment.GetEnvironmentVariable("LLRP_VIRTUAL_SCENARIO");
+        if (!string.IsNullOrWhiteSpace(virtualScenarioPath))
+        {
+            VirtualInventoryDataset dataset = new VirtualReaderScenarioLoader()
+                .LoadAsync(virtualScenarioPath)
+                .GetAwaiter()
+                .GetResult();
+            var catalog = new VirtualReaderCatalog();
+            catalog.Register(dataset);
+            virtualScenario = dataset.Scenario;
+            services.AddVirtualReader(catalog);
+        }
+        else
+        {
+            // The reader stack receives the same application logger factory as every other
+            // component. Serilog then routes SDK categories to sdk-*.log.
+            services.AddSingleton<IReaderSessionFactory>(provider =>
+                new LlrpReaderSessionFactory(provider.GetRequiredService<ILoggerFactory>()));
+        }
 
         services.AddLlrpReaderPlatformWpf();
+    }
+
+    private void SeedVirtualReaderProfileIfConfigured()
+    {
+        if (virtualScenario is null || services is null)
+        {
+            return;
+        }
+
+        IReaderProfileStore profiles = services.GetRequiredService<IReaderProfileStore>();
+        ReaderProfile? existing = profiles
+            .GetAsync(virtualScenario.ReaderId, CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
+        if (existing is null)
+        {
+            profiles
+                .SaveAsync(virtualScenario.ToReaderProfile(), CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+        }
     }
 
     private static Serilog.ILogger CreateApplicationLogger(string logDirectory) =>
