@@ -326,7 +326,8 @@ public sealed class ImpinjReaderExtensionModuleTests
 
         InventorySettings result = module.ApplyInventoryReportSpec(
             inventory,
-            new List<string> { ReportFieldSemantics.Phase });
+            new List<string> { ReportFieldSemantics.Phase },
+            R420Features());
 
         var options = Assert.IsType<ImpinjInventoryReportOptions>(
             result.Extensions[ImpinjInventoryReportOptions.ExtensionKey]);
@@ -341,7 +342,23 @@ public sealed class ImpinjReaderExtensionModuleTests
 
         InventorySettings result = module.ApplyInventoryReportSpec(
             inventory,
-            new List<string> { "unrelated-semantic" });
+            new List<string> { "unrelated-semantic" },
+            R420Features());
+
+        Assert.DoesNotContain(ImpinjInventoryReportOptions.ExtensionKey, result.Extensions.Keys);
+    }
+
+    [Fact]
+    public void ApplyInventoryReportSpec_respects_capability_gate()
+    {
+        var module = new ImpinjReaderExtensionModule();
+        var inventory = new InventorySettings();
+
+        // 请求含 phase-report，但能力目录不支持 Impinj RF Phase：不得写入。
+        InventorySettings result = module.ApplyInventoryReportSpec(
+            inventory,
+            new List<string> { ReportFieldSemantics.Phase },
+            ReaderFeatureCatalog.Empty);
 
         Assert.DoesNotContain(ImpinjInventoryReportOptions.ExtensionKey, result.Extensions.Keys);
     }

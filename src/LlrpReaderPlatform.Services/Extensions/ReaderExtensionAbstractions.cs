@@ -96,8 +96,12 @@ public interface IReaderExtensionModule
 
     /// <summary>
     /// 按本次寻卡请求的语义报告字段（ADR-0013）把厂商报告开关写入 SDK InventorySettings。
-    /// 只在 <see cref="LlrpReaderPlatform.Contracts.Tagging.ReportFieldSemantics"/>（如 phase-report）
-    /// 出现在 <paramref name="semanticFields"/> 且该能力被支持时写入；默认 no-op，旧模块零成本升级。
+    /// <paramref name="catalog"/> 是该 Reader 已仲裁的能力目录；仅当语义键出现在
+    /// <paramref name="semanticFields"/> 且 <paramref name="catalog"/> 明确支持对应能力时才写入，
+    /// 否则原样返回不修改设备（能力门控，避免向不支持语音活未知画像的设备下发厂商参数）。
     /// </summary>
-    InventorySettings ApplyInventoryReportSpec(InventorySettings settings, IReadOnlyList<string> semanticFields) => settings;
+    InventorySettings ApplyInventoryReportSpec(
+        InventorySettings settings,
+        IReadOnlyList<string> semanticFields,
+        LlrpReaderPlatform.Contracts.Settings.ReaderFeatureCatalog catalog) => settings;
 }

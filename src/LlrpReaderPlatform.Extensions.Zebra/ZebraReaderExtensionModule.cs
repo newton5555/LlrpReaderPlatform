@@ -68,13 +68,20 @@ public sealed class ZebraReaderExtensionModule : IReaderExtensionModule
         context.Builder.UseZebra();
     }
 
-    public InventorySettings ApplyInventoryReportSpec(InventorySettings settings, IReadOnlyList<string> semanticFields)
+    public InventorySettings ApplyInventoryReportSpec(
+        InventorySettings settings,
+        IReadOnlyList<string> semanticFields,
+        LlrpReaderPlatform.Contracts.Settings.ReaderFeatureCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(settings);
         bool wantsPhase = semanticFields.Contains(ReportFieldSemantics.Phase);
         bool wantsGps = semanticFields.Contains(ReportFieldSemantics.Gps);
-bool wantsXpc = semanticFields.Contains(ReportFieldSemantics.Xpc);
-        if (!wantsPhase && !wantsGps && !wantsXpc)
+        bool wantsXpc = semanticFields.Contains(ReportFieldSemantics.Xpc);
+        // 能力门控（ADR-0013）：每个语义键都必须由该 Reader 的能力目录明确支持才写入。
+        bool canPhase = catalog is not null && catalog.Supports(ReaderFeatures.ZebraReportPhase);
+        bool canGps = catalog is not null && catalog.Supports(ReaderFeatures.ZebraReportGps);
+        bool canXpc = catalog is not null && catalog.Supports(ReaderFeatures.ZebraReportXpc);
+        if ((!wantsPhase || !canPhase) && (!wantsGps || !canGps) && (!wantsXpc || !canXpc))
         {
             return settings;
         }
@@ -88,9 +95,10 @@ bool wantsXpc = semanticFields.Contains(ReportFieldSemantics.Xpc);
                 : new ZebraInventoryReportOptions();
         inventoryExtensions[ZebraInventoryReportOptions.ExtensionKey] = existing with
         {
-            IncludePhase = wantsPhase ? true : existing.IncludePhase,
-            IncludeGps = wantsGps ? true : existing.IncludeGps,
-            IncludeMltReport = wantsXpc ? true : existing.IncludeMltReport,
+            IncludePhase = wantsPhase && canPhase ? true : existing.IncludePhase,
+            IncludeGps = wantsGps && canGps ? true : existing.IncludeGps,
+            // Zebra XPC 由 MLT 报告携带（EnableMLTReport），因此 XPC 对应 IncludeMltReport。
+            IncludeMltReport = wantsXpc && canXpc ? true : existing.IncludeMltReport,
         };
 
         return settings with

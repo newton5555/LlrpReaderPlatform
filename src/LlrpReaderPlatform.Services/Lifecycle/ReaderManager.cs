@@ -1406,9 +1406,11 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                 // 模块不支持或语义键不在其能力范围时静默忽略，不影响寻卡启动。
                 if (spec.Report?.ExtensionReportFields is { Count: > 0 } semanticFields)
                 {
+                    LlrpReaderPlatform.Contracts.Settings.ReaderFeatureCatalog catalog =
+                        handle.Snapshot.FeatureCatalog ?? LlrpReaderPlatform.Contracts.Settings.ReaderFeatureCatalog.Empty;
                     foreach (IReaderExtensionModule extension in handle.Extensions)
                     {
-                        inventory = extension.ApplyInventoryReportSpec(inventory, semanticFields);
+                        inventory = extension.ApplyInventoryReportSpec(inventory, semanticFields, catalog);
                     }
                 }
 

@@ -112,15 +112,21 @@ public sealed class ImpinjReaderExtensionModule : IReaderExtensionModule
         context.Builder.UseImpinj();
     }
 
-    public InventorySettings ApplyInventoryReportSpec(InventorySettings settings, IReadOnlyList<string> semanticFields)
+    public InventorySettings ApplyInventoryReportSpec(
+        InventorySettings settings,
+        IReadOnlyList<string> semanticFields,
+        LlrpReaderPlatform.Contracts.Settings.ReaderFeatureCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        if (!semanticFields.Contains(LlrpReaderPlatform.Contracts.Tagging.ReportFieldSemantics.Phase))
+        // 能力门控（ADR-0013）：仅当请求含 phase-report 且该 Reader 已仲裁支持 RF Phase 时才写入。
+        if (!semanticFields.Contains(LlrpReaderPlatform.Contracts.Tagging.ReportFieldSemantics.Phase)
+            || catalog is null
+            || !catalog.Supports(ReaderFeatures.ImpinjRfPhase))
         {
             return settings;
         }
 
-        // R420 已实测：RF phase angle 属于 InventoryInventoryReportOptions 扩展字典。
+        // R420 已实测：RF Phase angle 属于 ImpinjInventoryReportOptions 扩展字典。
         var extensions = new Dictionary<string, object?>(settings.Extensions, StringComparer.Ordinal);
         ImpinjInventoryReportOptions existing = extensions.TryGetValue(
             ImpinjInventoryReportOptions.ExtensionKey, out object? value) &&
