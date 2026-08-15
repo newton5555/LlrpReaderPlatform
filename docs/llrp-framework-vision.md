@@ -760,8 +760,10 @@ Tab2 状态投影补充：主窗口状态刷新会重复向 Diagnostics 投影�
 **SDK 未托管项的三层纪律**（“上层先做、留接口给 SDK”）：Contracts 契约与语义键先落地；Services 只留方法挂点；UI 行按 Feature 隐藏，不得以“页面可操作”冒充完成。**SDK 缺口跟踪清单**：BlockPermalock/Recommission、2.0 安全 Tag Access、标准 XPC——SDK 托管后按语义键点亮，不做迁移。
 
 **不在本轮**：1.1/2.0 专属参数的实机验收（无对应设备，矩阵保持 `PendingHardware`）；任何未经实机验收的支持声明。
+### 9.2 寻卡联动上报设置（ADR-0013 落地）
 
-## 10. WPF 消费者对齐旧项目（UI 迭代回填）
+> 决策依据：[ADR-0013](decisions/ADR-0013-report-capability-ownership.md)：只有“需要上报控制”的参数做联动；一项参数实现真实联动后，设置页对应项改为只读。
+> 执行计划（临时文档，完成后归档并删除）：[寻卡联动上报设置实现计划](planning/inventory-report-linkage.md)。
 
 在初版三页 Tab 基础上，为对齐旧 `LlrpReaderStudio.Wpf` 的功能面已补充：
 
