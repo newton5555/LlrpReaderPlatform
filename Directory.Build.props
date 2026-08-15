@@ -32,4 +32,3 @@
     <Error Text="UseLocalLlrpSdk=true, but LlrpSdkSourceRoot does not contain src\LlrpSdk\LlrpSdk.csproj: $(LlrpSdkSourceRoot)" />
   </Target>
 </Project>
-
