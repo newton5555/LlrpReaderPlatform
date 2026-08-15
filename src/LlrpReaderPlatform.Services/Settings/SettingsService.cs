@@ -195,7 +195,6 @@ public sealed class SettingsService : IReaderSettingsService
                 issues.Add(new SettingsEntryIssue(entry.Key, $"{entry.Title} 未设置。"));
                 continue;
             }
-
             ValidateValue(entry, value, issues);
         }
 
@@ -406,7 +405,6 @@ public sealed class SettingsService : IReaderSettingsService
                 issues.Add(new SettingsEntryIssue(entry.Key, $"{entry.Title} 未设置。"));
                 continue;
             }
-
             ValidateValue(entry, value, issues);
         }
 
@@ -507,6 +505,7 @@ public sealed class SettingsService : IReaderSettingsService
         {
             normalized = type switch
             {
+                _ when type == typeof(byte) => Convert.ToByte(value, CultureInfo.InvariantCulture),
                 _ when type == typeof(ushort) => Convert.ToUInt16(value, CultureInfo.InvariantCulture),
                 _ when type == typeof(int) => Convert.ToInt32(value, CultureInfo.InvariantCulture),
                 _ when type == typeof(decimal) => Convert.ToDecimal(value, CultureInfo.InvariantCulture),

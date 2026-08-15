@@ -28,7 +28,7 @@
     <ProjectReference Include="..\LlrpReaderPlatform.Services\Services.csproj" />
     <ProjectReference Include="..\LlrpReaderPlatform.Infrastructure\Infrastructure.csproj" />
     <ProjectReference Include="..\LlrpReaderPlatform.Extensions.Impinj\Extensions.Impinj.csproj" />
-    <ProjectReference Include="..\LlrpReaderPlatform.Extensions.Zebra\ZebraExtensions.csproj" />
+    <ProjectReference Include="..\LlrpReaderPlatform.Extensions.Zebra\Extensions.Zebra.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -46,3 +46,4 @@
   </ItemGroup>
 
 </Project>
+

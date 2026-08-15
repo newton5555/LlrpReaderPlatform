@@ -164,6 +164,18 @@ public sealed class ZebraSettingsContributor : ISettingsExtensionContributor
     private static bool? GetBool(SettingsDraft draft, string key) =>
         draft.Values.TryGetValue(key, out object? value) && value is bool b ? b : null;
 
-    private static byte? GetByte(SettingsDraft draft, string key) =>
-        draft.Values.TryGetValue(key, out object? value) && value is byte byteValue ? byteValue : null;
+    private static byte? GetByte(SettingsDraft draft, string key)
+    {
+        if (!draft.Values.TryGetValue(key, out object? value))
+        {
+            return null;
+        }
+
+        return value switch
+        {
+            byte byteValue => byteValue,
+            int intValue when intValue is >= byte.MinValue and <= byte.MaxValue => (byte)intValue,
+            _ => null,
+        };
+    }
 }
