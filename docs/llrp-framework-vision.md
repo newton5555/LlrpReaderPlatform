@@ -737,7 +737,7 @@ Tab2 状态投影补充：主窗口状态刷新会重复向 Diagnostics 投影�
 
 ### 9.1 多版本与多厂商推进计划（1.1 / 2.0 / 1.0.1+Zebra）
 
-> 决策依据：[ADR-0011](decisions/ADR-0011-settings-page-dual-axis-gating.md)（一页 UI、双轴正交门控：标准轴按 `NegotiatedProtocolVersion`、厂商轴按 `ManufacturerId` + 能力画像）与 [ADR-0012](decisions/ADR-0012-semantic-feature-keys-and-graduation.md)（语义能力键 + `StandardizedSince` 毕业机制 + 标准优先仲裁）。本小节是本仓库当前唯一的多版本推进计划，不另建第二份阶段计划。
+> 决策依据：[ADR-0011](decisions/ADR-0011-settings-page-dual-axis-gating.md)（一页 UI、双轴正交门控：标准轴按 `NegotiatedProtocolVersion`、厂商轴按 `ManufacturerId` + 能力画像）、[ADR-0012](decisions/ADR-0012-semantic-feature-keys-and-graduation.md)（语义能力键 + `StandardizedSince` 毕业机制 + 标准优先仲裁）与 [ADR-0013](decisions/ADR-0013-report-capability-ownership.md)（报告字段走寻卡页联动、数据能力留在设置页）。本小节是本仓库当前唯一的多版本推进计划，不另建第二份阶段计划。
 
 **SDK 1.4.0 能力边界**（已核实，决定平台可做范围）：
 

@@ -116,12 +116,15 @@ Reader 的当前配置与 managed ROSpec 是两个查询范围。设备没有初
    `info.ProtocolVersion` 判定（与 SDK matcher 一致）；两轴取交集，避免在错误协议版本上配扩展。
 3. **语义键与毕业元数据**：每个 `Feature` 必须有稳定 `SemanticId`；语义会被标准吸收时立即标
    `StandardizedSince`（ADR-0012）。
-4. **设置贡献者**：实现 `ISettingsExtensionContributor`，只在 `Supports(feature)` 时贡献行；
+4. **报告能力归属（ADR-0013）**：报告类字段（Phase 等）开关走寻卡页联动，服务层按语义键分发到
+   标准/Impinj/Zebra，设置页同一项置为只读 + “由寻车页联动控制”提示；数据能力（如 FastID）仍由
+   设置页独占，寻卡页只展示。
+5. **设置贡献者**：实现 `ISettingsExtensionContributor`，只在 `Supports(feature)` 时贡献行；
    UI 行走泛型 `SettingsEntryRowViewModel`，渲染层零感知。
-5. **报告投影**：实现 `ProjectTagReport` 把扩展字段投影为稳定字符串，落 `ReaderTagReportProjection.Fields`；
+6. **报告投影**：实现 `ProjectTagReport` 把扩展字段投影为稳定字符串，落 `ReaderTagReportProjection.Fields`；
    寻卡页如需专属列再补列头选择器开关。
-6. **组合根**：宿主显式 `services.Add<Vendor>Extension()` 注册，不扫描 / 不硬编码。
-7. **测试与验证门槛**：厂商模块测试（适用性、门控、layout/Apply/投影往返）+ 至少一台真机按设备矩阵 L4 验收。
+7. **组合根**：宿主显式 `services.Add<Vendor>Extension()` 注册，不扫描 / 不硬编码。
+8. **测试与验证门槛**：厂商模块测试（适用性、门控、layout/Apply/投影往返）+ 至少一台真机按设备矩阵 L4 验收。
    未真机验收前声明为实验性（如 Zebra），不提升支持等级。
-8. **对版本组合的准备**：不假设厂商只匹配 1.0.1；通过 `ProtocolVersion` 显式声明，天然支持
+9. **对版本组合的准备**：不假设厂商只匹配 1.0.1；通过 `ProtocolVersion` 显式声明，天然支持
    未来 1.1/2.0 + 厂商组合，不产生按版本拆 UI 的组合爆炸。
