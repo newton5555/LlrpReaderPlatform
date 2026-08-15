@@ -74,20 +74,12 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-        <DataTemplate x:Key="SettingsRowTemplate">
-            <Grid Margin="0,4">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="145" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Title}" Style="{StaticResource FieldLabelStyle}" />
-
-                <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding ChoiceDisplays}"
-                          SelectedIndex="{Binding SelectedChoiceIndex, Mode=TwoWay}">
+        <!-- 仅渲染值编辑器（不带动画左侧标签），供 OTHER SETTINGS 的 ListView 值列使用 -->
+        <DataTemplate x:Key="SettingsValueEditorTemplate">
+            <Grid>
+                <ComboBox ItemsSource="{Binding ChoiceDisplays}"
+                          SelectedIndex="{Binding SelectedChoiceIndex, Mode=TwoWay}"
+                          VerticalAlignment="Center">
                     <ComboBox.Style>
                         <Style TargetType="ComboBox">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -103,7 +95,7 @@
                     </ComboBox.Style>
                 </ComboBox>
 
-                <CheckBox Grid.Row="0" Grid.Column="1" IsChecked="{Binding BooleanValue, Mode=TwoWay}"
+                <CheckBox IsChecked="{Binding BooleanValue, Mode=TwoWay}"
                           Content="Enabled" VerticalAlignment="Center">
                     <CheckBox.Style>
                         <Style TargetType="CheckBox">
@@ -120,8 +112,7 @@
                     </CheckBox.Style>
                 </CheckBox>
 
-                <ScrollViewer Grid.Row="0" Grid.Column="1" MaxHeight="150"
-                              VerticalScrollBarVisibility="Auto">
+                <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto">
                     <ScrollViewer.Style>
                         <Style TargetType="ScrollViewer">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -144,7 +135,7 @@
                     </ItemsControl>
                 </ScrollViewer>
 
-                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding ValueText, UpdateSourceTrigger=PropertyChanged}"
+                <TextBox Text="{Binding ValueText, UpdateSourceTrigger=PropertyChanged}"
                          VerticalAlignment="Center">
                     <TextBox.Style>
                         <Style TargetType="TextBox">
@@ -160,9 +151,20 @@
                     </TextBox.Style>
                 </TextBox>
 
-                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ReadOnlyReason}"
+                <TextBlock Text="{Binding ReadOnlyReason}"
                            Foreground="{DynamicResource MahApps.Brushes.Gray3}"
-                           VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,1,0,3" />
+                           TextWrapping="Wrap" VerticalAlignment="Center">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsReadOnly}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
             </Grid>
         </DataTemplate>
     </UserControl.Resources>
@@ -734,7 +736,27 @@
                                         <Border DockPanel.Dock="Top" Style="{StaticResource SectionHeaderStyle}">
                                             <TextBlock Text="OTHER SETTINGS" Style="{StaticResource SectionHeaderTextStyle}" />
                                         </Border>
-                                        <ItemsControl ItemsSource="{Binding OtherRows}" ItemTemplate="{StaticResource SettingsRowTemplate}" Margin="12" />
+                                        <ListView ItemsSource="{Binding OtherRows}"
+                                                  Margin="12"
+                                                  BorderThickness="0"
+                                                  Background="Transparent"
+                                                  ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                            <ListView.View>
+                                                <GridView>
+                                                    <GridViewColumn Header="Key" Width="220" DisplayMemberBinding="{Binding Key}" />
+                                                    <GridViewColumn Header="Description" Width="200" DisplayMemberBinding="{Binding Title}" />
+                                                    <GridViewColumn Header="Type" Width="110">
+                                                        <GridViewColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding EditorKind}" VerticalAlignment="Center" />
+                                                            </DataTemplate>
+                                                        </GridViewColumn.CellTemplate>
+                                                    </GridViewColumn>
+                                                    <GridViewColumn Header="Value" Width="300"
+                                                                    CellTemplate="{StaticResource SettingsValueEditorTemplate}" />
+                                                </GridView>
+                                            </ListView.View>
+                                        </ListView>
                                     </DockPanel>
                                 </Border>
                              </StackPanel>
