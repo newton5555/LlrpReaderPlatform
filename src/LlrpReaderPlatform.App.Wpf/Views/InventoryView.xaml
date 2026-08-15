@@ -4,7 +4,6 @@
              xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
              xmlns:local="clr-namespace:LlrpReaderPlatform.App.Wpf.Views">
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <local:BindingProxy x:Key="InventoryVmProxy" Data="{Binding}" />
         <Style x:Key="InventoryLifecycleButtonStyle" TargetType="Button"
                BasedOn="{StaticResource FlatActionButtonStyle}">
@@ -86,14 +85,6 @@
                               Visibility="{Binding HasTid, Converter={StaticResource BooleanToVisibilityConverter}}"
                               Click="CopyTidMenuItem_Click" />
                 </ContextMenu>
-                <Style x:Key="CenteredCellTextStyle" TargetType="TextBlock">
-                    <Setter Property="VerticalAlignment" Value="Center" />
-                    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
-                </Style>
-                <Style x:Key="CenteredMonoCellTextStyle" TargetType="TextBlock"
-                       BasedOn="{StaticResource CenteredCellTextStyle}">
-                    <Setter Property="FontFamily" Value="Consolas, Courier New" />
-                </Style>
                 <Style TargetType="DataGridColumnHeader">
                     <Setter Property="FontWeight" Value="Bold" />
                     <Setter Property="Padding" Value="10,8" />

@@ -3,12 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls">
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-
         <Style x:Key="TagAccessActionStyle" TargetType="Button"
                BasedOn="{StaticResource FlatActionButtonStyle}">
             <Setter Property="MinWidth" Value="132" />
-            <Setter Property="Padding" Value="16,9" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="FontSize" Value="13" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="mah:ControlsHelper.CornerRadius" Value="4" />
             <Style.Triggers>
@@ -27,12 +26,14 @@
         <Style x:Key="TagAccessSectionStyle" TargetType="Border">
             <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
             <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
         </Style>
 
         <Style x:Key="TagAccessSectionHeaderStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
             <Setter Property="Padding" Value="10,5" />
+            <Setter Property="CornerRadius" Value="3,3,0,0" />
         </Style>
 
         <Style x:Key="TagAccessSectionHeaderTextStyle" TargetType="TextBlock">
@@ -42,7 +43,7 @@
 
         <Style x:Key="TagAccessFieldLabelStyle" TargetType="TextBlock">
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.6" />
+            <Setter Property="Opacity" Value="0.75" />
             <Setter Property="Margin" Value="0,0,0,6" />
         </Style>
 
@@ -76,7 +77,8 @@
 
             <Border Grid.Column="1" Margin="24,2,0,0" Padding="12,8"
                     BorderThickness="1" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
-                    CornerRadius="3" VerticalAlignment="Top">
+                    CornerRadius="4" VerticalAlignment="Top"
+                    Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
                 <StackPanel>
                     <TextBlock Text="OPERATING READER" FontSize="10" FontWeight="Bold"
                                Foreground="{DynamicResource MahApps.Brushes.Gray3}"

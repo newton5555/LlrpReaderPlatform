@@ -9,9 +9,9 @@
             <TextBlock Text="A data source is a saved LLRP reader endpoint. Adding it registers the endpoint and verifies TCP connectivity on the LLRP port. Inventory starts from the Inventory page."
                        TextWrapping="Wrap" FontSize="13" Foreground="{DynamicResource MahApps.Brushes.Gray3}" Margin="0,5,0,20" />
 
-            <Border BorderThickness="1" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}" CornerRadius="4" Padding="24" Margin="0,0,0,24" Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
+            <Border Style="{StaticResource StandardCardStyle}" Padding="20" Margin="0,0,0,24">
                 <StackPanel>
-                    <TextBlock Text="Host Name / IP Address:" FontWeight="Bold" FontSize="14" Margin="0,0,0,8" />
+                    <TextBlock Text="Host Name / IP Address:" FontWeight="SemiBold" FontSize="13" Opacity="0.75" Margin="0,0,0,8" />
                     <Grid Margin="0,0,0,16">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -20,14 +20,14 @@
                         </Grid.ColumnDefinitions>
                         <TextBox Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
                                  IsEnabled="{Binding IsInputEnabled}"
-                                 FontSize="14" Padding="10,8" BorderThickness="1" />
+                                 FontSize="13" Padding="10,8" BorderThickness="1" />
                         <Button Grid.Column="1" Content="Scan LLRP Readers"
                                 Command="{Binding DiscoverCommand}" IsEnabled="{Binding IsInputEnabled}"
-                                Margin="10,0,0,0" Padding="14,8"
+                                Margin="10,0,0,0"
                                 Style="{StaticResource FlatActionButtonStyle}" />
                         <Button Grid.Column="2" Content="PROBE"
                                 Command="{Binding ProbeCommand}" IsEnabled="{Binding IsInputEnabled}"
-                                Margin="10,0,0,0" Padding="14,8"
+                                Margin="10,0,0,0"
                                 Style="{StaticResource FlatActionButtonStyle}" />
                     </Grid>
 
@@ -36,10 +36,10 @@
                         <StackPanel>
                             <DockPanel Margin="0,0,0,10">
                                 <Button Content="Close" Command="{Binding CloseDiscoveryPanelCommand}"
-                                        DockPanel.Dock="Right" FontWeight="Bold"
+                                        DockPanel.Dock="Right" FontWeight="SemiBold"
                                         Style="{StaticResource FlatActionButtonStyle}" />
                                 <TextBlock Text="Discovered LLRP Readers (mDNS _llrp._tcp.local.):"
-                                           FontWeight="Bold" FontSize="13" />
+                                           FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
                             </DockPanel>
 
                             <!-- WPF built-in progress control; no custom progress drawing. -->
@@ -49,16 +49,18 @@
                             <ListBox ItemsSource="{Binding Discovered}" IsEnabled="{Binding IsInputEnabled}" MaxHeight="220">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Padding="10,8" Margin="0,2" BorderThickness="1">
+                                        <Border Padding="10,8" Margin="0,2" BorderThickness="1"
+                                                BorderBrush="{DynamicResource MahApps.Brushes.Gray7}" CornerRadius="4"
+                                                Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel>
-                                                    <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" FontSize="13" />
+                                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="13" />
                                                     <TextBlock Text="{Binding DisplayEndpoint, StringFormat='Endpoint / IP: {0}'}"
-                                                               FontSize="11" />
+                                                               FontSize="11" Foreground="{DynamicResource MahApps.Brushes.Gray3}" />
                                                 </StackPanel>
                                                 <Button Grid.Column="1" Content="Select Reader"
                                                         Command="{Binding DataContext.UseDiscoveredCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
@@ -76,13 +78,13 @@
                                  Visibility="{Binding IsProbing, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
                     <TextBlock Text="Enter a hostname or IP address for a reader that exposes the LLRP service. Default LLRP port is 5084."
-                               FontSize="12" Margin="0,0,0,20" />
-                    <TextBlock Text="Nickname: (optional)" FontWeight="Bold" FontSize="14" Margin="0,0,0,8" />
-                    <TextBox Text="{Binding ReaderName, UpdateSourceTrigger=PropertyChanged}" FontSize="14"
+                               FontSize="12" Foreground="{DynamicResource MahApps.Brushes.Gray3}" Margin="0,0,0,20" />
+                    <TextBlock Text="Nickname: (optional)" FontWeight="SemiBold" FontSize="13" Opacity="0.75" Margin="0,0,0,8" />
+                    <TextBox Text="{Binding ReaderName, UpdateSourceTrigger=PropertyChanged}" FontSize="13"
                              IsEnabled="{Binding IsInputEnabled}"
                              Padding="10,8" BorderThickness="1" Margin="0,0,0,24" />
 
-                    <Expander Header="CONNECTION OPTIONS" FontWeight="Bold" FontSize="13" Margin="0,0,0,24">
+                    <Expander Header="CONNECTION OPTIONS" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,24">
                         <Border Padding="16" Margin="0,8,0,0" BorderThickness="1" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}" CornerRadius="4">
                             <StackPanel>
                                 <Grid Margin="0,4">
@@ -90,7 +92,7 @@
                                         <ColumnDefinition Width="140" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="LLRP Port:" VerticalAlignment="Center" FontWeight="Bold" />
+                                    <TextBlock Text="LLRP Port:" VerticalAlignment="Center" FontWeight="SemiBold" Opacity="0.75" />
                                     <TextBox Grid.Column="1" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
                                              IsEnabled="{Binding IsInputEnabled}"
                                              Padding="6" Width="100" HorizontalAlignment="Left" />
@@ -100,7 +102,7 @@
                                         <ColumnDefinition Width="140" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="LLRP Version:" VerticalAlignment="Center" FontWeight="Bold" />
+                                    <TextBlock Text="LLRP Version:" VerticalAlignment="Center" FontWeight="SemiBold" Opacity="0.75" />
                                     <ComboBox Grid.Column="1" ItemsSource="{Binding LlrpVersions}"
                                               DisplayMemberPath="Display" SelectedValuePath="Value"
                                               SelectedValue="{Binding LlrpVersion}" Width="180"
@@ -112,7 +114,8 @@
                     </Expander>
 
                     <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,0,0,12" />
-                    <Border BorderThickness="1" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}" CornerRadius="4" Padding="10" Margin="0,0,0,12"
+                    <Border BorderThickness="1" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}" CornerRadius="4" Padding="12" Margin="0,0,0,12"
+                            Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
                             Visibility="{Binding HasProbeResult, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="{Binding ProbeSummary}" TextWrapping="Wrap" />
@@ -124,9 +127,9 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Content="ADD DATA SOURCE" Command="{Binding SubmitCommand}"
                                 IsEnabled="{Binding IsInputEnabled}"
-                                Padding="20,10" FontSize="13" Margin="0,0,12,0"
-                                Style="{StaticResource FlatActionButtonStyle}" />
-                        <Button Content="CANCEL" Command="{Binding CancelCommand}" Padding="20,10" FontSize="13"
+                                Style="{StaticResource FlatActionButtonStyle}"
+                                Margin="0,0,12,0" />
+                        <Button Content="CANCEL" Command="{Binding CancelCommand}"
                                 Style="{StaticResource FlatActionButtonStyle}" />
                     </StackPanel>
                 </StackPanel>

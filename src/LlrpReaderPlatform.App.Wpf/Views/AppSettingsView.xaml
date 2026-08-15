@@ -4,7 +4,6 @@
              xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
              xmlns:fa="clr-namespace:FontAwesome.Sharp;assembly=FontAwesome.Sharp">
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <Style x:Key="ApplicationActionStyle" TargetType="Button"
                BasedOn="{StaticResource FlatActionButtonStyle}">
             <Setter Property="Padding" Value="14,8" />
@@ -35,27 +34,27 @@
                          IsIndeterminate="True"
                          Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-            <Border BorderThickness="1" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}" CornerRadius="4" Padding="16" Margin="0,0,0,16" Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
+            <Border Style="{StaticResource StandardCardStyle}" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="INVENTORY DATA RECORDING" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,12" />
                     <StackPanel>
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="130" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Recording mode:" VerticalAlignment="Center" />
+                        <TextBlock Text="Recording mode:" VerticalAlignment="Center" FontWeight="SemiBold" Opacity="0.75" />
                         <ComboBox Grid.Column="1" ItemsSource="{Binding LoggingModes}"
                                   SelectedItem="{Binding LoggingMode}" />
                     </Grid>
                     <TextBlock Text="{Binding LoggingModeDescription}" TextWrapping="Wrap"
-                               Margin="120,7,0,0" Opacity="0.75" />
+                               Margin="130,7,0,0" Foreground="{DynamicResource MahApps.Brushes.Gray3}" FontSize="12" />
                     <Grid Margin="0,12,0,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="130" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Raw log directory:" VerticalAlignment="Center" />
+                        <TextBlock Text="Raw log directory:" VerticalAlignment="Center" FontWeight="SemiBold" Opacity="0.75" />
                         <TextBox Grid.Column="1" Text="{Binding LogDirectory, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
                     <Button Content="SAVE APPLICATION SETTINGS" Command="{Binding SaveCommand}"
@@ -66,12 +65,12 @@
                 </StackPanel>
             </Border>
 
-            <Border BorderThickness="1" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}" CornerRadius="4" Padding="16" Margin="0,0,0,16" Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
+            <Border Style="{StaticResource StandardCardStyle}" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="DIAGNOSTICS LOGS" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,12" />
                     <StackPanel>
                     <TextBlock Text="View the WPF, platform, and SDK/LLRP diagnostic files saved on this computer."
-                               TextWrapping="Wrap" Opacity="0.75" />
+                               TextWrapping="Wrap" Foreground="{DynamicResource MahApps.Brushes.Gray3}" FontSize="13" />
                     <Button Click="OpenLogFolder_Click" Style="{StaticResource DiagnosticsActionStyle}"
                             ToolTip="Open the local diagnostic log folder"
                             HorizontalAlignment="Left" Margin="0,12,0,0">
@@ -90,7 +89,7 @@
                 </StackPanel>
             </Border>
 
-            <Border BorderThickness="1" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}" CornerRadius="4" Padding="16" Margin="0,0,0,16" Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
+            <Border Style="{StaticResource StandardCardStyle}" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="APPLICATION" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.Accent}" Margin="0,0,0,12" />
                     <StackPanel>

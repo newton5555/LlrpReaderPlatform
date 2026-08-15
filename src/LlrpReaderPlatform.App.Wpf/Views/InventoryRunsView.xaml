@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls">
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <Style x:Key="InventoryRunsActionStyle" TargetType="Button"
                BasedOn="{StaticResource FlatActionButtonStyle}">
             <Setter Property="Padding" Value="14,8" />
@@ -15,18 +14,6 @@
                     <Setter Property="IsEnabled" Value="False" />
                 </DataTrigger>
             </Style.Triggers>
-        </Style>
-        <Style x:Key="SummaryCardStyle" TargetType="Border">
-            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray7}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="14,10" />
-            <Setter Property="Margin" Value="0,0,10,0" />
-            <Setter Property="CornerRadius" Value="4" />
-            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
-        </Style>
-        <Style x:Key="CenteredTableTextStyle" TargetType="TextBlock">
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         </Style>
     </UserControl.Resources>
 
@@ -125,17 +112,17 @@
                 </DataGrid.RowStyle>
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Started (local)" Binding="{Binding StartedLocal, Mode=OneWay}" Width="1.35*"
-                                        ElementStyle="{StaticResource CenteredTableTextStyle}" />
+                                        ElementStyle="{StaticResource CenteredCellTextStyle}" />
                     <DataGridTextColumn Header="Ended (local)" Binding="{Binding EndedLocal, Mode=OneWay}" Width="1.35*"
-                                        ElementStyle="{StaticResource CenteredTableTextStyle}" />
+                                        ElementStyle="{StaticResource CenteredCellTextStyle}" />
                     <DataGridTextColumn Header="Duration" Binding="{Binding Duration, Mode=OneWay}" Width="100"
-                                        ElementStyle="{StaticResource CenteredTableTextStyle}" />
+                                        ElementStyle="{StaticResource CenteredCellTextStyle}" />
                     <DataGridTextColumn Header="Result" Binding="{Binding StopReasonDisplay, Mode=OneWay}" Width="1.1*"
-                                        ElementStyle="{StaticResource CenteredTableTextStyle}" />
+                                        ElementStyle="{StaticResource CenteredCellTextStyle}" />
                     <DataGridTextColumn Header="Reads" Binding="{Binding TotalReadCount, Mode=OneWay}" Width="90"
-                                        ElementStyle="{StaticResource CenteredTableTextStyle}" />
+                                        ElementStyle="{StaticResource CenteredCellTextStyle}" />
                     <DataGridTextColumn Header="Unique" Binding="{Binding UniqueTagCount, Mode=OneWay}" Width="90"
-                                        ElementStyle="{StaticResource CenteredTableTextStyle}" />
+                                        ElementStyle="{StaticResource CenteredCellTextStyle}" />
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
@@ -153,7 +140,8 @@
                            Foreground="{DynamicResource MahApps.Brushes.Gray3}" />
             </StackPanel>
             <Border Grid.Column="1" Padding="10,7" BorderThickness="1"
-                    Margin="0,0,10,0"
+                    Margin="0,0,10,0" CornerRadius="4"
+                    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
                     BorderBrush="{DynamicResource MahApps.Brushes.Gray7}">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -169,6 +157,8 @@
                 </Grid>
             </Border>
             <Border Grid.Column="2" Padding="10,7" BorderThickness="1"
+                    CornerRadius="4"
+                    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
                     BorderBrush="{DynamicResource MahApps.Brushes.Gray7}">
                 <Grid>
                     <Grid.ColumnDefinitions>

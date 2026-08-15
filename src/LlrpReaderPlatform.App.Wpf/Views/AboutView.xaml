@@ -3,9 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="28,24" MaxWidth="720" HorizontalAlignment="Left">
-            <Border BorderThickness="1" BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
-                    CornerRadius="4" Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
-                    Padding="32">
+            <Border Style="{StaticResource StandardCardStyle}" Padding="32">
                 <StackPanel>
                     <Image Source="/LlrpReaderPlatform;component/Assets/LlrpReader_Pro_Icon_Light.png"
                            Width="132" Height="132" HorizontalAlignment="Left"

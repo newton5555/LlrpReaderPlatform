@@ -13,6 +13,8 @@
             </ResourceDictionary.MergedDictionaries>
 
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+            <!-- 圆形图标按钮系列 -->
             <Style x:Key="FlatCircleButtonStyle" TargetType="Button">
                 <Setter Property="Width" Value="28" />
                 <Setter Property="Height" Value="28" />
@@ -33,21 +35,102 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Root" Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                                    <Setter TargetName="Root" Property="Background" Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=BorderBrush}" />
                                     <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.8" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.4" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
             </Style>
+
+            <Style x:Key="FlatMiniButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatCircleButtonStyle}">
+                <Setter Property="Width" Value="26" />
+                <Setter Property="Height" Value="26" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Root"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="13">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Root" Property="Background" Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=BorderBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.8" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.4" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="DangerCircleButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatCircleButtonStyle}">
+                <Setter Property="BorderBrush" Value="#DC2626" />
+                <Setter Property="Foreground" Value="#DC2626" />
+            </Style>
+
+            <Style x:Key="SuccessCircleButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatCircleButtonStyle}">
+                <Setter Property="BorderBrush" Value="#16A34A" />
+                <Setter Property="Foreground" Value="#16A34A" />
+            </Style>
+
+            <!-- 扁平操作按钮 -->
             <Style x:Key="FlatActionButtonStyle"
                    TargetType="Button"
                    BasedOn="{StaticResource MahApps.Styles.Button.Flat}">
+                <Setter Property="Padding" Value="14,8" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="HorizontalContentAlignment" Value="Center" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
                 <Setter Property="mah:ControlsHelper.CornerRadius" Value="4" />
             </Style>
+
+            <!-- 卡片容器规范 -->
+            <Style x:Key="StandardCardStyle" TargetType="Border">
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray7}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
+                <Setter Property="Padding" Value="16" />
+            </Style>
+
+            <Style x:Key="SummaryCardStyle" TargetType="Border">
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray7}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Padding" Value="14,10" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
+            </Style>
+
+            <!-- 表格单元格文本样式 -->
+            <Style x:Key="CenteredCellTextStyle" TargetType="TextBlock">
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            </Style>
+
+            <Style x:Key="CenteredMonoCellTextStyle" TargetType="TextBlock"
+                   BasedOn="{StaticResource CenteredCellTextStyle}">
+                <Setter Property="FontFamily" Value="Consolas, Courier New" />
+            </Style>
+
+            <!-- 常用转换器 -->
             <converters:TagMemoryBankDisplayConverter x:Key="TagMemoryBankDisplayConverter" />
             <converters:HexColorToBrushConverter x:Key="HexColorToBrushConverter" />
             <converters:HexColorToColorConverter x:Key="HexColorToColorConverter" />

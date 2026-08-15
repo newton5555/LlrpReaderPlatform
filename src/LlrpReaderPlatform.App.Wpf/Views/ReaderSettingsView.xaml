@@ -4,9 +4,10 @@
              xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
              xmlns:fa="clr-namespace:FontAwesome.Sharp;assembly=FontAwesome.Sharp">
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <Style x:Key="FieldLabelStyle" TargetType="TextBlock">
             <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.75" />
             <Setter Property="Margin" Value="0,0,8,6" />
         </Style>
         <Style x:Key="FieldControlStyle" TargetType="Control">
@@ -17,10 +18,13 @@
             <Setter Property="Margin" Value="0,0,10,10" />
             <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
             <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
         </Style>
         <Style x:Key="SectionHeaderStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
-            <Setter Property="Padding" Value="6,3" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="CornerRadius" Value="3,3,0,0" />
         </Style>
         <Style x:Key="SectionHeaderTextStyle" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
@@ -177,27 +181,27 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <WrapPanel Margin="0,0,0,8">
-                    <TextBlock Text="Hostname:" FontWeight="SemiBold" Opacity="0.6" Margin="0,0,6,0" />
+                    <TextBlock Text="Hostname:" FontWeight="SemiBold" Opacity="0.75" Margin="0,0,6,0" />
                     <TextBlock Text="{Binding ReaderHost}"
                                Margin="0,0,24,0" />
-                    <TextBlock Text="Interface:" FontWeight="SemiBold" Opacity="0.6" Margin="0,0,6,0" />
+                    <TextBlock Text="Interface:" FontWeight="SemiBold" Opacity="0.75" Margin="0,0,6,0" />
                     <TextBlock Text="LLRP" Margin="0,0,24,0" />
-                    <TextBlock Text="Model:" FontWeight="SemiBold" Opacity="0.6" Margin="0,0,6,0" />
+                    <TextBlock Text="Model:" FontWeight="SemiBold" Opacity="0.75" Margin="0,0,6,0" />
                     <TextBlock Text="{Binding ReaderModel}"
                                Margin="0,0,24,0" />
-                    <TextBlock Text="LLRP:" FontWeight="SemiBold" Opacity="0.6" Margin="0,0,6,0" />
+                    <TextBlock Text="LLRP:" FontWeight="SemiBold" Opacity="0.75" Margin="0,0,6,0" />
                     <TextBlock Text="{Binding ReaderProtocol}"
                                Margin="0,0,24,0" />
-                    <TextBlock Text="Policy:" FontWeight="SemiBold" Opacity="0.6" Margin="0,0,6,0" />
+                    <TextBlock Text="Policy:" FontWeight="SemiBold" Opacity="0.75" Margin="0,0,6,0" />
                     <TextBlock Text="{Binding ReaderProtocolPolicy}"
                                Margin="0,0,24,0" />
-                    <TextBlock Text="Session:" FontWeight="SemiBold" Opacity="0.6" Margin="0,0,6,0" />
+                    <TextBlock Text="Session:" FontWeight="SemiBold" Opacity="0.75" Margin="0,0,6,0" />
                     <TextBlock Text="{Binding ReaderConnection}"
                                Margin="0,0,24,0" />
-                    <TextBlock Text="Extension:" FontWeight="SemiBold" Opacity="0.6" Margin="0,0,6,0" />
+                    <TextBlock Text="Extension:" FontWeight="SemiBold" Opacity="0.75" Margin="0,0,6,0" />
                     <TextBlock Text="{Binding ReaderExtensions}"
                                Margin="0,0,24,0" />
-                    <TextBlock Text="Region:" FontWeight="SemiBold" Opacity="0.6" Margin="0,0,6,0" />
+                    <TextBlock Text="Region:" FontWeight="SemiBold" Opacity="0.75" Margin="0,0,6,0" />
                     <TextBlock Text="{Binding ReaderRegion}" />
                 </WrapPanel>
             </StackPanel>
@@ -901,6 +905,8 @@
 
             <Border BorderBrush="{DynamicResource MahApps.Brushes.Accent}"
                     BorderThickness="1"
+                    CornerRadius="4"
+                    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
                     Padding="24"
                     Margin="0,18,0,0">
                 <Border.Style>
