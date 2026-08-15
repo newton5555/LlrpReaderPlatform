@@ -1,6 +1,6 @@
 # 寻卡联动上报设置实现计划（Planning）
 
-- 状态：进行中（Planning）；**R1–R5 已完成**（build 0 错误，全量测试 349 项全绿：Contracts 5、Services 183、Impinj 17、Architecture 7、Infrastructure 10、App.Wpf 127）。**R6 真机部分完成**：R420（identity Mfr 25882/Model 2001002/FW 6.4.1.240，IP 已由 .134 变更为 .87）真实盘存开启相位→`impinj.rfPhaseAngle` 实测命中（30/30 报告），对照组不请求相位时不误发（0/25 报告含相位）以验证能力门控；Zebra FX9600（Mfr 161/Model 96008/FW 3.32.37.0，IP .88）完成 L1 身份连接；R6 剩余为 GPI 物理触发/多 Reader 并存/断网重启等现场项，见[设备矩阵](../compatibility/device-matrix.md)。
+- 状态：**已完成（留存记录，不删除）**；**R1–R5 已完成**（build 0 错误，全量测试 349 项全绿：Contracts 5、Services 183、Impinj 17、Architecture 7、Infrastructure 10、App.Wpf 127）。**R6 真机部分完成**：R420（identity Mfr 25882/Model 2001002/FW 6.4.1.240，IP 已由 .134 变更为 .87）真实盘存开启相位→`impinj.rfPhaseAngle` 实测命中（30/30 报告），对照组不请求相位时不误发（0/25 报告含相位）以验证能力门控；Zebra FX9600（Mfr 161/Model 96008/FW 3.32.37.0，IP .88）完成 L1 身份连接；R6 剩余为 GPI 物理触发/多 Reader 并存/断网重启等现场项，见[设备矩阵](../compatibility/device-matrix.md)。
 - 创建：2026-08
 - 决策依据：[ADR-0013](../decisions/ADR-0013-report-capability-ownership.md)（只有"需要上报控制"的参数做联动；实现真实联动后设置页对应项改为只读）
 - 生命周期：本文件是临时工作文档，不是正式计划。全部阶段完成后，把结果归档回
