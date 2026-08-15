@@ -107,7 +107,9 @@ public partial class SettingsEntryRowViewModel : ObservableObject
     {
         if (SelectedChoiceIndex >= 0 && SelectedChoiceIndex < choiceValues.Count)
         {
-            ValueText = FormatValue(choiceValues[SelectedChoiceIndex]);
+            // The editor displays the capability-table label, while
+            // SelectedChoiceValue remains the original value for saving.
+            ValueText = ChoiceDisplays[SelectedChoiceIndex];
         }
     }
 

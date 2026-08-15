@@ -12,6 +12,9 @@ namespace LlrpReaderPlatform.Services.Settings;
 /// </summary>
 public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCompiler
 {
+    /// <summary>RF Mode 下拉“默认”哨兵值：表示不下发 C1G2RFControl（Mode=0 + Tari=0）。</summary>
+    private const int RfModeDefaultSentinel = -1;
+
     private readonly IReadOnlyList<ISettingsExtensionContributor> extensions;
 
     public StandardSettingsCompiler(
@@ -281,8 +284,11 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             DefaultValue = (int)inventory.ReportEveryNTags,
         });
 
-        int currentRfMode = (int)inventory.ModeIndex;
-        IReadOnlyList<SettingsOption> rfModes = BuildRfModeOptions(runtime.Capabilities, currentRfMode);
+        // 展示值：设备 Mode=0 且 Tari=0（SDK“默认/不指定”）→ 哨兵 -1“默认”；否则用真实 ModeIdentifier。
+        int currentRfModeDisplay = (inventory.ModeIndex == 0 && inventory.Tari == 0)
+            ? RfModeDefaultSentinel
+            : (int)inventory.ModeIndex;
+        IReadOnlyList<SettingsOption> rfModes = BuildRfModeOptions(runtime.Capabilities, inventory.ModeIndex);
         entries.Add(new SettingsEntry
         {
             Key = SettingsKeys.RfMode,
@@ -290,27 +296,13 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             EditorKind = rfModes.Count > 0 ? EditorKind.Choice : EditorKind.Integer,
             ValueType = typeof(int),
             Options = rfModes,
-            Range = rfModes.Count > 0 ? null : new SettingsRange(0, ushort.MaxValue),
-            CurrentValue = currentRfMode,
-            DefaultValue = currentRfMode,
+            Range = rfModes.Count > 0 ? null : new SettingsRange(RfModeDefaultSentinel, ushort.MaxValue),
+            CurrentValue = currentRfModeDisplay,
+            DefaultValue = currentRfModeDisplay,
+            RfModeTariProfiles = BuildRfModeTariProfiles(runtime.Capabilities),
         });
 
-        ushort currentTari = ResolveTari(runtime.Capabilities, inventory.ModeIndex, inventory.Tari);
-        SettingsRange tariRange = ResolveTariRange(runtime.Capabilities, inventory.ModeIndex);
-        // 该 mode 若由设备声明为固定 Tari（Min==Max），不接受自定义，UI 不应暴露 Tari 输入；
-        // 保存时编译器直接写设备默认/0，见 ResolveTari。
-        bool tariFixedByMode = IsTariFixedByMode(runtime.Capabilities, inventory.ModeIndex);
-        entries.Add(new SettingsEntry
-        {
-            Key = SettingsKeys.Tari,
-            Title = "Tari",
-            EditorKind = EditorKind.Integer,
-            ValueType = typeof(int),
-            Range = tariRange,
-            CurrentValue = (int)currentTari,
-            DefaultValue = (int)currentTari,
-            ReadOnlyReason = tariFixedByMode ? "由所选 RF Mode 固定，不可编辑" : null,
-        });
+        AddTariEntry(entries, runtime.Capabilities, inventory.ModeIndex, inventory.Tari);
 
         entries.Add(new SettingsEntry
         {
@@ -440,18 +432,28 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
 
         if (compiled.RfMode is int mode)
         {
-            inventory = inventory with { ModeIndex = checked((ushort)mode) };
+            // “默认”哨兵 -1：走 SDK 默认（Mode=0 + Tari=0，SDK 不生成 C1G2RFControl，设备用默认）。
+            inventory = inventory with
+            {
+                ModeIndex = mode == RfModeDefaultSentinel ? (ushort)0 : checked((ushort)mode),
+                Tari = mode == RfModeDefaultSentinel ? (ushort)0 : inventory.Tari,
+            };
         }
 
-        if (compiled.Tari is int tari)
+        if (compiled.Tari is int tari && tari != 0)
         {
             inventory = inventory with { Tari = checked((ushort)tari) };
         }
 
-        inventory = inventory with
+        bool defaultRfModeSelected = compiled.RfMode == RfModeDefaultSentinel;
+        if (!defaultRfModeSelected
+            && (compiled.RfMode is not null || inventory.ModeIndex != 0 || inventory.Tari != 0))
         {
-            Tari = ResolveTari(runtime.Capabilities, inventory.ModeIndex, inventory.Tari),
-        };
+            inventory = inventory with
+            {
+                Tari = ResolveTari(runtime.Capabilities, inventory.ModeIndex, inventory.Tari),
+            };
+        }
 
         if (compiled.AntennaIds is { Count: > 0 } antennaIds)
         {
@@ -564,6 +566,144 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         new(7, "No operation / Negate selected"),
     ];
 
+    /// <summary>生成 Tari 设置项：未指定 RF 控制(0,0)→只读单项下拉；表内固定 Tari→只读单项下拉；可调→下拉；不在表→兜底。</summary>
+    private static void AddTariEntry(
+        IList<SettingsEntry> entries,
+        ReaderCapabilities? capabilities,
+        ushort modeIndex,
+        ushort tari)
+    {
+        // 默认：SDK 不指定 RF 控制（Mode=0 && Tari=0），Tari 只读显示为单项 0。
+        if (modeIndex == 0 && tari == 0)
+        {
+            entries.Add(new SettingsEntry
+            {
+                Key = SettingsKeys.Tari,
+                Title = "Tari",
+                EditorKind = EditorKind.Choice,
+                ValueType = typeof(int),
+                Options = [new SettingsOption(0, "0")],
+                CurrentValue = 0,
+                DefaultValue = 0,
+                ReadOnlyReason = "默认模式（由设备自动选择），Tari 固定为 0",
+            });
+            return;
+        }
+
+        C1G2RfModeEntry[] modes = SelectModes(capabilities, modeIndex);
+        if (modes.Length == 0)
+        {
+            // 能力表未收录该 mode：保留设备当前值，只读展示，不修改。
+            entries.Add(new SettingsEntry
+            {
+                Key = SettingsKeys.Tari,
+                Title = "Tari",
+                EditorKind = EditorKind.Integer,
+                ValueType = typeof(int),
+                Range = new SettingsRange(0, ushort.MaxValue),
+                CurrentValue = (int)tari,
+                DefaultValue = (int)tari,
+                ReadOnlyReason = "当前 RF Mode 不在能力表，保留设备值",
+            });
+            return;
+        }
+
+        bool fixedTari = modes.All(mode => mode.MinTariValue == mode.MaxTariValue);
+        if (fixedTari)
+        {
+            ushort value = checked((ushort)modes[0].MinTariValue);
+            entries.Add(new SettingsEntry
+            {
+                Key = SettingsKeys.Tari,
+                Title = "Tari",
+                EditorKind = EditorKind.Choice,
+                ValueType = typeof(int),
+                Options = [new SettingsOption(value, $"{value} ({value / 1000d:0.###} uS)")],
+                CurrentValue = (int)value,
+                DefaultValue = (int)value,
+                ReadOnlyReason = "由所选 RF Mode 固定，不可编辑",
+            });
+            return;
+        }
+
+        // 可调 Tari：Min..Max 按 Step 生成下拉选项。
+        int min = (int)modes.Min(static m => m.MinTariValue);
+        int max = (int)modes.Max(static m => m.MaxTariValue);
+        int step = modes[0].StepTariValue > 0 ? (int)modes[0].StepTariValue : 1;
+        var tariOptions = new List<SettingsOption>();
+        for (int v = min; v <= max; v += step)
+        {
+            tariOptions.Add(new SettingsOption(v, $"{v} ({v / 1000d:0.###} uS)"));
+        }
+        if (tariOptions.Count == 0) tariOptions.Add(new SettingsOption(min, $"{min} ({min / 1000d:0.###} uS)"));
+        // 可调 mode 下 tari=0 表示未指定：落到该 mode 的 MinTari（选项范围内）。
+        int currentTari = tari == 0 ? min : (int)tari;
+        if (!tariOptions.Any(o => Equals(o.Value, currentTari)))
+        {
+            tariOptions.Add(new SettingsOption(currentTari, $"{currentTari} (current)"));
+        }
+        entries.Add(new SettingsEntry
+        {
+            Key = SettingsKeys.Tari,
+            Title = "Tari",
+            EditorKind = EditorKind.Choice,
+            ValueType = typeof(int),
+            Options = tariOptions,
+            CurrentValue = currentTari,
+            DefaultValue = currentTari,
+        });
+    }
+
+    /// <summary>
+    /// 为能力表中的每个 RF Mode 生成该 mode 的 Tari 约束（固定值/可调范围/下拉选项），
+    /// 供 UI 在切换 RF Mode 时重建 Tari 控件。
+    /// </summary>
+    private static IReadOnlyList<RfModeTariProfile> BuildRfModeTariProfiles(ReaderCapabilities? capabilities)
+    {
+        if (capabilities?.RfModes is not { Count: > 0 } allModes)
+        {
+            return [];
+        }
+
+        return allModes
+            .GroupBy(static mode => mode.ModeIdentifier)
+            .Select(group =>
+            {
+                C1G2RfModeEntry[] modes = group.ToArray();
+                bool fixedTari = modes.All(static mode => mode.MinTariValue == mode.MaxTariValue);
+                if (fixedTari)
+                {
+                    return new RfModeTariProfile(
+                        (int)group.Key,
+                        IsFixedTari: true,
+                        FixedTariValue: (int)modes[0].MinTariValue,
+                        TariRange: new SettingsRange(modes[0].MinTariValue, modes[0].MaxTariValue),
+                        TariOptions: []);
+                }
+
+                int min = (int)modes.Min(static mode => mode.MinTariValue);
+                int max = (int)modes.Max(static mode => mode.MaxTariValue);
+                int step = modes[0].StepTariValue > 0 ? (int)modes[0].StepTariValue : 1;
+                var options = new List<SettingsOption>();
+                for (int v = min; v <= max; v += step)
+                {
+                    options.Add(new SettingsOption(v, $"{v} ({v / 1000d:0.###} uS)"));
+                }
+                if (options.Count == 0)
+                {
+                    options.Add(new SettingsOption(min, $"{min} ({min / 1000d:0.###} uS)"));
+                }
+
+                return new RfModeTariProfile(
+                    (int)group.Key,
+                    IsFixedTari: false,
+                    FixedTariValue: null,
+                    TariRange: new SettingsRange(min, max),
+                    TariOptions: options);
+            })
+            .ToArray();
+    }
+
     private static IReadOnlyList<SettingsOption> BuildRfModeOptions(
         ReaderCapabilities? capabilities,
         int currentMode)
@@ -573,7 +713,9 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             return [];
         }
 
-        var options = modes
+        var options = new List<SettingsOption> { new(-1, "默认") };
+
+        options.AddRange(modes
             .GroupBy(static mode => mode.ModeIdentifier)
             .Select(static group => new SettingsOption(
                 (int)group.Key,
@@ -583,13 +725,12 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
                         " / ",
                         group.Select(FormatRfModeDescription)
                             .Distinct(StringComparer.Ordinal)))))
-            .ToList();
+            .ToList());
 
-        // Some readers report a valid active mode that is absent from the RF mode
-        // capability table. Keep that value selectable so an unrelated setting
-        // change can round-trip without the service rejecting the reader's own
-        // current configuration.
-        if (!options.Any(option => Equals(option.Value, currentMode)))
+        // 当前设备 Mode 未指定（0＝SDK 默认/不指定）时选中“默认”；否则若能力表不包含该
+        // mode，则追加一个可选项以允许不改变设备现状地回滚（round-trip）。
+        bool inTable = options.Any(option => Equals(option.Value, currentMode));
+        if (currentMode != 0 && !inTable)
         {
             options.Add(new SettingsOption(currentMode, $"{currentMode}: current reader mode"));
         }
@@ -1355,9 +1496,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         ReaderCapabilities? capabilities,
         ushort modeIndex)
     {
-        C1G2RfModeEntry[] modes = capabilities?.RfModes?
-            .Where(mode => mode.ModeIdentifier == modeIndex)
-            .ToArray() ?? [];
+        C1G2RfModeEntry[] modes = SelectModes(capabilities, modeIndex);
         return modes.Length == 0
             ? new SettingsRange(0, ushort.MaxValue)
             : new SettingsRange(
@@ -1370,14 +1509,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         ushort modeIndex,
         ushort tari)
     {
-        if (modeIndex == 0)
-        {
-            return tari;
-        }
-
-        C1G2RfModeEntry[] modes = capabilities?.RfModes?
-            .Where(mode => mode.ModeIdentifier == modeIndex)
-            .ToArray() ?? [];
+        C1G2RfModeEntry[] modes = SelectModes(capabilities, modeIndex);
         if (modes.Length == 0)
         {
             return tari;
@@ -1408,10 +1540,23 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
     /// <summary>当前 mode 是否由设备声明为固定 Tari（宽范围内 Min==Max）。固定时 UI 不暴露输入。</summary>
     private static bool IsTariFixedByMode(ReaderCapabilities? capabilities, ushort modeIndex)
     {
-        C1G2RfModeEntry[] modes = capabilities?.RfModes?
-            .Where(mode => mode.ModeIdentifier == modeIndex)
-            .ToArray() ?? [];
+        C1G2RfModeEntry[] modes = SelectModes(capabilities, modeIndex);
         return modes.Length > 0 && modes.All(mode => mode.MinTariValue == mode.MaxTariValue);
+    }
+
+    /// <summary>按 LLRP 标准：ModeIndex 引用能力表中 ModeIdentifier 相同的 RF mode。
+    /// ModeIdentifier=0 也可能是设备能力表中的真实 RF Mode，不能与 UI 的默认哨兵 -1 混淆。</summary>
+    private static C1G2RfModeEntry[] SelectModes(
+        ReaderCapabilities? capabilities,
+        ushort modeIndex)
+    {
+        IReadOnlyList<C1G2RfModeEntry>? all = capabilities?.RfModes;
+        if (all is not { Count: > 0 } modes)
+        {
+            return [];
+        }
+
+        return modes.Where(mode => mode.ModeIdentifier == modeIndex).ToArray();
     }
 
     private static bool IsSupportedTari(C1G2RfModeEntry mode, ushort tari)

@@ -1402,12 +1402,13 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                 }
 
                 // ADR-0013：报告类扩展字段（phase/gps/xpc）由寻卡请求的语义键下发。
-                // 按当前激活扩展模块把语义键编译进各自的厂商 InventoryReportOptions；
-                // 模块不支持或语义键不在其能力范围时静默忽略，不影响寻卡启动。
-                if (spec.Report?.ExtensionReportFields is { Count: > 0 } semanticFields)
+                // 只要 spec.Report 存在就调用各扩展模块（空集合也调用），让模块把请求集合中
+                // 不存在的字段显式置 false，避免“取消请求”被静默忽略而沿用设备已开启的字段。
+                if (spec.Report is { } reportWithFields)
                 {
                     LlrpReaderPlatform.Contracts.Settings.ReaderFeatureCatalog catalog =
                         handle.Snapshot.FeatureCatalog ?? LlrpReaderPlatform.Contracts.Settings.ReaderFeatureCatalog.Empty;
+                    IReadOnlyList<string> semanticFields = reportWithFields.ExtensionReportFields ?? [];
                     foreach (IReaderExtensionModule extension in handle.Extensions)
                     {
                         inventory = extension.ApplyInventoryReportSpec(inventory, semanticFields, catalog);

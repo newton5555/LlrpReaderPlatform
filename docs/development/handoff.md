@@ -1,15 +1,44 @@
 # LlrpReaderPlatform 交接文档（Handoff）
 
 > 状态：基础中间层与首个 WPF 消费者首版代码已完成；能力目录已接入运行时快照和设置布局，并按型号、固件和 SDK 能力画像限定 Impinj L4 能力；最新构建 0 警告/0 错误，相关自动化已覆盖分层日志、盘存快照和设置模式，真机已完成标准 Probe/Settings Query、WPF 设置/GPO/GPI 状态查询、Impinj debounce/FastID/Phase/Search/Low Duty/固定频率回写、真实 TagReport 聚合、EPC/TID/User/Reserved 四个 Memory Bank 读取、User Bank 写入恢复和 FastID/Phase 扩展 TagReport，R420 Doppler 已按 SDK 能力隐藏；代码已补齐统一 `LifecycleChanged` 事件；平台通知订阅者异常不会中断生命周期收尾，TagReport/GPI/定时停止任务绑定来源 Session 与 InventoryRun，旧事件不会跨 Run 污染新数据；手动 Stop、GPI Stop、定时结束、连接 Faulted、ReaderException、设备主动关闭都会由平台事件驱动 WPF 收尾；GPI 启停触发器保存时，标准设置编译器会同步开启 `Configuration.Events.GpiEventEnabled`；GPI 平台事件保留 Reader 事件时间戳并记录端口/状态/触发匹配日志，便于 WPF 状态和真机记录对齐；设备列表刷新期间保持选中 Reader，避免取消在途设置查询的竞态；设备列表已提供 Faulted Reader 的重新连接/能力刷新入口；标准 Tag Access 按 Reader 能力声明降级，明确不支持的设备不会在服务或 Tag Memory 页显示为可用；标准 GPIO 端口数量优先来自 General Device Capabilities，若能力响应未声明端口数量则在成功状态查询后按返回端口补充当前运行时快照，但不把状态查询当作物理接线验收；明确无端口时 Tab1/Tab2 对应操作降级，部分 GPO 设备只启用实际端口；WPF 设置保存、Tag Memory 和寻卡启动按稳定 `PlatformErrorCode` 投影忙碌/不支持/设备错误等状态；Contracts 的 `PlatformOperationException` 让 Settings Query/GPI/GPO 在 ReaderBusy 时保留同一错误码，明确无 GPO 能力时返回 Unsupported；SQLite 只维护新平台数据，早期 schema 变化允许清空数据库重建；Settings Preset 以版本化语义 JSON 同时保存设置和 Inventory 字段，不考虑旧库导入；短连接断开失败时设置布局转为只读并要求重新激活，Reader 能力快照过期时设置页同步禁用编辑和保存；能力解析循环使用整数索引，避免 `ushort` 最大值回绕；Inventory 服务入口拒绝无效时长、重复天线和混合全部天线/指定天线参数；寻卡页已恢复旧 WPF 的 ELAPSED TIME 顶部布局、列头右键菜单列选择和 Peak RSSI 命名，同时保留平台 Tag List 附加列与原生 ProgressBar；添加数据源页加入 Host/Port 校验、发现记录归一化与 IPv6 端点展示，并在 Probe、发现、提交期间锁定端点及发现条目选择；离开页面会取消在途操作；其它 WPF 页面退出时会取消未完成的 Reader 操作和数据库操作；设备状态、GPI 事件和运行记录的 WPF Dispatcher 投影在页面销毁或应用 Dispatcher 关闭竞态下会静默收口；应用设置页会显示盘存数据记录模式和原始报告目录；Tag List 保存/删除会即时刷新已显示 Inventory 行的名称且不触碰 Reader 生命周期；GPI 物理事件/触发、其它 Memory Bank 写入、多 Reader、断网/重启现场恢复及其它现场证据仍在验收。
-> 最新自动化基线：336 项全绿（Contracts 5、Services 176、Infrastructure 10、App.Wpf 125、Architecture 7、Extensions.Impinj 13）。标准 Reader 未声明 GPIO 数量时，成功状态查询会将返回端口合并到运行时快照；这不替代 GPI 物理事件/触发验收。取消 `ActivateAsync`、Inventory Start 和短操作在 Probe/连接/扩展 Session 替换阶段会回收并重建干净 Session，下一次操作重新探测能力。
+> 最新自动化基线：360 项全绿（Contracts 5、Services 188、Infrastructure 10、App.Wpf 133、Architecture 7、Extensions.Impinj 17）。标准 Reader 未声明 GPIO 数量时，成功状态查询会将返回端口合并到运行时快照；这不替代 GPI 物理事件/触发验收。取消 `ActivateAsync`、Inventory Start 和短操作在 Probe/连接/扩展 Session 替换阶段会回收并重建干净 Session，下一次操作重新探测能力。
 > 生成日期：以提交时为准。
 > 本文档供接手的开发者在短时间内了解项目现状、关键设计、已知边界与下一步。
 
-2026-08-13 当前交付收口：WPF 程序集名称已固定为 `LlrpReaderPlatform`，发布文件为
+2026-08-16 任务已完成（RF Mode / Tari 设置页联动）：本分支 `dev` 工作区已完成 UI 显示、固定 Tari 编辑形态和 SDK 写入兜底，并完成全量 Debug 构建与测试。
+
+2026-08-16 真机验收：Impinj 真实 `ModeIdentifier=0` 可在设置页独立选择，Tari 正确显示为
+`14300 (14.3 uS)`，保存后设备接受 `ModeIndex=0/Tari=14300`，未再回落到默认 `Tari=0`。
+
+已完成并验证：
+- 修复 RF Mode `-1` 哨兵校验回归：`StandardSettingsCompiler` 在能力表为空时
+  `rf-mode` 合法范围改为 `SettingsRange(RfModeDefaultSentinel, ushort.MaxValue)`，
+  配套更新 `StandardSettingsCompilerTests` 断言。
+- 新增 RF Mode→Tari 能力联动：Contracts 新增 `RfModeTariProfile` 与
+  `SettingsEntry.RfModeTariProfiles`；编译器 `BuildRfModeTariProfiles` 按能力表生成
+  每 mode 的 Tari 约束（固定值/可调范围/下拉选项）；WPF `ReaderSettingsViewModel` 监听
+  RF Mode 下拉变化重建 Tari 行（`RefreshTariForSelectedRfMode`/`BuildTariEntryFromProfile`/
+  `ReplaceRow`）；`ReaderSettingsView.xaml` 的 Tari 统一使用下拉编辑器。
+- Choice 行的 `ValueText` 现在使用能力选项的 Display，RF Mode 的内部哨兵 `-1` 在 UI 显示为
+  `默认`，保存时仍通过 `SelectedChoiceValue`/Display 反查写入原始值；其它 Tx/Rx、Session 等
+  表项也统一显示“index（描述）”。
+- 具体 RF Mode 的固定 Tari（包括切换后的固定值）现在显示为只有一个选项的只读下拉；选择
+  `默认` 时按 SDK 语义隐藏 Tari，因为默认就是 `Mode=0 + Tari=0`，不应再显示独立编辑项；
+  可调 mode 仍按能力表的 Min/Max/Step 生成选项。
+- 修复真实 `ModeIdentifier=0` 与 UI 默认模式的冲突：默认模式使用内部哨兵 `-1`，能力表中的
+  Impinj Mode 0 保留独立的 Tari profile；选择该 Mode 后显示唯一的 `14300 (14.3 uS)`，
+  `CompileSdk` 写入时也会按能力表补齐 `ModeIndex=0/Tari=14300`，不再落回默认 `Tari=0`。
+- `CompileSdk` 在只读 Tari 不进入 Draft 时，仍按能力表 `MinTariValue` 补出固定合法值，避免
+  SDK `SET-INV-034` 的 `Tari ... is not valid for RF mode ...` 错误；新增回归测试覆盖固定 mode
+  保存路径。
+- 新增/更新测试全通过：Services.Tests 188、App.Wpf.Tests 133；完整基线为 360 项全绿。
+
+2026-08-13 当前交付收口：WPF 程序集名称已改为 `LlrpReaderPlatform`，发布文件为
 `LlrpReaderPlatform.exe`；About 页使用与程序集名称一致的 Pack URI，单文件发布中会正确
 嵌入并显示亮色产品图标；添加数据源页将同时包含端口和协议版本的分组标题改为
 `CONNECTION OPTIONS`。当前本地便携发布使用 Windows x64、自包含、单文件模式，目标机不需要
-预装 .NET Desktop Runtime。当前源码自动化基线仍为 336 项全绿。
+预装 .NET Desktop Runtime。该日期阶段源码自动化基线为 336 项；截至该阶段末基线为 357 项全绿，
+后续 RF Mode/Tari 回归已将当前基线更新为 360 项。
 
 当前现场端点记录：Impinj R420 的新平台 Profile 当前为 `192.168.40.87:5084`；文中 `192.168.41.134:5084` 是此前现场验收时使用的历史地址，不代表当前网络地址。标准 1.0.1 Reader 仍为 `192.168.41.148:5084`。端点变化本身未被当作新的硬件验收结论，重新连接/寻卡结果仍需现场复测。
 
@@ -86,10 +115,10 @@ LLRP Reader Platform 是一个**厂商无关的 LLRP 应用框架 + 首个 WPF �
 
 ```text
 dotnet build LlrpReaderPlatform.slnx   # 0 警告 0 错误
- dotnet test  LlrpReaderPlatform.slnx --no-build   # 336 项全绿
+ dotnet test  LlrpReaderPlatform.slnx --no-build   # 360 项全绿
 ```
 
-测试分布：Contracts.Tests 5、Services.Tests 176、Infrastructure.Tests 10、App.Wpf.Tests 125、Architecture.Tests 7、Extensions.Impinj.Tests 13。
+测试分布：Contracts.Tests 5、Services.Tests 188、Infrastructure.Tests 10、App.Wpf.Tests 133、Architecture.Tests 7、Extensions.Impinj.Tests 17。
 
 WPF 发布：`dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false -p:UseLocalLlrpSdk=false -o artifacts/publish/win-x64`，然后运行 `artifacts/publish/win-x64/LlrpReaderPlatform.exe`；发布目录已加入 `.gitignore`。
 
@@ -202,7 +231,7 @@ LlrpReaderPlatform.slnx
 - 新增文档/移动文档时，同步更新 `docs/README.md`、根 `README.md` 与 `LlrpReaderPlatform.slnx`；
 - 真机相关结论（厂商 ID、能力字段、扩展字段）必须来自实测，勿从 SDK 包名或接口推断；
 - 本仓库当前阶段：P0～P7 首版代码已落地，P8 真机与多设备验收进行中；旧 WPF 主要功能入口和服务链路已迁移，剩余是硬件结论、少量专用编辑器和扩展设备覆盖。
-- 本轮代码边界：Contracts 新增 Reader 端点归一化和 `PlatformOperationException`，程序化添加、SQLite、SDK 会话构造和 WPF IPv6 展示共享同一 Host 规则；同时保护 Start 返回与早到终止生命周期事件之间的状态竞态；Tag Logging 关闭时不会创建 Run 文件；全局寻卡部分失败状态按 Reader 名称和错误摘要定位。文中按日期保留的 304/307/311/312/318 等数字是历史阶段基线；当前 App.Wpf 回归为 125 项通过，完整基线为 336 项，构建 0 警告 0 错误。
+- 本轮代码边界：Contracts 新增 Reader 端点归一化和 `PlatformOperationException`，程序化添加、SQLite、SDK 会话构造和 WPF IPv6 展示共享同一 Host 规则；同时保护 Start 返回与早到终止生命周期事件之间的状态竞态；Tag Logging 关闭时不会创建 Run 文件；全局寻卡部分失败状态按 Reader 名称和错误摘要定位。文中按日期保留的 304/307/311/312/318/336/356/357 等数字是历史阶段基线；当前 App.Wpf 回归为 133 项通过，完整基线为 360 项，构建 0 警告 0 错误。
 - 本轮 WPF 补充：主设备页发现与添加数据源页发现共用归一化/去重逻辑，主设备页的非法端口会回退 5084，IPv6 会统一使用无方括号 Host 和带方括号的端点展示；设置 Tab1 的旧分组按实际语义行显隐，Tab2 的 GPO/GPI 区域按端口能力降级，不再显示空的伪控件；所有页面的设备、连接和持久化异常统一经过 `PlatformErrorCode` 投影，现场可区分设备错误与本地保存失败。
 - 本轮 WPF 生命周期补充：Tag Memory 读写、设置加载和其它页面异步操作在页面销毁后会静默收口晚到的非取消异常，不再把已关闭页面的底层失败变成未观察异常；未销毁页面仍按原有状态文本显示失败。
 - 本轮设备入口补充：添加数据源页和主设备页对 Probe、添加、激活的未结构化异常统一使用稳定设备错误分类，保留底层详细信息供现场诊断。

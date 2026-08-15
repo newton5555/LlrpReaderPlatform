@@ -320,9 +320,13 @@
 
                                             <TextBlock Grid.Row="6" Text="Tari:" Style="{StaticResource FieldLabelStyle}"
                                                        Visibility="{Binding IsTariVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                            <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding TariRow.ValueText, UpdateSourceTrigger=PropertyChanged}"
-                                                     IsEnabled="{Binding IsTariEditable}" Margin="0,0,0,6"
-                                                     Visibility="{Binding IsTariVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <ComboBox Grid.Row="6" Grid.Column="1"
+                                                      ItemsSource="{Binding TariRow.ChoiceDisplays}"
+                                                      SelectedIndex="{Binding TariRow.SelectedChoiceIndex, Mode=TwoWay}"
+                                                      Text="{Binding TariRow.ValueText, UpdateSourceTrigger=PropertyChanged}"
+                                                      IsEditable="True"
+                                                      IsEnabled="{Binding IsTariEditable}" Margin="0,0,0,6"
+                                                      Visibility="{Binding IsTariVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
                                             <TextBlock Grid.Row="7" Text="Report Phase Angle:" Style="{StaticResource FieldLabelStyle}"
                                                        Visibility="{Binding IsPhaseAngleVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
@@ -746,14 +750,6 @@
                                             <ListView.View>
                                                 <GridView>
                                                     <GridViewColumn Header="Key" Width="220" DisplayMemberBinding="{Binding Key}" />
-                                                    <GridViewColumn Header="Description" Width="200" DisplayMemberBinding="{Binding Title}" />
-                                                    <GridViewColumn Header="Type" Width="110">
-                                                        <GridViewColumn.CellTemplate>
-                                                            <DataTemplate>
-                                                                <TextBlock Text="{Binding EditorKind}" VerticalAlignment="Center" />
-                                                            </DataTemplate>
-                                                        </GridViewColumn.CellTemplate>
-                                                    </GridViewColumn>
                                                     <GridViewColumn Header="Value" Width="300"
                                                                     CellTemplate="{StaticResource SettingsValueEditorTemplate}" />
                                                 </GridView>

@@ -100,19 +100,29 @@
                     <Setter Property="BorderThickness" Value="0,0,1,1" />
                     <Setter Property="ContextMenu">
                         <Setter.Value>
-                            <ContextMenu>
-                                <StackPanel Margin="4">
+                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                <MenuItem Header="基础列" IsEnabled="False" />
+                                <StackPanel Margin="4,0,4,4">
                                     <CheckBox Content="#" IsChecked="{Binding Data.ShowIndexColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
                                     <CheckBox Content="EPC" IsChecked="{Binding Data.ShowEpcColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
                                     <CheckBox Content="TID" IsChecked="{Binding Data.ShowTidColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
                                     <CheckBox Content="Count" IsChecked="{Binding Data.ShowCountColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
                                     <CheckBox Content="First Seen" IsChecked="{Binding Data.ShowFirstSeenColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
                                     <CheckBox Content="Last Seen" IsChecked="{Binding Data.ShowLastSeenColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
+                                </StackPanel>
+                                <Separator />
+                                <StackPanel Margin="4,0,4,4" Orientation="Horizontal">
                                     <CheckBox Content="Reader" IsChecked="{Binding Data.ShowReaderColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
                                     <CheckBox Content="Antenna" IsChecked="{Binding Data.ShowAntennaColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
+                                </StackPanel>
+                                <Separator />
+                                <StackPanel Margin="4,0,4,4">
                                     <CheckBox Content="Peak RSSI" IsChecked="{Binding Data.ShowRssiColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
                                     <CheckBox Content="Channel" IsChecked="{Binding Data.ShowChannelColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
                                     <CheckBox Content="PC Bits" IsChecked="{Binding Data.ShowPcBitsColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
+                                </StackPanel>
+                                <Separator />
+                                <StackPanel Margin="4,0,4,4">
                                     <CheckBox Content="Phase" IsChecked="{Binding Data.ShowPhaseColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
                                     <CheckBox Content="GPS" IsChecked="{Binding Data.ShowGpsColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
                                     <CheckBox Content="XPC" IsChecked="{Binding Data.ShowXpcColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />

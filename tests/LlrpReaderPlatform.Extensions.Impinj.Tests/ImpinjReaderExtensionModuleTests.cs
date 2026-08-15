@@ -335,17 +335,21 @@ public sealed class ImpinjReaderExtensionModuleTests
     }
 
     [Fact]
-    public void ApplyInventoryReportSpec_ignores_other_semantics()
+    public void ApplyInventoryReportSpec_disables_phase_when_not_requested()
     {
         var module = new ImpinjReaderExtensionModule();
         var inventory = new InventorySettings();
 
+        // 能力支持 RF Phase，但请求集合不含 phase-report：应显式写入 IncludeRfPhaseAngle=false，
+        // 使“取消请求”能真正关闭设备上的相位报告，而不是静默沿用已开启值。
         InventorySettings result = module.ApplyInventoryReportSpec(
             inventory,
             new List<string> { "unrelated-semantic" },
             R420Features());
 
-        Assert.DoesNotContain(ImpinjInventoryReportOptions.ExtensionKey, result.Extensions.Keys);
+        var options = Assert.IsType<ImpinjInventoryReportOptions>(
+            result.Extensions[ImpinjInventoryReportOptions.ExtensionKey]);
+        Assert.False(options.IncludeRfPhaseAngle);
     }
 
     [Fact]

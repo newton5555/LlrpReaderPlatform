@@ -247,7 +247,7 @@ public sealed class MainViewModelSmokeTests
         await vm.LoadCommand.ExecuteAsync(profile.Id);
         await vm.LoadDefaultsCommand.ExecuteAsync(null);
 
-        Assert.Contains(vm.Rows, row => row.Key == SettingsKeys.Session && row.ValueText == "2");
+        Assert.Contains(vm.Rows, row => row.Key == SettingsKeys.Session && row.ValueText == "S2");
         Assert.Equal(0, session.SettingsApplyCount);
         Assert.Contains("默认", vm.Status);
         Assert.Equal("SDK defaults (not applied)", vm.SettingsOrigin);

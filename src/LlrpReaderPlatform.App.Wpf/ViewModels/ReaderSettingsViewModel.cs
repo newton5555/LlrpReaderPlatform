@@ -17,6 +17,7 @@ namespace LlrpReaderPlatform.App.Wpf.ViewModels;
 /// </summary>
 public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationOwner, IDisposable
 {
+    private const int RfModeDefaultSentinel = -1;
     private readonly IReaderSettingsService settings;
     private readonly ILogger<ReaderSettingsViewModel> logger;
     private readonly IReaderManager? readerManager;
@@ -248,9 +249,32 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
     public bool IsSessionEditable => SessionRow is { IsReadOnly: false };
     public bool IsTariEditable => TariRow is { IsReadOnly: false };
 
-    /// <summary>Tari 由 RF Mode 决定。固定 Tari 的 mode（如 Impinj R420）不接受自定义，UI 隐藏入口；
-    /// 仅当设备 mode 允许自定义 Tari 时才显示可编辑行。</summary>
-    public bool IsTariVisible => TariRow is { IsReadOnly: false };
+    /// <summary>
+    /// 默认 RF Mode 代表 SDK 的 Mode=0 + Tari=0，不单独展示 Tari；
+    /// 能力表中的固定 Mode 则显示为只读单项下拉。
+    /// </summary>
+    public bool IsTariVisible => TariRow is not null && !IsDefaultRfMode;
+
+    private bool IsDefaultRfMode
+    {
+        get
+        {
+            SettingsEntryRowViewModel? row = RfModeRow;
+            if (row is null)
+            {
+                return false;
+            }
+
+            if (row.SelectedChoiceValue is not null)
+            {
+                return Convert.ToInt32(row.SelectedChoiceValue, CultureInfo.InvariantCulture)
+                    == RfModeDefaultSentinel;
+            }
+
+            return int.TryParse(row.ValueText, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value)
+                && value == RfModeDefaultSentinel;
+        }
+    }
 
     public bool IsPhaseAngleEditable => PhaseAngleRow is { IsReadOnly: false };
     public bool IsDopplerEditable => DopplerRow is { IsReadOnly: false };
@@ -934,6 +958,135 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
             OnPropertyChanged(nameof(IsFrequencyChannelsVisible));
             OnPropertyChanged(nameof(IsFrequencyChannelsEditable));
         }
+
+        // 切换 RF Mode 后，按新 mode 的 Tari 能力重建 Tari 行（下拉/范围/只读）。
+        if (ReferenceEquals(sender, RfModeRow)
+            && (args.PropertyName is nameof(SettingsEntryRowViewModel.SelectedChoiceIndex)
+                or nameof(SettingsEntryRowViewModel.ValueText)))
+        {
+            if (args.PropertyName == nameof(SettingsEntryRowViewModel.SelectedChoiceIndex))
+            {
+                RefreshTariForSelectedRfMode();
+            }
+
+            OnPropertyChanged(nameof(IsTariVisible));
+        }
+    }
+
+    /// <summary>
+    /// 依据当前选中的 RF Mode 重建 Tari 设置行。能力表为 RF Mode 提供
+    /// <see cref="RfModeTariProfile"/> 时生效；否则（能力缺失、默认或未知 mode）保留现状。
+    /// </summary>
+    private void RefreshTariForSelectedRfMode()
+    {
+        SettingsEntryRowViewModel? rfMode = RfModeRow;
+        IReadOnlyList<RfModeTariProfile>? profiles = rfMode?.Entry.RfModeTariProfiles;
+        if (rfMode is null || profiles is not { Count: > 0 })
+        {
+            return;
+        }
+
+        object? selected = rfMode.SelectedChoiceValue;
+        if (selected is null
+            || !int.TryParse(Convert.ToString(selected, CultureInfo.InvariantCulture), NumberStyles.Integer, CultureInfo.InvariantCulture, out int modeId))
+        {
+            return;
+        }
+
+        RfModeTariProfile? profile = profiles.FirstOrDefault(profile => profile.ModeIdentifier == modeId);
+        if (profile is null)
+        {
+            // “默认”(-1) 或能力表外的 mode：保留 Tari 行现状（设备默认/只读占位）。
+            return;
+        }
+
+        SettingsEntry tariEntry = BuildTariEntryFromProfile(profile);
+        ReplaceRow(SettingsKeys.Tari, tariEntry);
+        OnPropertyChanged(nameof(TariRow));
+        OnPropertyChanged(nameof(IsTariEditable));
+        OnPropertyChanged(nameof(IsTariVisible));
+    }
+
+    private static SettingsEntry BuildTariEntryFromProfile(RfModeTariProfile profile)
+    {
+        if (profile.IsFixedTari)
+        {
+            int fixedValue = profile.FixedTariValue ?? 0;
+            return new SettingsEntry
+            {
+                Key = SettingsKeys.Tari,
+                Title = "Tari",
+                EditorKind = EditorKind.Choice,
+                ValueType = typeof(int),
+                Options = [new SettingsOption(fixedValue, $"{fixedValue} ({fixedValue / 1000d:0.###} uS)")],
+                CurrentValue = fixedValue,
+                DefaultValue = fixedValue,
+                ReadOnlyReason = "由所选 RF Mode 固定，不可编辑",
+            };
+        }
+
+        IReadOnlyList<SettingsOption> options = profile.TariOptions;
+        if (options.Count == 0)
+        {
+            // 能力信息缺失时回退为范围输入，默认取范围最小值。
+            SettingsRange range = profile.TariRange ?? new SettingsRange(0, ushort.MaxValue);
+            return new SettingsEntry
+            {
+                Key = SettingsKeys.Tari,
+                Title = "Tari",
+                EditorKind = EditorKind.Integer,
+                ValueType = typeof(int),
+                Range = range,
+                CurrentValue = (int)range.Min,
+                DefaultValue = (int)range.Min,
+            };
+        }
+
+        // 切换 RF Mode 后，Tari 落到该 mode 的默认（最小值），使控件随 mode 明确变化。
+        int min = Convert.ToInt32(options[0].Value, CultureInfo.InvariantCulture);
+        return new SettingsEntry
+        {
+            Key = SettingsKeys.Tari,
+            Title = "Tari",
+            EditorKind = EditorKind.Choice,
+            ValueType = typeof(int),
+            Options = options,
+            CurrentValue = min,
+            DefaultValue = min,
+        };
+    }
+
+    /// <summary>
+    /// 用新的设置项替换指定 Key 的行（Rows 与所属分组集合同步更新），
+    /// 并按既有约定订阅新行的属性变更。
+    /// </summary>
+    private void ReplaceRow(string key, SettingsEntry newEntry)
+    {
+        SettingsEntryRowViewModel? old = FindRow(key);
+        if (old is null)
+        {
+            return;
+        }
+
+        var replacement = new SettingsEntryRowViewModel(newEntry);
+        int indexInRows = Rows.IndexOf(old);
+        if (indexInRows >= 0)
+        {
+            Rows[indexInRows] = replacement;
+        }
+        else
+        {
+            Rows.Add(replacement);
+        }
+
+        ObservableCollection<SettingsEntryRowViewModel> group = GetGroup(key);
+        if (group.Contains(old))
+        {
+            int indexInGroup = group.IndexOf(old);
+            group[indexInGroup] = replacement;
+        }
+
+        replacement.PropertyChanged += OnLegacyRowPropertyChanged;
     }
 
     private SettingsEntryRowViewModel? FindRow(string key) => Rows.FirstOrDefault(row => row.Key == key);

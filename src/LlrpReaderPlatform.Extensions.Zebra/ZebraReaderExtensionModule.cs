@@ -81,7 +81,9 @@ public sealed class ZebraReaderExtensionModule : IReaderExtensionModule
         bool canPhase = catalog is not null && catalog.Supports(ReaderFeatures.ZebraReportPhase);
         bool canGps = catalog is not null && catalog.Supports(ReaderFeatures.ZebraReportGps);
         bool canXpc = catalog is not null && catalog.Supports(ReaderFeatures.ZebraReportXpc);
-        if ((!wantsPhase || !canPhase) && (!wantsGps || !canGps) && (!wantsXpc || !canXpc))
+        // 只要设备能力目录支持任一报告字段就写开关（true/false 都写），不能因“本次未请求”就短路
+        // 返回——否则取消勾选相位时设备沿用已开启值，出现“可开不可关”。
+        if (!canPhase && !canGps && !canXpc)
         {
             return settings;
         }
@@ -93,12 +95,13 @@ public sealed class ZebraReaderExtensionModule : IReaderExtensionModule
             value is ZebraInventoryReportOptions report
                 ? report
                 : new ZebraInventoryReportOptions();
+        // 显式开/关：不请求的字段置 false，避免“取消请求”被静默忽略而沿用设备已开启值。
         inventoryExtensions[ZebraInventoryReportOptions.ExtensionKey] = existing with
         {
-            IncludePhase = wantsPhase && canPhase ? true : existing.IncludePhase,
-            IncludeGps = wantsGps && canGps ? true : existing.IncludeGps,
+            IncludePhase = wantsPhase && canPhase,
+            IncludeGps = wantsGps && canGps,
             // Zebra XPC 由 MLT 报告携带（EnableMLTReport），因此 XPC 对应 IncludeMltReport。
-            IncludeMltReport = wantsXpc && canXpc ? true : existing.IncludeMltReport,
+            IncludeMltReport = wantsXpc && canXpc,
         };
 
         return settings with

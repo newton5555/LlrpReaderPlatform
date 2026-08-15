@@ -329,6 +329,111 @@ public sealed class LegacySettingsLayoutViewModelTests
     }
 
     [Fact]
+    public async Task Switching_rf_mode_rebuilds_tari_row_from_mode_capability()
+    {
+        Guid readerId = Guid.NewGuid();
+        var service = new StubSettingsService(readerId, BuildRfModeLinkedModel(readerId));
+        var vm = new ReaderSettingsViewModel(service);
+
+        await vm.LoadCommand.ExecuteAsync(readerId);
+
+        // 初始 RF Mode = 1（可调 Tari：范围可为 100/200/250），切换前 Tari 是下拉。
+        Assert.NotNull(vm.RfModeRow);
+        Assert.NotNull(vm.TariRow);
+        Assert.True(vm.TariRow!.IsChoice);
+        Assert.Equal("100 (0.1 uS)", vm.TariRow.ValueText);
+
+        // 切换到固定 Tari 的 mode 2（仅固定值 250、只读单项下拉）。
+        vm.RfModeRow!.SelectedChoiceIndex = 1;
+        Assert.True(vm.TariRow!.IsChoice);
+        Assert.True(vm.TariRow.IsReadOnly);
+        Assert.Single(vm.TariRow.ChoiceDisplays);
+        Assert.Equal("250 (0.25 uS)", vm.TariRow.ValueText);
+
+        // 切回可调 mode 1，Tari 恢复为下拉。
+        vm.RfModeRow.SelectedChoiceIndex = 0;
+        Assert.True(vm.TariRow.IsChoice);
+        Assert.False(vm.TariRow.IsReadOnly);
+        Assert.Equal("100 (0.1 uS)", vm.TariRow.ValueText);
+    }
+
+    [Fact]
+    public async Task Switching_rf_mode_to_fixed_tari_keeps_row_visible_and_readonly()
+    {
+        Guid readerId = Guid.NewGuid();
+        var service = new StubSettingsService(readerId, BuildRfModeLinkedModel(readerId));
+        var vm = new ReaderSettingsViewModel(service);
+
+        await vm.LoadCommand.ExecuteAsync(readerId);
+
+        // 初始 Tari 行可见可编辑。
+        Assert.True(vm.IsTariVisible);
+        Assert.True(vm.IsTariEditable);
+
+        // 切换到固定 Tari mode 后 Tari 行仍可见，但不可编辑。
+        vm.RfModeRow!.SelectedChoiceIndex = 1;
+        Assert.True(vm.IsTariVisible);
+        Assert.False(vm.IsTariEditable);
+        Assert.False(vm.TariRow!.IsEditable);
+    }
+
+    [Fact]
+    public async Task Switching_rf_mode_does_not_touch_tari_when_no_mode_capability_present()
+    {
+        Guid readerId = Guid.NewGuid();
+        var service = new StubSettingsService(readerId, BuildRfModeNoProfileModel(readerId));
+        var vm = new ReaderSettingsViewModel(service);
+
+        await vm.LoadCommand.ExecuteAsync(readerId);
+
+        var originalTari = vm.TariRow;
+        vm.RfModeRow!.SelectedChoiceIndex = 1;
+        Assert.Same(originalTari, vm.TariRow);
+        Assert.Equal("250", vm.TariRow!.ValueText);
+    }
+
+    [Fact]
+    public async Task Selecting_default_rf_mode_hides_tari_and_specific_mode_shows_it()
+    {
+        Guid readerId = Guid.NewGuid();
+        var service = new StubSettingsService(readerId, BuildRfModeNoProfileModel(readerId));
+        var vm = new ReaderSettingsViewModel(service);
+
+        await vm.LoadCommand.ExecuteAsync(readerId);
+
+        Assert.Equal("默认", vm.RfModeRow!.ValueText);
+        Assert.False(vm.IsTariVisible);
+
+        vm.RfModeRow.SelectedChoiceIndex = 1;
+        Assert.True(vm.IsTariVisible);
+
+        vm.RfModeRow.SelectedChoiceIndex = 0;
+        Assert.False(vm.IsTariVisible);
+    }
+
+    [Fact]
+    public async Task Selecting_impinj_real_mode_zero_shows_its_fixed_tari_instead_of_default_zero()
+    {
+        Guid readerId = Guid.NewGuid();
+        var service = new StubSettingsService(readerId, BuildImpinjModeZeroModel(readerId));
+        var vm = new ReaderSettingsViewModel(service);
+
+        await vm.LoadCommand.ExecuteAsync(readerId);
+
+        Assert.Equal("默认", vm.RfModeRow!.ValueText);
+        Assert.False(vm.IsTariVisible);
+
+        vm.RfModeRow.SelectedChoiceIndex = 1;
+
+        Assert.Equal(0, vm.RfModeRow.SelectedChoiceValue);
+        Assert.True(vm.IsTariVisible);
+        Assert.True(vm.TariRow!.IsChoice);
+        Assert.True(vm.TariRow.IsReadOnly);
+        Assert.Equal("14300 (14.3 uS)", vm.TariRow.ValueText);
+        Assert.Equal(14_300, vm.TariRow.SelectedChoiceValue);
+    }
+
+    [Fact]
     public async Task Explicit_zero_gpi_capability_hides_the_tab_one_gpi_matrix()
     {
         Guid readerId = Guid.NewGuid();
@@ -521,6 +626,110 @@ public sealed class LegacySettingsLayoutViewModelTests
         yield return Choice(SettingsKeys.FilterStateAction(index), 0, new SettingsOption(0, "Assert A / Deassert B"));
         yield return Choice(SettingsKeys.FilterMatchAction(index), 1, new SettingsOption(0, "Do nothing"), new SettingsOption(1, "Select"));
         yield return Choice(SettingsKeys.FilterNonMatchAction(index), 2, new SettingsOption(0, "Do nothing"), new SettingsOption(1, "Select"), new SettingsOption(2, "Unselect"));
+    }
+
+    /// <summary>
+    /// 构建带 RF Mode→Tari 能力联动的模型：
+    /// mode 1＝可调 Tari（100/200/250 下拉），mode 2＝固定 Tari 250（只读）。
+    /// </summary>
+    private static SettingsEditorModel BuildRfModeLinkedModel(Guid readerId)
+    {
+        SettingsEntry rfMode = Choice(
+            SettingsKeys.RfMode,
+            1,
+            new SettingsOption(1, "mode 1"),
+            new SettingsOption(2, "mode 2"));
+        rfMode = rfMode with
+        {
+            RfModeTariProfiles =
+            [
+                new RfModeTariProfile(
+                    1,
+                    IsFixedTari: false,
+                    FixedTariValue: null,
+                    TariRange: new SettingsRange(100, 250),
+                    TariOptions:
+                    [
+                        new SettingsOption(100, "100 (0.1 uS)"),
+                        new SettingsOption(200, "200 (0.2 uS)"),
+                        new SettingsOption(250, "250 (0.25 uS)"),
+                    ]),
+                new RfModeTariProfile(
+                    2,
+                    IsFixedTari: true,
+                    FixedTariValue: 250,
+                    TariRange: new SettingsRange(250, 250),
+                    TariOptions: []),
+            ],
+        };
+
+        SettingsEntry[] entries =
+        [
+            rfMode,
+            Choice(SettingsKeys.Tari, 100, new SettingsOption(100, "100 (0.1 uS)"), new SettingsOption(200, "200 (0.2 uS)"), new SettingsOption(250, "250 (0.25 uS)")),
+        ];
+
+        return new SettingsEditorModel(
+            new EffectiveSettingsLayout { ReaderId = readerId, CapabilityRevision = 4, Entries = entries },
+            new SettingsSnapshot
+            {
+                ReaderId = readerId,
+                CapabilityRevision = 4,
+                Values = entries.ToDictionary(entry => entry.Key, entry => entry.CurrentValue),
+            });
+    }
+
+    /// <summary>构建带多个 RF Mode 选项但无 Tari 能力联动的模型。</summary>
+    private static SettingsEditorModel BuildRfModeNoProfileModel(Guid readerId)
+    {
+        SettingsEntry[] entries =
+        [
+            Choice(SettingsKeys.RfMode, -1, new SettingsOption(-1, "默认"), new SettingsOption(1, "mode 1")),
+            Integer(SettingsKeys.Tari, 250),
+        ];
+
+        return new SettingsEditorModel(
+            new EffectiveSettingsLayout { ReaderId = readerId, CapabilityRevision = 4, Entries = entries },
+            new SettingsSnapshot
+            {
+                ReaderId = readerId,
+                CapabilityRevision = 4,
+                Values = entries.ToDictionary(entry => entry.Key, entry => entry.CurrentValue),
+            });
+    }
+
+    private static SettingsEditorModel BuildImpinjModeZeroModel(Guid readerId)
+    {
+        SettingsEntry rfMode = Choice(
+            SettingsKeys.RfMode,
+            -1,
+            new SettingsOption(-1, "默认"),
+            new SettingsOption(0, "mode 0")) with
+        {
+            RfModeTariProfiles =
+            [
+                new RfModeTariProfile(
+                    0,
+                    IsFixedTari: true,
+                    FixedTariValue: 14_300,
+                    TariRange: new SettingsRange(14_300, 14_300),
+                    TariOptions: []),
+            ],
+        };
+        SettingsEntry[] entries =
+        [
+            rfMode,
+            Choice(SettingsKeys.Tari, 0, new SettingsOption(0, "0")),
+        ];
+
+        return new SettingsEditorModel(
+            new EffectiveSettingsLayout { ReaderId = readerId, CapabilityRevision = 4, Entries = entries },
+            new SettingsSnapshot
+            {
+                ReaderId = readerId,
+                CapabilityRevision = 4,
+                Values = entries.ToDictionary(entry => entry.Key, entry => entry.CurrentValue),
+            });
     }
 
     private static SettingsEntry Boolean(string key, bool value) => new()

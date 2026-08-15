@@ -131,7 +131,7 @@ public sealed class StandardSettingsCompilerTests
         Assert.Equal(EditorKind.Integer, rfMode.EditorKind);
         Assert.False(rfMode.IsReadOnly);
         Assert.Empty(rfMode.Options);
-        Assert.Equal(new SettingsRange(0, ushort.MaxValue), rfMode.Range);
+        Assert.Equal(new SettingsRange(-1, ushort.MaxValue), rfMode.Range);
         Assert.Equal(3, rfMode.CurrentValue);
     }
 
@@ -181,6 +181,98 @@ public sealed class StandardSettingsCompilerTests
             "7 (M0/640K, Tari: 6.3 uS, PIE: 1.5)",
             Assert.Single(rfMode.Options, static option => Equals(option.Value, 7)).Display);
         Assert.Equal(1000, rfMode.CurrentValue);
+    }
+
+    [Fact]
+    public void Runtime_layout_carries_per_mode_tari_profiles_for_rf_mode()
+    {
+        var compiler = new StandardSettingsCompiler();
+        ReaderCapabilities capabilities = CreateCapabilities(
+            rfModes:
+            [
+                // mode 1：可调 Tari（100..250，步进 50）。
+                new C1G2RfModeEntry(1, "", false, 0, "", "", 100_000, 100, 100, 250, 50),
+                // mode 2：固定 Tari 300。
+                new C1G2RfModeEntry(2, "", false, 0, "", "", 300_000, 300, 300, 300, 0),
+            ]);
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(new ReaderSettings(), new ManagedRoSpecSnapshot(
+                new InventorySettings { ModeIndex = 1 }, InventoryRuntimeState.Disabled)),
+            capabilities);
+
+        EffectiveSettingsLayout layout = compiler.BuildLayout(Snapshot(), runtime);
+
+        SettingsEntry rfMode = Assert.Single(layout.Entries, static entry => entry.Key == SettingsKeys.RfMode);
+        IReadOnlyList<RfModeTariProfile>? profiles = rfMode.RfModeTariProfiles;
+        Assert.NotNull(profiles);
+        Assert.Equal(2, profiles!.Count);
+
+        RfModeTariProfile adjustable = Assert.Single(profiles, static p => p.ModeIdentifier == 1);
+        Assert.False(adjustable.IsFixedTari);
+        Assert.Collection(
+            adjustable.TariOptions,
+            static option => Assert.Equal(100, option.Value),
+            static option => Assert.Equal(150, option.Value),
+            static option => Assert.Equal(200, option.Value),
+            static option => Assert.Equal(250, option.Value));
+
+        RfModeTariProfile fixedTari = Assert.Single(profiles, static p => p.ModeIdentifier == 2);
+        Assert.True(fixedTari.IsFixedTari);
+        Assert.Equal(300, fixedTari.FixedTariValue);
+    }
+
+    [Fact]
+    public void Runtime_layout_labels_default_rf_mode_sentinel_instead_of_showing_minus_one()
+    {
+        var compiler = new StandardSettingsCompiler();
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(
+                new ReaderSettings(),
+                new ManagedRoSpecSnapshot(
+                    new InventorySettings { ModeIndex = 0, Tari = 0 },
+                    InventoryRuntimeState.Disabled)),
+            CreateCapabilities(
+                rfModes:
+                [
+                    new C1G2RfModeEntry(7, "DRV_64_3", false, 2, "PR_ASK", "DI", 64_000, 2_000, 6_250, 6_250, 0),
+                ]));
+
+        EffectiveSettingsLayout layout = compiler.BuildLayout(Snapshot(), runtime);
+        SettingsEntry rfMode = Assert.Single(layout.Entries, static entry => entry.Key == SettingsKeys.RfMode);
+
+        Assert.Equal(EditorKind.Choice, rfMode.EditorKind);
+        Assert.Equal(-1, rfMode.CurrentValue);
+        Assert.Equal("默认", Assert.Single(rfMode.Options, static option => Equals(option.Value, -1)).Display);
+    }
+
+    [Fact]
+    public void Runtime_layout_keeps_real_mode_zero_and_its_fixed_tari_separate_from_default()
+    {
+        var compiler = new StandardSettingsCompiler();
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(
+                new ReaderSettings(),
+                new ManagedRoSpecSnapshot(
+                    new InventorySettings { ModeIndex = 0, Tari = 14_300 },
+                    InventoryRuntimeState.Disabled)),
+            CreateCapabilities(
+                rfModes:
+                [
+                    new C1G2RfModeEntry(0, "IMPINJ_MODE_0", true, 2, "PR_ASK", "DI", 640_000, 2_000, 14_300, 14_300, 0),
+                ]));
+
+        EffectiveSettingsLayout layout = compiler.BuildLayout(Snapshot(), runtime);
+
+        SettingsEntry rfMode = Assert.Single(layout.Entries, static entry => entry.Key == SettingsKeys.RfMode);
+        Assert.Equal(0, rfMode.CurrentValue);
+        Assert.Equal("默认", Assert.Single(rfMode.Options, static option => Equals(option.Value, -1)).Display);
+        Assert.Contains(rfMode.Options, static option => Equals(option.Value, 0));
+
+        SettingsEntry tari = Assert.Single(layout.Entries, static entry => entry.Key == SettingsKeys.Tari);
+        Assert.True(tari.IsReadOnly);
+        Assert.Equal(EditorKind.Choice, tari.EditorKind);
+        Assert.Equal(14_300, tari.CurrentValue);
+        Assert.Equal((ushort)14_300, Assert.Single(tari.Options).Value);
     }
 
     [Fact]
@@ -317,7 +409,71 @@ public sealed class StandardSettingsCompilerTests
         Assert.Equal((ushort)12_500, compiled.Inventory.Tari);
         Assert.Equal(
             12_500,
-            Assert.IsType<int>(Assert.Single(layout.Entries, static entry => entry.Key == SettingsKeys.Tari).CurrentValue));
+        Assert.IsType<int>(Assert.Single(layout.Entries, static entry => entry.Key == SettingsKeys.Tari).CurrentValue));
+    }
+
+    [Fact]
+    public void CompileSdk_resolves_fixed_tari_for_explicit_real_mode_zero()
+    {
+        var compiler = new StandardSettingsCompiler();
+        ReaderRuntimeSnapshot snapshot = Snapshot(new ReaderAntennaInfo { AntennaId = 1, Name = "A1" });
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(
+                new ReaderSettings(),
+                new ManagedRoSpecSnapshot(
+                    new InventorySettings { AntennaIds = [1], ModeIndex = 0, Tari = 0 },
+                    InventoryRuntimeState.Disabled)),
+            CreateCapabilities(
+                rfModes:
+                [
+                    new C1G2RfModeEntry(0, "IMPINJ_MODE_0", true, 2, "PR_ASK", "DI", 640_000, 2_000, 14_300, 14_300, 0),
+                ]));
+
+        EffectiveSettingsLayout layout = compiler.BuildLayout(snapshot, runtime);
+        var draft = new SettingsDraft { ReaderId = ReaderId, CapabilityRevision = 7 };
+        draft.Values[SettingsKeys.AntennaIds] = "1";
+        draft.Values[SettingsKeys.RfMode] = 0;
+
+        ReaderSettings compiled = compiler.CompileSdk(draft, layout, runtime, snapshot);
+
+        Assert.Equal((ushort)0, compiled.Inventory!.ModeIndex);
+        Assert.Equal((ushort)14_300, compiled.Inventory.Tari);
+    }
+
+    [Fact]
+    public void CompileSdk_uses_fixed_mode_tari_when_readonly_tari_is_not_in_draft()
+    {
+        var compiler = new StandardSettingsCompiler();
+        ReaderRuntimeSnapshot snapshot = Snapshot(new ReaderAntennaInfo { AntennaId = 1, Name = "A1" });
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(
+                new ReaderSettings(),
+                new ManagedRoSpecSnapshot(
+                    new InventorySettings { AntennaIds = [1], ModeIndex = 1002, Tari = 0 },
+                    InventoryRuntimeState.Disabled)),
+            CreateCapabilities(
+                rfModes:
+                [
+                    new C1G2RfModeEntry(1002, "DRV_64_3", true, 2, "PR_ASK", "DI", 64_000, 2_000, 6_250, 6_250, 0),
+                ]));
+
+        EffectiveSettingsLayout layout = compiler.BuildLayout(snapshot, runtime);
+        SettingsEntry tari = Assert.Single(layout.Entries, static entry => entry.Key == SettingsKeys.Tari);
+        Assert.True(tari.IsReadOnly);
+        Assert.Equal(EditorKind.Choice, tari.EditorKind);
+        Assert.Equal(6250, tari.CurrentValue);
+        Assert.Equal((ushort)6250, Assert.Single(tari.Options).Value);
+
+        var draft = new SettingsDraft { ReaderId = ReaderId, CapabilityRevision = 7 };
+        foreach (SettingsEntry entry in layout.Entries.Where(static entry => !entry.IsReadOnly))
+        {
+            draft.Values[entry.Key] = entry.CurrentValue;
+        }
+
+        ReaderSettings compiled = compiler.CompileSdk(draft, layout, runtime, snapshot);
+
+        Assert.Equal((ushort)1002, compiled.Inventory!.ModeIndex);
+        Assert.Equal((ushort)6250, compiled.Inventory.Tari);
     }
 
     [Fact]

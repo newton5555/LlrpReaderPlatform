@@ -28,13 +28,13 @@ public sealed class SettingsEntryRowViewModelTests
         Assert.True(row.IsChoice);
         Assert.False(row.IsBoolean);
         Assert.Equal(0, row.SelectedChoiceIndex);
-        Assert.Equal("1", row.ValueText);
+        Assert.Equal("A1", row.ValueText);
         Assert.Equal(new[] { "A1", "A2" }, row.ChoiceDisplays);
         Assert.Equal((ushort)1, row.SelectedChoiceValue);
 
         row.SelectedChoiceIndex = 1;
 
-        Assert.Equal("2", row.ValueText);
+        Assert.Equal("A2", row.ValueText);
         Assert.Equal((ushort)2, row.SelectedChoiceValue);
     }
 
@@ -58,11 +58,11 @@ public sealed class SettingsEntryRowViewModelTests
         Assert.Equal(1, row.SelectedChoiceIndex);
         Assert.Equal("1 (10 dBm)", row.ChoiceDisplays[0]);
         Assert.Equal("2 (20.5 dBm)", row.ChoiceDisplays[1]);
-        Assert.Equal("2", row.ValueText);
+        Assert.Equal("2 (20.5 dBm)", row.ValueText);
 
         row.SelectedChoiceIndex = 0;
 
-        Assert.Equal("1", row.ValueText);
+        Assert.Equal("1 (10 dBm)", row.ValueText);
         Assert.Equal((ushort)1, row.SelectedChoiceValue);
     }
 

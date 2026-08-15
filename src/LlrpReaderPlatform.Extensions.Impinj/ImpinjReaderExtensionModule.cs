@@ -118,14 +118,14 @@ public sealed class ImpinjReaderExtensionModule : IReaderExtensionModule
         LlrpReaderPlatform.Contracts.Settings.ReaderFeatureCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        // 能力门控（ADR-0013）：仅当请求含 phase-report 且该 Reader 已仲裁支持 RF Phase 时才写入。
-        if (!semanticFields.Contains(LlrpReaderPlatform.Contracts.Tagging.ReportFieldSemantics.Phase)
-            || catalog is null
-            || !catalog.Supports(ReaderFeatures.ImpinjRfPhase))
+        // 能力门控（ADR-0013）：仅当该 Reader 已仲裁支持 RF Phase 时才写开关；
+        // 请求集合含 phase-report 则开启，否则显式关闭，避免“取消请求”被静默忽略。
+        if (catalog is null || !catalog.Supports(ReaderFeatures.ImpinjRfPhase))
         {
             return settings;
         }
 
+        bool requestPhase = semanticFields.Contains(LlrpReaderPlatform.Contracts.Tagging.ReportFieldSemantics.Phase);
         // R420 已实测：RF Phase angle 属于 ImpinjInventoryReportOptions 扩展字典。
         var extensions = new Dictionary<string, object?>(settings.Extensions, StringComparer.Ordinal);
         ImpinjInventoryReportOptions existing = extensions.TryGetValue(
@@ -135,7 +135,7 @@ public sealed class ImpinjReaderExtensionModule : IReaderExtensionModule
                 : new ImpinjInventoryReportOptions();
         extensions[ImpinjInventoryReportOptions.ExtensionKey] = existing with
         {
-            IncludeRfPhaseAngle = true,
+            IncludeRfPhaseAngle = requestPhase,
         };
         return settings with
         {
