@@ -35,6 +35,7 @@ Planning 文档是短期工作文档：完成后把结果归档回主计划/ADR/
 - [旧 WPF 功能迁移矩阵](development/legacy-feature-matrix.md)
 - [真机验收运行手册](development/hardware-validation-runbook.md)
 - [WPF 用户操作与故障排查](development/wpf-user-and-troubleshooting.md)
+- [Virtual Reader 开发模式](development/virtual-reader.md)
 - [发布规范、单文件交付与 SDK 切换](development/release.md)
 
 ### 4.1 已发布版本
@@ -48,7 +49,7 @@ Planning 文档是短期工作文档：完成后把结果归档回主计划/ADR/
   日志分类和盘存快照规则见 [ADR-0007](decisions/ADR-0007-layered-logging-and-inventory-snapshots.md)；
   SDK 引用切换规则见 [ADR-0008](decisions/ADR-0008-switchable-sdk-references.md)；
   Windows 单文件交付规则见 [ADR-0009](decisions/ADR-0009-windows-self-contained-single-file.md)；
-  硬件验证 CLI 规则见 [ADR-0010](decisions/ADR-0010-hardware-validation-cli.md)。
+  硬件验证 CLI 规则见 [ADR-0010](decisions/ADR-0010-hardware-validation-cli.md)；Virtual Reader 开发替身见 [ADR-0015](decisions/ADR-0015-virtual-reader-development-mode.md)。
 
 ### 6. 冻结项目参考
 

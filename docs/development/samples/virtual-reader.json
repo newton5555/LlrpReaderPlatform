@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "readerId": "5f5a3b6c-2b7c-4c39-9f05-8f8a3d3bb5d4",
+  "name": "platform-sample",
+  "readerName": "Virtual sample reader",
+  "host": "virtual-reader",
+  "port": 5084,
+  "protocolVersion": "Force101",
+  "inventory": {
+    "tagLogPath": "virtual-tags.jsonl"
+  },
+  "identity": {
+    "manufacturerId": 1447647828,
+    "modelId": 1,
+    "firmware": "virtual-1.0",
+    "model": "Virtual Reader"
+  },
+  "capabilities": {
+    "maxAntennas": 2,
+    "requireExplicitAntennaIds": true,
+    "gpiCount": 1,
+    "gpoCount": 2,
+    "tagAccessAvailable": true,
+    "blockEraseAvailable": true,
+    "txPowerIndices": [1, 2, 3, 4],
+    "rxSensitivityIndices": [1, 2, 3, 4],
+    "rfModeIndices": [0, 20]
+  },
+  "replay": {
+    "mode": "Accelerated",
+    "speed": 10,
+    "fallbackIntervalMilliseconds": 50,
+    "loop": true
+  },
+  "tagMemory": [
+    {
+      "epc": "3000AABB",
+      "tidHex": "E2000017221101441890CDEF",
+      "reservedHex": "0000000000000000",
+      "userHex": "11223344",
+      "accessPasswordHex": "01020304",
+      "userWritable": true
+    }
+  ],
+  "faults": {
+    "responseDelayMilliseconds": 0
+  }
+}

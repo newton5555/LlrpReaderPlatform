@@ -123,10 +123,10 @@ LLRP Reader Platform 是一个**厂商无关的 LLRP 应用框架 + 首个 WPF �
 
 ```text
 dotnet build LlrpReaderPlatform.slnx   # 0 警告 0 错误
- dotnet test  LlrpReaderPlatform.slnx --no-build   # 368 项全绿
+ dotnet test  LlrpReaderPlatform.slnx --no-build   # 378 项全绿
 ```
 
-测试分布：Contracts.Tests 5、Services.Tests 188、Infrastructure.Tests 10、App.Wpf.Tests 133、Architecture.Tests 9、Extensions.Impinj.Tests 17、Extensions.Zebra.Tests 6。
+测试分布：Contracts.Tests 5、Services.Tests 188、Infrastructure.Tests 10、App.Wpf.Tests 133、Architecture.Tests 9、Extensions.Impinj.Tests 17、Extensions.Zebra.Tests 6、VirtualReader.Tests 10。
 
 WPF 发布：`dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false -p:UseLocalLlrpSdk=false -o artifacts/publish/win-x64`，然后运行 `artifacts/publish/win-x64/LlrpReaderPlatform.exe`；发布目录已加入 `.gitignore`。
 
@@ -155,7 +155,8 @@ LlrpReaderPlatform.slnx
     ├── LlrpReaderPlatform.App.Wpf.Tests/
     ├── LlrpReaderPlatform.Infrastructure.Tests/       EF SQLite CRUD
     ├── LlrpReaderPlatform.Architecture.Tests/  依赖方向与公开 API 边界
-    └── LlrpReaderPlatform.Hardware.Tests/      硬件验收 CLI
+    ├── LlrpReaderPlatform.Hardware.Tests/      硬件验收 CLI
+    └── LlrpReaderPlatform.VirtualReader.Tests/ Virtual Reader 场景/生命周期/WPF 链路测试
 ```
 
 依赖方向（架构测试守护）：`View/ViewModel → Services → Contracts`；应用组合根再注册
@@ -235,7 +236,7 @@ LlrpReaderPlatform.slnx
 - 架构：`docs/architecture/`（overview / reader-runtime / extensions-and-settings）
 - 兼容性：`docs/compatibility/device-matrix.md`
 - 开发：`docs/development/roadmap.md`、`docs/development/testing-strategy.md`、`docs/development/legacy-feature-matrix.md`、`docs/development/hardware-validation-runbook.md`
-- 决策：`docs/decisions/`（ADR 0001~0009）
+- 决策：`docs/decisions/`（ADR 0001~0015）
 - 冻结仓库参考：`docs/legacy/README.md`
 
 ## 9. 交接注意事项
@@ -243,9 +244,22 @@ LlrpReaderPlatform.slnx
 - 修改共享层（Contracts/Services）后必须跑全量测试；架构测试会拦截"契约泄漏 SDK/WPF"、"Services 引厂商包"类回归；
 - 新增文档/移动文档时，同步更新 `docs/README.md`、根 `README.md` 与 `LlrpReaderPlatform.slnx`；
 - 真机相关结论（厂商 ID、能力字段、扩展字段）必须来自实测，勿从 SDK 包名或接口推断；
-- 本仓库当前阶段：P0～P7 首版代码已落地，P8 真机与多设备验收进行中；旧 WPF 主要功能入口和服务链路已迁移，剩余是硬件结论、少量专用编辑器和扩展设备覆盖。
-- 本轮代码边界：Contracts 新增 Reader 端点归一化和 `PlatformOperationException`，程序化添加、SQLite、SDK 会话构造和 WPF IPv6 展示共享同一 Host 规则；同时保护 Start 返回与早到终止生命周期事件之间的状态竞态；Tag Logging 关闭时不会创建 Run 文件；全局寻卡部分失败状态按 Reader 名称和错误摘要定位。文中按日期保留的 304/307/311/312/318/336/356/357/360 等数字是历史阶段基线；当前 App.Wpf 回归为 133 项通过，完整基线为 368 项，构建 0 警告 0 错误。
+- 本仓库当前阶段：P0～P7 首版代码已落地，P8 真机与多设备验收进行中；旧 WPF 主要功能入口和服务链路已迁移，Virtual Reader 已作为显式开发模式接入，剩余是硬件结论、少量专用编辑器和扩展设备覆盖。
+- 本轮代码边界：Contracts 新增 Reader 端点归一化和 `PlatformOperationException`，程序化添加、SQLite、SDK 会话构造和 WPF IPv6 展示共享同一 Host 规则；同时保护 Start 返回与早到终止生命周期事件之间的状态竞态；Tag Logging 关闭时不会创建 Run 文件；全局寻卡部分失败状态按 Reader 名称和错误摘要定位。文中按日期保留的 304/307/311/312/318/336/356/357/360 等数字是历史阶段基线；当前 App.Wpf 回归为 133 项通过，VirtualReader 为 10 项通过，完整基线为 378 项，构建 0 警告 0 错误。
 - 本轮 WPF 补充：主设备页发现与添加数据源页发现共用归一化/去重逻辑，主设备页的非法端口会回退 5084，IPv6 会统一使用无方括号 Host 和带方括号的端点展示；设置 Tab1 的旧分组按实际语义行显隐，Tab2 的 GPO/GPI 区域按端口能力降级，不再显示空的伪控件；所有页面的设备、连接和持久化异常统一经过 `PlatformErrorCode` 投影，现场可区分设备错误与本地保存失败。
 - 本轮 WPF 生命周期补充：Tag Memory 读写、设置加载和其它页面异步操作在页面销毁后会静默收口晚到的非取消异常，不再把已关闭页面的底层失败变成未观察异常；未销毁页面仍按原有状态文本显示失败。
 - 本轮设备入口补充：添加数据源页和主设备页对 Probe、添加、激活的未结构化异常统一使用稳定设备错误分类，保留底层详细信息供现场诊断。
 - 本轮页面导航补充：添加数据源、设备设置（含 Tab2 GPI/GPO）、Tag Memory、Tag Lists、运行记录和应用设置离开侧栏页面时取消各自短操作；Shell 发起的设置加载也受同一导航代际保护，旧结果不会把当前页切回设置；寻卡页不因导航停止，继续保持一次完整的 Start→Inventory→Stop→Disconnect 生命周期。设置 Apply 在预查询后和实际编译回调内复核 CapabilityRevision，变化时返回 StaleCapability，不把旧 Draft 下发到新能力上下文。
+
+## 10. 2026-08-16 Virtual Reader 独立开发工作区交接
+
+本轮在 `F:\Projects\LLRP\LlrpReaderPlatform.VirtualReader` 的 `codex/virtual-reader` 分支完成，不修改原 UI worktree 的未提交变更。新增 `LlrpReaderPlatform.VirtualReader` 项目和 `VirtualReader.Tests`：
+
+- 从现有 `tag-logs` JSONL 优先、`inventory-snapshots` 回退加载场景数据，处理无效/非单调时间戳；
+- 提供连接、设置 Query/Apply、显式天线校验、Managed ROSpec 状态、RealTime/Accelerated/Step/Loop 盘存回放；
+- 提供跨 Session 保留的 Reader 设置、GPI/GPO、EPC/TID/Reserved/User 内存、密码校验、读写/块擦除和故障注入；
+- 通过同一个 `IReaderSessionFactory` 和 `ReaderManager` 完成 Probe→Add→Activate→Inventory→Stop 生命周期，并投影虚拟 TID/扩展字段；
+- WPF 仅在显式设置 `LLRP_VIRTUAL_SCENARIO` 时替换 SessionFactory，未设置时真实 TCP SDK 路径不变；
+- 相关边界决策见 [ADR-0015](../decisions/ADR-0015-virtual-reader-development-mode.md)，运行方式见 [Virtual Reader 开发模式](virtual-reader.md)。
+
+验证结果：`dotnet build LlrpReaderPlatform.slnx --no-restore` 0 警告/0 错误；`dotnet test LlrpReaderPlatform.slnx --no-build` 378 项全绿；Markdown 本地链接和 `.slnx` XML 均通过检查。

@@ -24,7 +24,7 @@ LlrpReaderPlatform is a new LLRP application platform whose first deliverable is
 
 The frozen `../LlrpReaderStudio` repository is reference material only — it documents existing capabilities and migration boundaries and is never a runtime dependency.
 
-**Current baseline:** `1.0.0` · Windows x64 · self-contained single-file portable. The build is clean (0 warnings, 0 errors) and automated tests are green (368 tests). Automated tests use a `FakeSession`; real-device conclusions are recorded separately.
+**Current baseline:** `1.0.0` · Windows x64 · self-contained single-file portable. The build is clean (0 warnings, 0 errors) and automated tests are green (378 tests, including the Virtual Reader suite). Most service tests use a `FakeSession`; the Virtual Reader suite exercises deterministic multi-step reader behavior. Real-device conclusions are recorded separately.
 
 ## Architecture
 
@@ -118,6 +118,8 @@ Requirements: Windows x64; the reader must be reachable over the network, defaul
 On first run the app creates its SQLite database, logs, and inventory snapshot directory under `%LocalAppData%\LlrpReaderPlatform\`.
 
 ## Build & publish
+
+For WPF/service development without a physical reader, set `LLRP_VIRTUAL_SCENARIO` to a scenario JSON file before starting the app. The Virtual Reader uses the same `ReaderManager`, settings, inventory, Tag Access, GPI/GPO, and lifecycle events as a real session; JSONL tag logs are replayed first and inventory snapshots are the fallback. See [Virtual Reader development mode](docs/development/virtual-reader.md).
 
 On a Windows machine with the .NET 10 SDK:
 

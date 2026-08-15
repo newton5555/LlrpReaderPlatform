@@ -24,7 +24,7 @@ LlrpReaderPlatform 是一个新的 LLRP 应用平台，首个交付物是 Window
 
 冻结的 `../LlrpReaderStudio` 仓库仅作参考，只记录现有能力和迁移边界，不作为运行时依赖。
 
-**当前基线：** `1.0.0` · Windows x64 · 自包含单文件便携发布。构建 0 警告、0 错误，自动化测试 368 项全绿；自动化测试使用 `FakeSession`，真机结论单独记录。
+**当前基线：** `1.0.0` · Windows x64 · 自包含单文件便携发布。构建 0 警告、0 错误，自动化测试 378 项全绿（含 Virtual Reader 场景与生命周期测试）；服务测试主要使用 `FakeSession`，Virtual Reader 套件覆盖确定性设备行为，真机结论单独记录。
 
 ## 架构
 
@@ -118,6 +118,8 @@ SDK 侧有两个出口：核心 `LlrpSdk`（标准 LLRP 适配，由 `Services` 
 首次运行会在 `%LocalAppData%\LlrpReaderPlatform\` 创建 SQLite 数据库、日志和盘存快照目录。
 
 ## 本地构建与发布
+
+没有真机时可设置 `LLRP_VIRTUAL_SCENARIO` 指向场景 JSON，使用同一套 ReaderManager、设置、寻卡、Tag Memory、GPI/GPO 和 WPF 页面进行开发验收，详见[Virtual Reader 开发模式](docs/development/virtual-reader.md)。
 
 在安装 .NET 10 SDK 的 Windows 机器上：
 
