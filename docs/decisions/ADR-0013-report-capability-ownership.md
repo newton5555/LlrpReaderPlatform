@@ -1,6 +1,6 @@
 # ADR-0013：报告能力职责归属——联动 vs 分离
 
-- 状态：Proposed
+- 状态：Accepted（R1–R5 已实现并验证；R6 真机验证待设备现场后按[主计划 9.2](../llrp-framework-vision.md)与 planning 文档归档）
 - 日期：2026-08
 
 ## 决策
