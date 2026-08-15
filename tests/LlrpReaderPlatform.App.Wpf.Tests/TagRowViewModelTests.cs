@@ -67,4 +67,35 @@ public sealed class TagRowViewModelTests
         Assert.Contains(nameof(TagRowViewModel.LastSeen), changed);
         Assert.Contains(nameof(TagRowViewModel.PeakRssi), changed);
     }
+
+    [Fact]
+    public void Update_raises_phase_change_when_extension_field_changes()
+    {
+        var first = new TagObservation
+        {
+            Epc = "3001",
+            ReadCount = 1,
+            FirstSeen = DateTimeOffset.UtcNow,
+            LastSeen = DateTimeOffset.UtcNow,
+            ExtensionFields = new Dictionary<string, string>
+            {
+                ["impinj.rfPhaseAngle"] = "3376",
+            },
+        };
+        var row = new TagRowViewModel(first);
+        var changed = new List<string?>();
+        row.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+
+        row.Update("Reader A", first with
+        {
+            ReadCount = 2,
+            ExtensionFields = new Dictionary<string, string>
+            {
+                ["impinj.rfPhaseAngle"] = "2416",
+            },
+        }, "Known tag");
+
+        Assert.Equal("2416", row.Phase);
+        Assert.Contains(nameof(TagRowViewModel.Phase), changed);
+    }
 }

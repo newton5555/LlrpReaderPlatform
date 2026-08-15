@@ -141,13 +141,6 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool showXpcColumn;
 
-    private ReaderFeatureCatalog featureCatalog = ReaderFeatureCatalog.Empty;
-
-    /// <summary>当前选中 Reader 是否支持该语义报告字段（ADR-0013）；不支持时列开关不可用。</summary>
-    public bool IsPhaseColumnSupported => featureCatalog.SupportsSemantic(ReportFieldSemantics.Phase);
-    public bool IsGpsColumnSupported => featureCatalog.SupportsSemantic(ReportFieldSemantics.Gps);
-    public bool IsXpcColumnSupported => featureCatalog.SupportsSemantic(ReportFieldSemantics.Xpc);
-
     public InventoryViewModel(
         IInventoryService inventory,
         ITagListStore? tagListStore = null,
@@ -206,17 +199,6 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         Guid? nextReaderId = reader?.ReaderId;
         bool contextChanged = ReaderId != nextReaderId;
         ReaderId = nextReaderId;
-        ReaderFeatureCatalog nextCatalog = reader?.Snapshot.FeatureCatalog ?? ReaderFeatureCatalog.Empty;
-        if (!ReferenceEquals(featureCatalog, nextCatalog))
-        {
-            featureCatalog = nextCatalog;
-            if (!IsPhaseColumnSupported) ShowPhaseColumn = false;
-            if (!IsGpsColumnSupported) ShowGpsColumn = false;
-            if (!IsXpcColumnSupported) ShowXpcColumn = false;
-            OnPropertyChanged(nameof(IsPhaseColumnSupported));
-            OnPropertyChanged(nameof(IsGpsColumnSupported));
-            OnPropertyChanged(nameof(IsXpcColumnSupported));
-        }
 
         // 运行中的全局盘存继续展示所有 activeReaderIds 的合并结果；
         // 非运行状态则必须把左侧 Reader 的切换/移除投影到表格，否则旧 Reader
@@ -961,10 +943,12 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
             return false;
         }
 
+        // 列开关是全局意图（一个开关管多个 Reader），不在此处做能力门控；
+        // 是否真正下发由 ReaderManager 按每个 Reader 的能力目录单独仲裁。
         var extensionReportFields = new List<string>();
-        if (ShowPhaseColumn && IsPhaseColumnSupported) extensionReportFields.Add(ReportFieldSemantics.Phase);
-        if (ShowGpsColumn && IsGpsColumnSupported) extensionReportFields.Add(ReportFieldSemantics.Gps);
-        if (ShowXpcColumn && IsXpcColumnSupported) extensionReportFields.Add(ReportFieldSemantics.Xpc);
+        if (ShowPhaseColumn) extensionReportFields.Add(ReportFieldSemantics.Phase);
+        if (ShowGpsColumn) extensionReportFields.Add(ReportFieldSemantics.Gps);
+        if (ShowXpcColumn) extensionReportFields.Add(ReportFieldSemantics.Xpc);
 
         startSpec = Spec with
         {

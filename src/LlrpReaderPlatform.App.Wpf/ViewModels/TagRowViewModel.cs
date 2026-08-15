@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using LlrpReaderPlatform.Contracts.Tagging;
 
@@ -147,6 +148,37 @@ public sealed class TagRowViewModel : ObservableObject
         if (previous.LastChannelIndex != nextTag.LastChannelIndex)
         {
             OnPropertyChanged(nameof(LastChannelIndex));
+        }
+
+        // 扩展字段（相位/GPS/XPC）是每 EPC 的最新观测值，必须按变化单独通知；
+        // 否则 DataGrid 只读属性列不会刷新，UI 会停留在首次绑定的旧值。
+        string? previousPhase = previous.ExtensionFields.GetValueOrDefault("impinj.rfPhaseAngle")
+            ?? previous.ExtensionFields.GetValueOrDefault("zebra.phase")
+            ?? previous.ExtensionFields.GetValueOrDefault("phase");
+        string? nextPhase = nextTag.ExtensionFields.GetValueOrDefault("impinj.rfPhaseAngle")
+            ?? nextTag.ExtensionFields.GetValueOrDefault("zebra.phase")
+            ?? nextTag.ExtensionFields.GetValueOrDefault("phase");
+        if (!string.Equals(previousPhase, nextPhase, StringComparison.Ordinal))
+        {
+            OnPropertyChanged(nameof(Phase));
+        }
+
+        string? previousGps = previous.ExtensionFields.GetValueOrDefault("zebra.gps")
+            ?? previous.ExtensionFields.GetValueOrDefault("gps");
+        string? nextGps = nextTag.ExtensionFields.GetValueOrDefault("zebra.gps")
+            ?? nextTag.ExtensionFields.GetValueOrDefault("gps");
+        if (!string.Equals(previousGps, nextGps, StringComparison.Ordinal))
+        {
+            OnPropertyChanged(nameof(Gps));
+        }
+
+        string? previousXpc = previous.ExtensionFields.GetValueOrDefault("zebra.xpc")
+            ?? previous.ExtensionFields.GetValueOrDefault("xpc");
+        string? nextXpc = nextTag.ExtensionFields.GetValueOrDefault("zebra.xpc")
+            ?? nextTag.ExtensionFields.GetValueOrDefault("xpc");
+        if (!string.Equals(previousXpc, nextXpc, StringComparison.Ordinal))
+        {
+            OnPropertyChanged(nameof(Xpc));
         }
     }
 }

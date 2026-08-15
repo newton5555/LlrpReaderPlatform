@@ -117,31 +117,27 @@ public sealed class InventoryViewModelTests
     });
 
     [Fact]
-    public void Report_column_support_tracks_reader_semantic_features()
+    public void Report_column_toggles_are_global_intent_not_gated_by_selected_reader()
     {
         using var vm = new InventoryViewModel(new BurstInventoryService());
 
-        // 无能力快照：列开关默认不支持。
+        // 列开关是全局意图：一个开关管多个 Reader，勾选与否不因当前选中 Reader
+        // 的能力而禁用；是否真下发由 ReaderManager 按每个 Reader 的能力单独仲裁。
         vm.SetReaderContext(CreateReader(Guid.NewGuid(), "No Cap"));
-        Assert.False(vm.IsPhaseColumnSupported);
-        Assert.False(vm.IsGpsColumnSupported);
+        vm.ShowPhaseColumn = true;
+        vm.ShowGpsColumn = true;
+        vm.ShowXpcColumn = true;
 
-        // 有 Impinj RF phase 语义：相位列支持，GPS 列不支持。
-        Guid impinjId = Guid.NewGuid();
-        vm.SetReaderContext(CreateReaderWithFeatures(impinjId, "Impinj", ReaderFeatures.ImpinjRfPhase));
+        Assert.True(vm.ShowPhaseColumn);
+        Assert.True(vm.ShowGpsColumn);
+        Assert.True(vm.ShowXpcColumn);
 
-        Assert.True(vm.IsPhaseColumnSupported);
-        Assert.False(vm.IsGpsColumnSupported);
+        // 切换 Reader 不应重置用户已勾选的列。
+        vm.SetReaderContext(CreateReader(Guid.NewGuid(), "Another Reader"));
+        Assert.True(vm.ShowPhaseColumn);
+        Assert.True(vm.ShowGpsColumn);
+        Assert.True(vm.ShowXpcColumn);
     }
-
-    private static ReaderItemViewModel CreateReaderWithFeatures(Guid id, string name, params Feature[] features) =>
-        new(new ReaderRuntimeSnapshot
-        {
-            ReaderId = id,
-            Profile = new ReaderProfile { Id = id, Name = name, Host = "192.0.2.1" },
-            State = ReaderState.Disconnected,
-            FeatureCatalog = new ReaderFeatureCatalog { SupportedFeatures = features },
-        });
 
     [Fact]
     public async Task TagReport_is_aggregated_by_services_and_projected_to_wpf_rows()
