@@ -1,6 +1,7 @@
 using LlrpReaderPlatform.Extensions.Impinj;
 using LlrpReaderPlatform.Contracts.Readers;
 using LlrpReaderPlatform.Contracts.Settings;
+using LlrpReaderPlatform.Contracts.Tagging;
 using LlrpReaderPlatform.Services.Extensions;
 using LlrpReaderPlatform.Services.Settings;
 using LlrpNet.Protocol.Impinj.Enumerations.V1_0_1;
@@ -315,6 +316,61 @@ public sealed class ImpinjReaderExtensionModuleTests
             contributor.Apply(draft, EmptyLayout(id), reader, runtime, new ReaderSettings()));
 
         Assert.Contains("至少需要一个频道", error.Message);
+    }
+
+    [Fact]
+    public void ApplyInventoryReportSpec_sets_rf_phase_angle_when_phase_semantic_requested()
+    {
+        var module = new ImpinjReaderExtensionModule();
+        var inventory = new InventorySettings();
+
+        InventorySettings result = module.ApplyInventoryReportSpec(
+            inventory,
+            new List<string> { ReportFieldSemantics.Phase });
+
+        var options = Assert.IsType<ImpinjInventoryReportOptions>(
+            result.Extensions[ImpinjInventoryReportOptions.ExtensionKey]);
+        Assert.True(options.IncludeRfPhaseAngle);
+    }
+
+    [Fact]
+    public void ApplyInventoryReportSpec_ignores_other_semantics()
+    {
+        var module = new ImpinjReaderExtensionModule();
+        var inventory = new InventorySettings();
+
+        InventorySettings result = module.ApplyInventoryReportSpec(
+            inventory,
+            new List<string> { "unrelated-semantic" });
+
+        Assert.DoesNotContain(ImpinjInventoryReportOptions.ExtensionKey, result.Extensions.Keys);
+    }
+
+    [Fact]
+    public void Settings_contributor_marks_phase_as_linked_readonly()
+    {
+        var contributor = new ImpinjSettingsContributor();
+        Guid id = Guid.NewGuid();
+        var reader = new ReaderRuntimeSnapshot
+        {
+            ReaderId = id,
+            Profile = new ReaderProfile { Id = id, Host = "192.0.2.20" },
+            State = ReaderState.Disconnected,
+            ManufacturerId = ImpinjReaderExtensionModule.ImpinjManufacturerId,
+            ModelId = ImpinjReaderExtensionModule.R420ModelId,
+            CapabilityRevision = 1,
+            FeatureCatalog = R420Features(),
+        };
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(new ReaderSettings(), new ManagedRoSpecSnapshot(
+                new InventorySettings(), InventoryRuntimeState.Disabled)), null);
+        var entries = new List<SettingsEntry>();
+
+        contributor.ContributeLayout(entries, reader, runtime);
+
+        SettingsEntry phase = Assert.Single(entries, entry => entry.Key == ImpinjSettingsContributor.PhaseAngle);
+        Assert.True(phase.IsReadOnly);
+        Assert.Equal("由寻卡页联动控制", phase.ReadOnlyReason);
     }
 
     private static EffectiveSettingsLayout EmptyLayout(Guid readerId) => new()

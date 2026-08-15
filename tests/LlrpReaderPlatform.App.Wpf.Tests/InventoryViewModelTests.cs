@@ -3,6 +3,7 @@ using LlrpReaderPlatform.App.Wpf.ViewModels;
 using LlrpReaderPlatform.Contracts.Lifecycle;
 using LlrpReaderPlatform.Contracts.Persistence;
 using LlrpReaderPlatform.Contracts.Readers;
+using LlrpReaderPlatform.Contracts.Settings;
 using LlrpReaderPlatform.Contracts.Tagging;
 using LlrpReaderPlatform.Services.Lifecycle;
 using LlrpReaderPlatform.Services.Persistence;
@@ -114,6 +115,33 @@ public sealed class InventoryViewModelTests
         Profile = new ReaderProfile { Id = id, Name = name, Host = "192.0.2.1" },
         State = ReaderState.Disconnected,
     });
+
+    [Fact]
+    public void Report_column_support_tracks_reader_semantic_features()
+    {
+        using var vm = new InventoryViewModel(new BurstInventoryService());
+
+        // 无能力快照：列开关默认不支持。
+        vm.SetReaderContext(CreateReader(Guid.NewGuid(), "No Cap"));
+        Assert.False(vm.IsPhaseColumnSupported);
+        Assert.False(vm.IsGpsColumnSupported);
+
+        // 有 Impinj RF phase 语义：相位列支持，GPS 列不支持。
+        Guid impinjId = Guid.NewGuid();
+        vm.SetReaderContext(CreateReaderWithFeatures(impinjId, "Impinj", ReaderFeatures.ImpinjRfPhase));
+
+        Assert.True(vm.IsPhaseColumnSupported);
+        Assert.False(vm.IsGpsColumnSupported);
+    }
+
+    private static ReaderItemViewModel CreateReaderWithFeatures(Guid id, string name, params Feature[] features) =>
+        new(new ReaderRuntimeSnapshot
+        {
+            ReaderId = id,
+            Profile = new ReaderProfile { Id = id, Name = name, Host = "192.0.2.1" },
+            State = ReaderState.Disconnected,
+            FeatureCatalog = new ReaderFeatureCatalog { SupportedFeatures = features },
+        });
 
     [Fact]
     public async Task TagReport_is_aggregated_by_services_and_projected_to_wpf_rows()

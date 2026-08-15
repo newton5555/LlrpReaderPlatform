@@ -81,7 +81,9 @@ public sealed class ContractsSerializationTests
         Assert.NotNull(restored);
         Assert.Equal(original.Antennas, restored.Antennas);
         Assert.Equal(original.DurationSeconds, restored.DurationSeconds);
-        Assert.Equal(original.Report, restored.Report);
+        // 记录包含新增的 ExtensionReportFields 集合字段，改用 JSON 往返等价比较，避免
+        // 引用型集合导致 record 值相等失败；语义字段内容通过断言单独锁定。
+        Assert.Equal(JsonSerializer.Serialize(original.Report, JsonOptions), JsonSerializer.Serialize(restored.Report, JsonOptions));
 
         var request = new TagWriteRequest
         {

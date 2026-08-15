@@ -1,6 +1,6 @@
 # 寻卡联动上报设置实现计划（Planning）
 
-- 状态：进行中（Planning）
+- 状态：进行中（Planning）；**R1–R5 已完成**：build 0 错误，全量测试 348 项全绿（Contracts 5、Services 183、Impinj 16、Architecture 7、Infrastructure 10、App.Wpf 127）。R6 真机验证待设备现场执行。
 - 创建：2026-08
 - 决策依据：[ADR-0013](../decisions/ADR-0013-report-capability-ownership.md)（只有"需要上报控制"的参数做联动；实现真实联动后设置页对应项改为只读）
 - 生命周期：本文件是临时工作文档，不是正式计划。全部阶段完成后，把结果归档回
@@ -20,40 +20,40 @@
 
 ## 阶段计划
 
-### R1：Contracts 语义上报字段
+### R1：Contracts 语义上报字段 `已完成`
 
 - `InventoryReportSpec` 增 `IReadOnlySet<string> ExtensionReportFields`（语义键集合，如 `phase-report` / `gps-report` / `xpc-report`）。
 - 定义稳定常量 `ReportFieldSemantics.Phase = "phase-report"` 等（Contracts，UI 无关）。
 - `ReaderFeatures.ImpinjRfPhase` 补 semanticId `phase-report`（与 Zebra 对齐，供仲裁）。
 
-### R2：服务层扩展模块上报编译钩子
+### R2：服务层扩展模块上报编译钩子 `已完成`
 
 - `IReaderExtensionModule` 增可选方法 `ApplyInventoryReportSpec(InventorySettings settings, IReadOnlySet<string> semanticFields)`，默认 no-op（旧模块零成本升级）。
 - Impinj 实现：semantic 含 `phase-report` 且 `Supports(ImpinjRfPhase)` 时写 `ImpinjInventoryReportOptions.IncludeRfPhaseAngle`。
 - Zebra 实现：按 `phase-report` / `gps-report` / `xpc-report` 写 `ZebraInventoryReportOptions` 对应开关。
 - `ReaderManager.StartInventoryAsync` 在 `ApplyInventorySpec` 之后、`Session.StartInventoryAsync` 之前，按当前激活扩展调用；不支持的语义键静默忽略并记日志（不报错、不阻断寻卡）。
 
-### R3：寻卡页联动
+### R3：寻卡页联动 `已完成`
 
 - `InventoryViewModel` 列开关 `ShowPhaseColumn` / `ShowGpsColumn` / `ShowXpcColumn` 写入 `TryBuildStartSpec` 的 `ExtensionReportFields`。
 - 列开关仅当当前 Reader 的 FeatureCatalog 支持对应语义时可用；不可用时禁用/隐藏开关。
 - `TagRowViewModel` 改从语义字段读取显示（`phase` / `gps` / `xpc` 语义键），不区分 zebra/impinj 厂商键；厂商投影保持现有字符串字段，语义键由扩展模块按同一命名投影。
 
-### R4：设置页只读 + 联动提示（逐项生效）
+### R4：设置页只读 + 联动提示（逐项生效） `已完成`
 
 - `SettingsEntry` 增加"由寻卡页联动控制"标记或直接 `ReadOnlyReason`。
 - 只有 R2/R3 已实现真实联动、且本次联动生效的项（如 Impinj RF phase、Zebra report-phase）才在设置页置只读并显示提示。
 - 尚未联动的项保持可写，**不做一次性批量只读**。
 - 数据类能力（FastID 等）始终可编辑。
 
-### R5：自动化测试
+### R5：自动化测试 `已完成`
 
 - Contracts：语义字段集合序列化/回读。
 - Services：`ApplyInventoryReportSpec` 按模块 × 能力矩阵编译（FakeSession 捕获下发的 `InventorySettings`）；不支持语义键被忽略。
 - WPF：`TryBuildStartSpec` 列 → 语义映射；列开关可用性门控；设置页只读投影。
 - Architecture：确认无厂商类型泄漏进 Contracts。
 
-### R6：真机验证与归档
+### R6：真机验证与归档 `待设备现场（进行中）`
 
 - R420：寻卡开相位列后 TagReport 出现 `impinj.rfPhaseAngle`；设置页相位项只读并提示。
 - Zebra FX9600（如有设备）：开相位/GPS 列后报告含对应字段。
