@@ -297,6 +297,9 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
 
         ushort currentTari = ResolveTari(runtime.Capabilities, inventory.ModeIndex, inventory.Tari);
         SettingsRange tariRange = ResolveTariRange(runtime.Capabilities, inventory.ModeIndex);
+        // 该 mode 若由设备声明为固定 Tari（Min==Max），不接受自定义，UI 不应暴露 Tari 输入；
+        // 保存时编译器直接写设备默认/0，见 ResolveTari。
+        bool tariFixedByMode = IsTariFixedByMode(runtime.Capabilities, inventory.ModeIndex);
         entries.Add(new SettingsEntry
         {
             Key = SettingsKeys.Tari,
@@ -306,6 +309,7 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             Range = tariRange,
             CurrentValue = (int)currentTari,
             DefaultValue = (int)currentTari,
+            ReadOnlyReason = tariFixedByMode ? "由所选 RF Mode 固定，不可编辑" : null,
         });
 
         entries.Add(new SettingsEntry
@@ -1379,6 +1383,15 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             return tari;
         }
 
+        bool fixedTari = modes.All(m => m.MinTariValue == m.MaxTariValue);
+        // 设备为该 mode 声明固定 Tari（如 Impinj R420 Mode 1002：Min==Max），不接受自定义 Tari。
+        // 抓包确认 Impinj 真实下发 Tari=0（由 Mode 决定实际时序），此处不写默认值而写 0，
+        // 与设备行为一致且不会触发“超出允许范围”。
+        if (fixedTari)
+        {
+            return 0;
+        }
+
         if (tari == 0)
         {
             return checked((ushort)modes[0].MinTariValue);
@@ -1390,6 +1403,15 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         }
 
         throw new InvalidOperationException($"Tari {tari} is not valid for RF Mode {modeIndex}.");
+    }
+
+    /// <summary>当前 mode 是否由设备声明为固定 Tari（宽范围内 Min==Max）。固定时 UI 不暴露输入。</summary>
+    private static bool IsTariFixedByMode(ReaderCapabilities? capabilities, ushort modeIndex)
+    {
+        C1G2RfModeEntry[] modes = capabilities?.RfModes?
+            .Where(mode => mode.ModeIdentifier == modeIndex)
+            .ToArray() ?? [];
+        return modes.Length > 0 && modes.All(mode => mode.MinTariValue == mode.MaxTariValue);
     }
 
     private static bool IsSupportedTari(C1G2RfModeEntry mode, ushort tari)

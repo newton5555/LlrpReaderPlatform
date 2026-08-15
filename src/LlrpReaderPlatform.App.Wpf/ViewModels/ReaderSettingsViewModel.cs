@@ -247,6 +247,11 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
     public bool IsReportEveryEditable => ReportEveryRow is { IsReadOnly: false };
     public bool IsSessionEditable => SessionRow is { IsReadOnly: false };
     public bool IsTariEditable => TariRow is { IsReadOnly: false };
+
+    /// <summary>Tari 由 RF Mode 决定。固定 Tari 的 mode（如 Impinj R420）不接受自定义，UI 隐藏入口；
+    /// 仅当设备 mode 允许自定义 Tari 时才显示可编辑行。</summary>
+    public bool IsTariVisible => TariRow is { IsReadOnly: false };
+
     public bool IsPhaseAngleEditable => PhaseAngleRow is { IsReadOnly: false };
     public bool IsDopplerEditable => DopplerRow is { IsReadOnly: false };
     public bool IsTxPowerEditable => TxPowerRow is { IsReadOnly: false } && IsGlobalAntennaSettingsEnabled;
@@ -883,7 +888,7 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
             nameof(IsPhaseAngleVisible), nameof(IsDopplerVisible), nameof(IsFrequencySettingsVisible),
             nameof(IsLowDutySettingsVisible), nameof(IsRfModeEditable), nameof(IsSearchModeEditable),
             nameof(IsFastIdEditable), nameof(IsPopulationEditable), nameof(IsReportEveryEditable),
-            nameof(IsSessionEditable), nameof(IsTariEditable),
+            nameof(IsSessionEditable), nameof(IsTariEditable), nameof(IsTariVisible),
             nameof(IsPhaseAngleEditable), nameof(IsDopplerEditable), nameof(IsFrequencyModeEditable),
             nameof(IsTxPowerEditable), nameof(IsRxSensitivityEditable),
             nameof(IsLowDutyEditable), nameof(IsEmptyFieldTimeoutEditable), nameof(IsFieldPingIntervalEditable),

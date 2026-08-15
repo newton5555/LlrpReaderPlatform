@@ -318,9 +318,11 @@
                                                       IsEnabled="{Binding IsSessionEditable}"
                                                       Margin="0,0,0,6" />
 
-                                            <TextBlock Grid.Row="6" Text="Tari:" Style="{StaticResource FieldLabelStyle}" />
+                                            <TextBlock Grid.Row="6" Text="Tari:" Style="{StaticResource FieldLabelStyle}"
+                                                       Visibility="{Binding IsTariVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                             <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding TariRow.ValueText, UpdateSourceTrigger=PropertyChanged}"
-                                                     IsEnabled="{Binding IsTariEditable}" Margin="0,0,0,6" />
+                                                     IsEnabled="{Binding IsTariEditable}" Margin="0,0,0,6"
+                                                     Visibility="{Binding IsTariVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
                                             <TextBlock Grid.Row="7" Text="Report Phase Angle:" Style="{StaticResource FieldLabelStyle}"
                                                        Visibility="{Binding IsPhaseAngleVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
