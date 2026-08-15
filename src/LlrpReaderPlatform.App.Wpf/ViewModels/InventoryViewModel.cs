@@ -82,6 +82,12 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool isInventoryStarting;
 
+    public bool IsEmptyStateVisible => UniqueTagCount == 0 && !IsInventoryRunning && !IsInventoryStarting;
+
+    partial void OnUniqueTagCountChanged(int value) => OnPropertyChanged(nameof(IsEmptyStateVisible));
+    partial void OnIsInventoryRunningChanged(bool value) => OnPropertyChanged(nameof(IsEmptyStateVisible));
+    partial void OnIsInventoryStartingChanged(bool value) => OnPropertyChanged(nameof(IsEmptyStateVisible));
+
     [ObservableProperty]
     private bool isBusy;
 

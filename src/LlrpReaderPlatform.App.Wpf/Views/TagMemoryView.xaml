@@ -234,8 +234,17 @@
                                     </StackPanel>
                                 </Grid>
 
-                                <TextBlock Text="Access password"
-                                           Style="{StaticResource TagAccessFieldLabelStyle}" />
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Access password"
+                                               Style="{StaticResource TagAccessFieldLabelStyle}" Margin="0" />
+                                    <TextBlock Grid.Column="1" Text="{Binding AccessPasswordHelperText}"
+                                               FontSize="11" Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                                               FontFamily="Consolas, Courier New" />
+                                </Grid>
                                 <TextBox Text="{Binding AccessPassword, UpdateSourceTrigger=PropertyChanged}"
                                          Padding="8" mah:TextBoxHelper.Watermark="00000000"
                                          FontFamily="Consolas, Courier New" />
@@ -261,8 +270,17 @@
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Text="Data (hex words)"
-                                           Style="{StaticResource TagAccessFieldLabelStyle}" />
+                                <Grid Grid.Row="0" Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Data (hex words)"
+                                               Style="{StaticResource TagAccessFieldLabelStyle}" Margin="0" />
+                                    <TextBlock Grid.Column="1" Text="{Binding DataHexHelperText}"
+                                               FontSize="11" Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                                               FontFamily="Consolas, Courier New" />
+                                </Grid>
                                 <TextBox Grid.Row="1"
                                          Text="{Binding DataHex, UpdateSourceTrigger=PropertyChanged}"
                                          MinHeight="146" AcceptsReturn="True"

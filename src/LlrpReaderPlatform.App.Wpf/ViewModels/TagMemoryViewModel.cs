@@ -62,6 +62,76 @@ public partial class TagMemoryViewModel : ObservableObject, IPageOperationOwner,
     [ObservableProperty]
     private string dataHex = string.Empty;
 
+    partial void OnAccessPasswordChanged(string value)
+    {
+        OnPropertyChanged(nameof(AccessPasswordHelperText));
+    }
+
+    partial void OnDataHexChanged(string value)
+    {
+        OnPropertyChanged(nameof(DataHexHelperText));
+    }
+
+    public string AccessPasswordHelperText
+    {
+        get
+        {
+            string pwd = AccessPassword?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(pwd))
+            {
+                return "0/8 HEX（需 8 位十六进制 / 32-bit）";
+            }
+
+            bool isValidHex = pwd.All(Uri.IsHexDigit);
+            if (!isValidHex)
+            {
+                return "包含非法非十六进制字符（仅支持 0-9, A-F）";
+            }
+
+            if (pwd.Length == 8)
+            {
+                return "8/8 HEX（32-bit 密码格式正确）";
+            }
+
+            return $"{pwd.Length}/8 HEX（需 8 位十六进制）";
+        }
+    }
+
+    public string DataHexHelperText
+    {
+        get
+        {
+            string hex = DataHex?.Replace(" ", "").Replace("-", "").Replace("\r", "").Replace("\n", "") ?? string.Empty;
+            if (string.IsNullOrEmpty(hex))
+            {
+                return "0 Words（1 Word = 16-bit / 4 位十六进制）";
+            }
+
+            bool isValidHex = hex.All(Uri.IsHexDigit);
+            if (!isValidHex)
+            {
+                return "包含非法非十六进制字符（仅支持 0-9, A-F）";
+            }
+
+            int words = hex.Length / 4;
+            int rem = hex.Length % 4;
+            if (rem == 0)
+            {
+                return $"{words} Words（{hex.Length * 4}-bit / {hex.Length / 2} 字节）";
+            }
+
+            return $"{words} Words + {rem} 位HEX（未对齐，需为 4 位HEX的倍数）";
+        }
+    }
+
+    public void SetTargetEpc(string epc)
+    {
+        if (!string.IsNullOrWhiteSpace(epc))
+        {
+            Epc = epc.Trim();
+        }
+    }
+
     [ObservableProperty]
     private string? result;
 

@@ -124,10 +124,10 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="EPC" Width="2*"
                                         Binding="{Binding EpcHex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                        ElementStyle="{StaticResource CenteredMonoCellTextStyle}" />
+                                        ElementStyle="{StaticResource LeftMonoCellTextStyle}" />
                     <DataGridTextColumn Header="TOI name" Width="1.2*"
                                         Binding="{Binding DisplayName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                        ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                                        ElementStyle="{StaticResource LeftCellTextStyle}" />
                     <DataGridTemplateColumn Header="Color" Width="220">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>

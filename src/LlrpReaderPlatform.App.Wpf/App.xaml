@@ -20,9 +20,9 @@
                 <Setter Property="Height" Value="28" />
                 <Setter Property="Padding" Value="0" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                <Setter Property="Background" Value="Transparent" />
-                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray7}" />
+                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
+                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Gray2}" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
@@ -35,7 +35,8 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Root" Property="Background" Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=BorderBrush}" />
+                                    <Setter TargetName="Root" Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
                                     <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
@@ -51,8 +52,8 @@
             </Style>
 
             <Style x:Key="FlatMiniButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatCircleButtonStyle}">
-                <Setter Property="Width" Value="26" />
-                <Setter Property="Height" Value="26" />
+                <Setter Property="Width" Value="24" />
+                <Setter Property="Height" Value="24" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
@@ -60,12 +61,13 @@
                                     Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="13">
+                                    CornerRadius="12">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Root" Property="Background" Value="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=BorderBrush}" />
+                                    <Setter TargetName="Root" Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
                                     <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
@@ -80,14 +82,98 @@
                 </Setter>
             </Style>
 
+            <Style x:Key="HeaderCircleButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="24" />
+                <Setter Property="Height" Value="24" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Root"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="12">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Root" Property="Background" Value="#33FFFFFF" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Root" Property="Background" Value="#55FFFFFF" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.4" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <Style x:Key="DangerCircleButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatCircleButtonStyle}">
-                <Setter Property="BorderBrush" Value="#DC2626" />
                 <Setter Property="Foreground" Value="#DC2626" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Root"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="14">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Root" Property="Background" Value="#DC2626" />
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="#DC2626" />
+                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.8" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.4" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <Style x:Key="SuccessCircleButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatCircleButtonStyle}">
-                <Setter Property="BorderBrush" Value="#16A34A" />
                 <Setter Property="Foreground" Value="#16A34A" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Root"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="14">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Root" Property="Background" Value="#16A34A" />
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="#16A34A" />
+                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.8" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.4" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <!-- 扁平操作按钮 -->
@@ -97,9 +183,21 @@
                 <Setter Property="Padding" Value="14,8" />
                 <Setter Property="FontSize" Value="13" />
                 <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray7}" />
+                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
+                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Text}" />
                 <Setter Property="HorizontalContentAlignment" Value="Center" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
                 <Setter Property="mah:ControlsHelper.CornerRadius" Value="4" />
+            </Style>
+
+            <Style x:Key="PrimaryActionButtonStyle"
+                   TargetType="Button"
+                   BasedOn="{StaticResource FlatActionButtonStyle}">
+                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
             </Style>
 
             <!-- 卡片容器规范 -->
@@ -120,8 +218,22 @@
             </Style>
 
             <!-- 表格单元格文本样式 -->
+            <Style x:Key="LeftCellTextStyle" TargetType="TextBlock">
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="HorizontalAlignment" Value="Left" />
+                <Setter Property="TextAlignment" Value="Left" />
+                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            </Style>
+
+            <Style x:Key="LeftMonoCellTextStyle" TargetType="TextBlock"
+                   BasedOn="{StaticResource LeftCellTextStyle}">
+                <Setter Property="FontFamily" Value="Consolas, Courier New" />
+            </Style>
+
             <Style x:Key="CenteredCellTextStyle" TargetType="TextBlock">
                 <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
+                <Setter Property="TextAlignment" Value="Center" />
                 <Setter Property="TextTrimming" Value="CharacterEllipsis" />
             </Style>
 

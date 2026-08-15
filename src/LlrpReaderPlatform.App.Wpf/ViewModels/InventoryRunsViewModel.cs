@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LlrpReaderPlatform.Contracts.Errors;
@@ -61,6 +63,45 @@ public partial class InventoryRunsViewModel : ObservableObject, IPageOperationOw
     public long LatestReadCount => Runs.FirstOrDefault()?.TotalReadCount ?? 0;
     public int LatestUniqueTagCount => Runs.FirstOrDefault()?.UniqueTagCount ?? 0;
     public string LatestStopReason => Runs.FirstOrDefault()?.StopReasonDisplay ?? "—";
+
+    [RelayCommand]
+    private void LocateFile(string? filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return;
+        }
+
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{filePath}\"",
+                    UseShellExecute = true
+                });
+            }
+            else
+            {
+                string? dir = Path.GetDirectoryName(filePath);
+                if (!string.IsNullOrWhiteSpace(dir) && Directory.Exists(dir))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "explorer.exe",
+                        Arguments = $"\"{dir}\"",
+                        UseShellExecute = true
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to locate file {FilePath}", filePath);
+        }
+    }
 
     public void SelectReader(Guid? id, string? name = null)
     {

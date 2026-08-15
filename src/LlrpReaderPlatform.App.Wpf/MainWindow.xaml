@@ -390,6 +390,15 @@
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
+
+                            <!-- 空状态提示 -->
+                            <Border IsHitTestVisible="False"
+                                    Visibility="{Binding HasNoReaders, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                    Padding="12,28" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="暂无读写器，点击右上角 + 添加" FontSize="11"
+                                           Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                                           TextWrapping="Wrap" TextAlignment="Center" />
+                            </Border>
                         </Grid>
                     </StackPanel>
                 </DockPanel>

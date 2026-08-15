@@ -84,6 +84,10 @@
                               CommandParameter="{Binding}"
                               Visibility="{Binding HasTid, Converter={StaticResource BooleanToVisibilityConverter}}"
                               Click="CopyTidMenuItem_Click" />
+                    <Separator />
+                    <MenuItem Header="在 Tag Memory 中操作"
+                              CommandParameter="{Binding}"
+                              Click="OpenInTagMemoryMenuItem_Click" />
                 </ContextMenu>
                 <Style TargetType="DataGridColumnHeader">
                     <Setter Property="FontWeight" Value="Bold" />
@@ -142,10 +146,10 @@
                                     ElementStyle="{StaticResource CenteredCellTextStyle}" />
                 <DataGridTextColumn Header="EPC" Binding="{Binding Epc, Mode=OneWay}" Width="2.2*"
                                     Visibility="{Binding Data.ShowEpcColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                    ElementStyle="{StaticResource CenteredMonoCellTextStyle}" />
+                                    ElementStyle="{StaticResource LeftMonoCellTextStyle}" />
                 <DataGridTextColumn Header="TID" Binding="{Binding Tid, Mode=OneWay}" Width="1.8*"
                                     Visibility="{Binding Data.ShowTidColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                    ElementStyle="{StaticResource CenteredMonoCellTextStyle}" />
+                                    ElementStyle="{StaticResource LeftMonoCellTextStyle}" />
                 <DataGridTextColumn Header="Count" Binding="{Binding ReadCount, Mode=OneWay}" Width="80"
                                     Visibility="{Binding Data.ShowCountColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredCellTextStyle}" />
@@ -169,7 +173,7 @@
                                     ElementStyle="{StaticResource CenteredCellTextStyle}" />
                 <DataGridTextColumn Header="PC Bits" Binding="{Binding PcBitsHex, Mode=OneWay}" Width="90"
                                     Visibility="{Binding Data.ShowPcBitsColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                    ElementStyle="{StaticResource CenteredMonoCellTextStyle}" />
+                                    ElementStyle="{StaticResource LeftMonoCellTextStyle}" />
                 <DataGridTextColumn Header="Phase" Binding="{Binding Phase, Mode=OneWay}" Width="90"
                                     Visibility="{Binding Data.ShowPhaseColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     ElementStyle="{StaticResource CenteredMonoCellTextStyle}" />
@@ -178,7 +182,7 @@
                                     ElementStyle="{StaticResource CenteredMonoCellTextStyle}" />
                 <DataGridTextColumn Header="XPC" Binding="{Binding Xpc, Mode=OneWay}" Width="120"
                                     Visibility="{Binding Data.ShowXpcColumn, Source={StaticResource InventoryVmProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                    ElementStyle="{StaticResource CenteredMonoCellTextStyle}" />
+                                    ElementStyle="{StaticResource LeftMonoCellTextStyle}" />
                 <DataGridTemplateColumn Header="TOI" Width="1.4*" IsReadOnly="True">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
@@ -205,6 +209,18 @@
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
             </DataGrid>
+
+            <!-- 空状态占位提示 -->
+            <Border IsHitTestVisible="False"
+                    Visibility="{Binding IsEmptyStateVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="未开始盘存" FontSize="14" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" Foreground="{DynamicResource MahApps.Brushes.Gray3}" />
+                    <TextBlock Text="点击左上方 Start 开始寻卡" FontSize="12"
+                               HorizontalAlignment="Center" Foreground="{DynamicResource MahApps.Brushes.Gray4}" Margin="0,4,0,0" />
+                </StackPanel>
+            </Border>
 
         </Grid>
     </Grid>

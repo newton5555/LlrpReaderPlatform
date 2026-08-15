@@ -28,6 +28,15 @@ public partial class InventoryView : UserControl
         }
     }
 
+    private void OpenInTagMemoryMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { CommandParameter: TagRowViewModel row } && !string.IsNullOrWhiteSpace(row.Epc))
+        {
+            var mainVm = (Application.Current?.MainWindow as MainWindow)?.DataContext as MainViewModel;
+            mainVm?.NavigateToTagMemoryWithTarget(row.Epc, row.ReaderId);
+        }
+    }
+
     private static void TrySetClipboardText(string value)
     {
         if (string.IsNullOrWhiteSpace(value))

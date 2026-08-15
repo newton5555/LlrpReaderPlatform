@@ -95,6 +95,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<ReaderItemViewModel> Readers { get; } = [];
 
+    public bool HasNoReaders => Readers.Count == 0;
+
     /// <summary>mDNS 扫描到的 Reader。</summary>
     public ObservableCollection<DiscoveredReaderViewModel> Discovered { get; } = [];
 
@@ -217,6 +219,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             refreshingReaderList = false;
         }
 
+        OnPropertyChanged(nameof(HasNoReaders));
         TagMemory.UpdateAvailableReaders(Readers, SelectedReader?.ReaderId);
         logger.LogTrace("WPF reader list refreshed: {ReaderCount}, selected {ReaderId}.", Readers.Count, SelectedReader?.ReaderId);
 
@@ -476,6 +479,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             InventoryRuns.SelectReader(SelectedReader?.ReaderId, SelectedReader?.Name);
         }
+    }
+
+    /// <summary>跨页联动：携带指定 EPC 和 Reader 目标跳转到 Tag Memory 页面。</summary>
+    public void NavigateToTagMemoryWithTarget(string epc, Guid? readerId = null)
+    {
+        if (readerId is { } id && SelectedReader?.ReaderId != id)
+        {
+            SelectedReader = Readers.FirstOrDefault(r => r.ReaderId == id);
+        }
+
+        TagMemory.SetTargetEpc(epc);
+        Navigate("TagMemory");
     }
 
     /// <summary>点击设备列表项：选中并打开设置页（对齐旧项目 OpenDataSourceSettings）。</summary>

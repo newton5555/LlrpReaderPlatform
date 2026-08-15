@@ -849,46 +849,100 @@
                                             <Button Grid.Column="1"
                                                     Command="{Binding Diagnostics.RefreshGpioCommand}"
                                                     CommandParameter="{Binding DataContext.ReaderId, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
-                                                    Style="{StaticResource FlatCircleButtonStyle}"
-                                                    Width="28" Height="28"
-                                                    ToolTip="REFRESH GPI/GPO STATUS"
-                                                    Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
-                                                    BorderBrush="{DynamicResource MahApps.Brushes.IdealForeground}">
-                                                <fa:IconBlock Icon="ArrowsRotate" IconFont="Solid" FontSize="12" />
+                                                    Style="{StaticResource HeaderCircleButtonStyle}"
+                                                    ToolTip="REFRESH GPI/GPO STATUS">
+                                                <fa:IconBlock Icon="ArrowsRotate" IconFont="Solid" FontSize="11"
+                                                              Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
                                             </Button>
                                         </Grid>
                                     </Border>
-                                    <Grid Margin="12,10,12,0"
+                                    <Grid Margin="12,12,12,0"
                                           Visibility="{Binding Diagnostics.IsGpiStatusAvailable, Converter={StaticResource BooleanToVisibilityConverter}}">
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
                                         </Grid.RowDefinitions>
-                                        <Grid Grid.Row="0" Margin="0,0,0,4">
+                                        <Grid Grid.Row="0" Margin="0,0,0,8">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="70" />
-                                                <ColumnDefinition Width="140" />
+                                                <ColumnDefinition Width="80" />
+                                                <ColumnDefinition Width="130" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="PORT" FontWeight="SemiBold" />
-                                            <TextBlock Grid.Column="1" Text="CONFIGURED" FontWeight="SemiBold" />
-                                            <TextBlock Grid.Column="2" Text="STATE" FontWeight="SemiBold" />
+                                            <TextBlock Grid.Column="0" Text="PORT" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Gray3}" />
+                                            <TextBlock Grid.Column="1" Text="CONFIGURED" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Gray3}" />
+                                            <TextBlock Grid.Column="2" Text="STATE" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource MahApps.Brushes.Gray3}" />
                                         </Grid>
                                         <ItemsControl Grid.Row="1" ItemsSource="{Binding Diagnostics.Gpis}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Grid Margin="0,3">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="70" />
-                                                            <ColumnDefinition Width="140" />
-                                                            <ColumnDefinition Width="*" />
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBlock Grid.Column="0" Text="{Binding PortNumber}" VerticalAlignment="Center" />
-                                                        <CheckBox Grid.Column="1" IsChecked="{Binding Configured}" IsEnabled="False"
-                                                                  Content="Configured" VerticalAlignment="Center" />
-                                                        <CheckBox Grid.Column="2" IsChecked="{Binding State}" IsEnabled="False"
-                                                                  Content="High" VerticalAlignment="Center" />
-                                                    </Grid>
+                                                    <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource MahApps.Brushes.Gray8}" Padding="0,6">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="80" />
+                                                                <ColumnDefinition Width="130" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="{Binding PortNumber, StringFormat='GPI {0}'}"
+                                                                       FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                                <Border Width="7" Height="7" CornerRadius="3.5" Margin="0,0,6,0" VerticalAlignment="Center">
+                                                                    <Border.Style>
+                                                                        <Style TargetType="Border">
+                                                                            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray7}" />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding Configured}" Value="True">
+                                                                                    <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Border.Style>
+                                                                </Border>
+                                                                <TextBlock VerticalAlignment="Center" FontSize="12">
+                                                                    <TextBlock.Style>
+                                                                        <Style TargetType="TextBlock">
+                                                                            <Setter Property="Text" Value="Disabled" />
+                                                                            <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Gray3}" />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding Configured}" Value="True">
+                                                                                    <Setter Property="Text" Value="Configured" />
+                                                                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Text}" />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBlock.Style>
+                                                                </TextBlock>
+                                                            </StackPanel>
+                                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                                <Border Width="7" Height="7" CornerRadius="3.5" Margin="0,0,6,0" VerticalAlignment="Center">
+                                                                    <Border.Style>
+                                                                        <Style TargetType="Border">
+                                                                            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray7}" />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding State}" Value="True">
+                                                                                    <Setter Property="Background" Value="#16A34A" />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Border.Style>
+                                                                </Border>
+                                                                <TextBlock VerticalAlignment="Center" FontSize="12">
+                                                                    <TextBlock.Style>
+                                                                        <Style TargetType="TextBlock">
+                                                                            <Setter Property="Text" Value="Low (0)" />
+                                                                            <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Gray3}" />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding State}" Value="True">
+                                                                                    <Setter Property="Text" Value="High (1)" />
+                                                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                                                    <Setter Property="Foreground" Value="#16A34A" />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBlock.Style>
+                                                                </TextBlock>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
