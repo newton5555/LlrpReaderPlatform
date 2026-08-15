@@ -1384,12 +1384,12 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         }
 
         bool fixedTari = modes.All(m => m.MinTariValue == m.MaxTariValue);
-        // 设备为该 mode 声明固定 Tari（如 Impinj R420 Mode 1002：Min==Max），不接受自定义 Tari。
-        // 抓包确认 Impinj 真实下发 Tari=0（由 Mode 决定实际时序），此处不写默认值而写 0，
-        // 与设备行为一致且不会触发“超出允许范围”。
+        // 设备为该 mode 声明固定 Tari（如 Impinj R400 Mode 1002：Min==Max==6250），设备层按 lrb 能力表
+        // 要求该值，不接受 0。UI 已隐藏 Tari 入口，编译时直接使用设备当前运行的合法 Tari；
+        // 若为空则补该 mode 的 MinTariValue。固定 mode 不抛“超出允许范围”，也不下发 0。
         if (fixedTari)
         {
-            return 0;
+            return checked((ushort)modes[0].MinTariValue);
         }
 
         if (tari == 0)
