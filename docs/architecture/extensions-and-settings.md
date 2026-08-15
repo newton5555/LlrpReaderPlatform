@@ -100,8 +100,6 @@ Apply 前必须重新验证：
 
 Reader 的当前配置与 managed ROSpec 是两个查询范围。设备没有初始 ROSpec 时，设置编译器
 会以新的默认 `InventorySettings` 作为待部署 ROSpec；这不代表设备配置为空，`GET_READER_CONFIG`
-Reader 的当前配置与 managed ROSpec 是两个查询范围。设备没有初始 ROSpec 时，设置编译器
-会以新的默认 `InventorySettings` 作为待部署 ROSpec；这不代表设备目前已空，`GET_READER_CONFIG`
 返回的 `ReaderConfiguration.Antennas`、事件、GPO 等仍作为 `SET_READER_CONFIG` 基线保留并回写。
 
 ## 新厂商模块接入清单（面向 1.1/2.0 与多厂商）
