@@ -34,6 +34,9 @@ public sealed record InventoryReportSpec
     public bool? IncludeLastSeenTimestamp { get; init; }
     public bool? IncludeTagSeenCount { get; init; }
     public bool? IncludePcBits { get; init; }
+
+    /// <summary>本次寻卡请求的扩展报告字段语义键集合（ADR-0013）。使用可序列化的数组类型。</summary>
+    public IReadOnlyList<string> ExtensionReportFields { get; init; } = [];
 }
 
 /// <summary>寻卡启动参数（平台 DTO）。</summary>

@@ -58,10 +58,24 @@ public sealed class TagRowViewModel : ObservableObject
     public ushort? LastAntenna => tag.LastAntenna;
     public ushort? LastChannelIndex => tag.LastChannelIndex;
 
-    /// <summary>Zebra 报告扩展字段（来自 TagObservation.ExtensionFields；无则空）。</summary>
-    public string? Phase => tag.ExtensionFields.TryGetValue("zebra.phase", out string? v) ? v : null;
-    public string? Gps => tag.ExtensionFields.TryGetValue("zebra.gps", out string? v) ? v : null;
-    public string? Xpc => tag.ExtensionFields.TryGetValue("zebra.xpc", out string? v) ? v : null;
+    /// <summary>报告扩展字段（来自 TagObservation.ExtensionFields；无则空）。读取语义展示键，
+    /// 回退到厂商投影键，保证 Impinj/Zebra 均能显示相位列（ADR-0013）。</summary>
+    public string? Phase => Field("phase", "zebra.phase", "impinj.rfPhaseAngle");
+    public string? Gps => Field("gps", "zebra.gps");
+    public string? Xpc => Field("xpc", "zebra.xpc");
+
+    private string? Field(params string[] keys)
+    {
+        foreach (string key in keys)
+        {
+            if (tag.ExtensionFields.TryGetValue(key, out string? value) && !string.IsNullOrEmpty(value))
+            {
+                return value;
+            }
+        }
+
+        return null;
+    }
 
     public void Update(
         string nextReaderName,

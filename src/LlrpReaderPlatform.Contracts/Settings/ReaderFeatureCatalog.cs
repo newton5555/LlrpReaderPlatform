@@ -10,6 +10,7 @@ namespace LlrpReaderPlatform.Contracts.Settings;
 /// </summary>
 public readonly record struct Feature
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public Feature(
         string id,
         string? vendor = null,
@@ -61,7 +62,7 @@ public static class ReaderFeatures
 
     // Impinj 厂商扩展（厂商轴；语义键按各自命名空间，暂不对应标准项）。
     public static readonly Feature ImpinjFastId = new("fast-id", "impinj");
-    public static readonly Feature ImpinjRfPhase = new("rf-phase", "impinj");
+    public static readonly Feature ImpinjRfPhase = new("rf-phase", "impinj", semanticId: "phase-report");
     public static readonly Feature ImpinjDoppler = new("doppler", "impinj");
     public static readonly Feature ImpinjSearchMode = new("search-mode", "impinj");
     public static readonly Feature ImpinjLowDutyCycle = new("low-duty-cycle", "impinj");
@@ -98,6 +99,10 @@ public sealed class ReaderFeatureCatalog
 
     public bool SupportsOrUnknown(Feature feature) =>
         !HasStandardCapabilityBaseline || Supports(feature);
+
+    /// <summary>是否存在语义键等于指定值的已仲裁能力（ADR-0012）。用于 UI 按语义键判断可用性。</summary>
+    public bool SupportsSemantic(string semanticId) =>
+        SupportedFeatures.Any(f => string.Equals(f.SemanticId, semanticId, StringComparison.Ordinal));
 
     public ReaderFeatureCatalog Add(params Feature[] features) => new()
     {

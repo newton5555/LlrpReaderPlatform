@@ -1401,6 +1401,17 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                     };
                 }
 
+                // ADR-0013：报告类扩展字段（phase/gps/xpc）由寻卡请求的语义键下发。
+                // 按当前激活扩展模块把语义键编译进各自的厂商 InventoryReportOptions；
+                // 模块不支持或语义键不在其能力范围时静默忽略，不影响寻卡启动。
+                if (spec.Report?.ExtensionReportFields is { Count: > 0 } semanticFields)
+                {
+                    foreach (IReaderExtensionModule extension in handle.Extensions)
+                    {
+                        inventory = extension.ApplyInventoryReportSpec(inventory, semanticFields);
+                    }
+                }
+
                 // 先建立运行上下文，再启动 ROSpec。部分 Reader 会在 Start 返回前立即
                 // 发出 TagReport；这样首批报告也能归属于本次 InventoryRun 和日志文件。
                 if (aggregates.TryGetValue(readerId, out TagAggregateStore? aggregate))

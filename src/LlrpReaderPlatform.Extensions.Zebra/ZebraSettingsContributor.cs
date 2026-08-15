@@ -68,8 +68,9 @@ public sealed class ZebraSettingsContributor : ISettingsExtensionContributor
 
         if (supportsInventory)
         {
-            AddBool(entries, IncludePhase, "Zebra report phase", report?.IncludePhase);
-            AddBool(entries, IncludeGps, "Zebra report GPS", report?.IncludeGps);
+            // ADR-0013：报告类字段由寻卡页列开关联动控制，设置页只读并提示。
+            AddBool(entries, IncludePhase, "Zebra report phase", report?.IncludePhase, "由寻卡页联动控制");
+            AddBool(entries, IncludeGps, "Zebra report GPS", report?.IncludeGps, "由寻卡页联动控制");
             AddBool(entries, IncludeZoneId, "Zebra report zone id", report?.IncludeZoneId);
             AddBool(entries, IncludeZoneName, "Zebra report zone name", report?.IncludeZoneName);
             AddBool(entries, IncludeMltReport, "Zebra report MLT (experimental)", report?.IncludeMltReport);
@@ -124,7 +125,7 @@ public sealed class ZebraSettingsContributor : ISettingsExtensionContributor
         return settings;
     }
 
-    private static void AddBool(IList<SettingsEntry> entries, string key, string title, bool? currentValue)
+    private static void AddBool(IList<SettingsEntry> entries, string key, string title, bool? currentValue, string? readOnlyReason = null)
     {
         if (currentValue is null)
         {
@@ -139,6 +140,7 @@ public sealed class ZebraSettingsContributor : ISettingsExtensionContributor
             ValueType = typeof(bool),
             CurrentValue = currentValue,
             Source = SettingsSource.VendorExtension,
+            ReadOnlyReason = readOnlyReason,
         });
     }
 

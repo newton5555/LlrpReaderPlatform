@@ -1,4 +1,6 @@
+using System.Collections.ObjectModel;
 using LlrpReaderPlatform.Contracts.Settings;
+using LlrpReaderPlatform.Contracts.Tagging;
 using LlrpReaderPlatform.Services.Extensions;
 using LlrpReaderPlatform.Services.Settings;
 using LlrpNet.Core.Protocol;
@@ -64,6 +66,37 @@ public sealed class ZebraReaderExtensionModule : IReaderExtensionModule
     {
         ArgumentNullException.ThrowIfNull(context);
         context.Builder.UseZebra();
+    }
+
+    public InventorySettings ApplyInventoryReportSpec(InventorySettings settings, IReadOnlyList<string> semanticFields)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        bool wantsPhase = semanticFields.Contains(ReportFieldSemantics.Phase);
+        bool wantsGps = semanticFields.Contains(ReportFieldSemantics.Gps);
+bool wantsXpc = semanticFields.Contains(ReportFieldSemantics.Xpc);
+        if (!wantsPhase && !wantsGps && !wantsXpc)
+        {
+            return settings;
+        }
+
+        // settings 即 InventorySettings：写入其 Extensions 字典（与设置贡献者 Apply 对齐）。
+        var inventoryExtensions = new Dictionary<string, object?>(settings.Extensions, StringComparer.Ordinal);
+        ZebraInventoryReportOptions existing = inventoryExtensions.TryGetValue(
+            ZebraInventoryReportOptions.ExtensionKey, out object? value) &&
+            value is ZebraInventoryReportOptions report
+                ? report
+                : new ZebraInventoryReportOptions();
+        inventoryExtensions[ZebraInventoryReportOptions.ExtensionKey] = existing with
+        {
+            IncludePhase = wantsPhase ? true : existing.IncludePhase,
+            IncludeGps = wantsGps ? true : existing.IncludeGps,
+            IncludeMltReport = wantsXpc ? true : existing.IncludeMltReport,
+        };
+
+        return settings with
+        {
+            Extensions = new ReadOnlyDictionary<string, object?>(inventoryExtensions),
+        };
     }
 
     public ReaderTagReportProjection ProjectTagReport(TagReport report)

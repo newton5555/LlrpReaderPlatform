@@ -8,6 +8,7 @@ using LlrpReaderPlatform.Contracts.Errors;
 using LlrpReaderPlatform.Contracts.Lifecycle;
 using LlrpReaderPlatform.Contracts.Persistence;
 using LlrpReaderPlatform.Contracts.Readers;
+using LlrpReaderPlatform.Contracts.Settings;
 using LlrpReaderPlatform.Contracts.Tagging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -140,6 +141,13 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool showXpcColumn;
 
+    private ReaderFeatureCatalog featureCatalog = ReaderFeatureCatalog.Empty;
+
+    /// <summary>当前选中 Reader 是否支持该语义报告字段（ADR-0013）；不支持时列开关不可用。</summary>
+    public bool IsPhaseColumnSupported => featureCatalog.SupportsSemantic(ReportFieldSemantics.Phase);
+    public bool IsGpsColumnSupported => featureCatalog.SupportsSemantic(ReportFieldSemantics.Gps);
+    public bool IsXpcColumnSupported => featureCatalog.SupportsSemantic(ReportFieldSemantics.Xpc);
+
     public InventoryViewModel(
         IInventoryService inventory,
         ITagListStore? tagListStore = null,
@@ -198,9 +206,20 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         Guid? nextReaderId = reader?.ReaderId;
         bool contextChanged = ReaderId != nextReaderId;
         ReaderId = nextReaderId;
+        ReaderFeatureCatalog nextCatalog = reader?.Snapshot.FeatureCatalog ?? ReaderFeatureCatalog.Empty;
+        if (!ReferenceEquals(featureCatalog, nextCatalog))
+        {
+            featureCatalog = nextCatalog;
+            if (!IsPhaseColumnSupported) ShowPhaseColumn = false;
+            if (!IsGpsColumnSupported) ShowGpsColumn = false;
+            if (!IsXpcColumnSupported) ShowXpcColumn = false;
+            OnPropertyChanged(nameof(IsPhaseColumnSupported));
+            OnPropertyChanged(nameof(IsGpsColumnSupported));
+            OnPropertyChanged(nameof(IsXpcColumnSupported));
+        }
 
         // 运行中的全局盘存继续展示所有 activeReaderIds 的合并结果；
-        // 非运行态则必须把左侧 Reader 的切换/移除投影到表格，否则旧 Reader
+        // 非运行状态则必须把左侧 Reader 的切换/移除投影到表格，否则旧 Reader
         // 的标签会在当前 Reader 已为空或已更换后继续留在页面上。
         if (contextChanged && activeReaderIds.IsEmpty)
         {
@@ -942,12 +961,17 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
             return false;
         }
 
+        var extensionReportFields = new List<string>();
+        if (ShowPhaseColumn && IsPhaseColumnSupported) extensionReportFields.Add(ReportFieldSemantics.Phase);
+        if (ShowGpsColumn && IsGpsColumnSupported) extensionReportFields.Add(ReportFieldSemantics.Gps);
+        if (ShowXpcColumn && IsXpcColumnSupported) extensionReportFields.Add(ReportFieldSemantics.Xpc);
+
         startSpec = Spec with
         {
             DurationSeconds = durationSeconds,
             Report = new InventoryReportSpec
             {
-                // Report configuration is derived from the Inventory table columns;
+                // Report is derived from the Inventory table columns;
                 // keep device reports granular so the UI and counters stay realtime.
                 ReportEveryNTags = 1,
                 IncludeAntennaId = ShowAntennaColumn,
@@ -957,6 +981,8 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
                 IncludeLastSeenTimestamp = ShowLastSeenColumn,
                 IncludeTagSeenCount = ShowCountColumn,
                 IncludePcBits = ShowPcBitsColumn,
+                // ADR-0013：报告类扩展字段按列开关请求；服务层按激活扩展编译到厂商参数。
+                ExtensionReportFields = extensionReportFields,
             },
         };
         return true;

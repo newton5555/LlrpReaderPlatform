@@ -113,9 +113,9 @@
                                     <CheckBox Content="Peak RSSI" IsChecked="{Binding Data.ShowRssiColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
                                     <CheckBox Content="Channel" IsChecked="{Binding Data.ShowChannelColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
                                     <CheckBox Content="PC Bits" IsChecked="{Binding Data.ShowPcBitsColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
-                                    <CheckBox Content="Phase" IsChecked="{Binding Data.ShowPhaseColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
-                                    <CheckBox Content="GPS" IsChecked="{Binding Data.ShowGpsColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
-                                    <CheckBox Content="XPC" IsChecked="{Binding Data.ShowXpcColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" Margin="8,4" />
+                                    <CheckBox Content="Phase" IsChecked="{Binding Data.ShowPhaseColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" IsEnabled="{Binding Data.IsPhaseColumnSupported, Source={StaticResource InventoryVmProxy}}" Margin="8,4" />
+                                    <CheckBox Content="GPS" IsChecked="{Binding Data.ShowGpsColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" IsEnabled="{Binding Data.IsGpsColumnSupported, Source={StaticResource InventoryVmProxy}}" Margin="8,4" />
+                                    <CheckBox Content="XPC" IsChecked="{Binding Data.ShowXpcColumn, Source={StaticResource InventoryVmProxy}, Mode=TwoWay}" IsEnabled="{Binding Data.IsXpcColumnSupported, Source={StaticResource InventoryVmProxy}}" Margin="8,4" />
                                 </StackPanel>
                             </ContextMenu>
                         </Setter.Value>

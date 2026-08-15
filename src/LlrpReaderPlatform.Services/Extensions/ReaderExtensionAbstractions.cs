@@ -93,4 +93,11 @@ public interface IReaderExtensionModule
     /// <see cref="ProjectTagReport"/>，以便同时贡献多个 UI 无关字段。
     /// </summary>
     string? GetTidHex(TagReport report) => null;
+
+    /// <summary>
+    /// 按本次寻卡请求的语义报告字段（ADR-0013）把厂商报告开关写入 SDK InventorySettings。
+    /// 只在 <see cref="LlrpReaderPlatform.Contracts.Tagging.ReportFieldSemantics"/>（如 phase-report）
+    /// 出现在 <paramref name="semanticFields"/> 且该能力被支持时写入；默认 no-op，旧模块零成本升级。
+    /// </summary>
+    InventorySettings ApplyInventoryReportSpec(InventorySettings settings, IReadOnlyList<string> semanticFields) => settings;
 }

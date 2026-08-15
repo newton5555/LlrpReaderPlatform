@@ -97,6 +97,8 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
                 CurrentValue = report?.IncludeRfPhaseAngle ?? false,
                 DefaultValue = false,
                 Source = SettingsSource.VendorExtension,
+                // ADR-0013：相位已由寻卡页列开关联动控制，设置页只读并提示。
+                ReadOnlyReason = "由寻卡页联动控制",
             });
         }
 

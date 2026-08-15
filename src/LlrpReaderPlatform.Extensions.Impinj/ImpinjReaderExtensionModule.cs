@@ -5,6 +5,7 @@ using LlrpNet.Core.Protocol;
 using LlrpSdk;
 using LlrpSdk.Extensions;
 using LlrpSdk.Extensions.Impinj;
+using System.Collections.ObjectModel;
 using System.Globalization;
 
 namespace LlrpReaderPlatform.Extensions.Impinj;
@@ -109,6 +110,31 @@ public sealed class ImpinjReaderExtensionModule : IReaderExtensionModule
     {
         ArgumentNullException.ThrowIfNull(context);
         context.Builder.UseImpinj();
+    }
+
+    public InventorySettings ApplyInventoryReportSpec(InventorySettings settings, IReadOnlyList<string> semanticFields)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        if (!semanticFields.Contains(LlrpReaderPlatform.Contracts.Tagging.ReportFieldSemantics.Phase))
+        {
+            return settings;
+        }
+
+        // R420 已实测：RF phase angle 属于 InventoryInventoryReportOptions 扩展字典。
+        var extensions = new Dictionary<string, object?>(settings.Extensions, StringComparer.Ordinal);
+        ImpinjInventoryReportOptions existing = extensions.TryGetValue(
+            ImpinjInventoryReportOptions.ExtensionKey, out object? value) &&
+            value is ImpinjInventoryReportOptions report
+                ? report
+                : new ImpinjInventoryReportOptions();
+        extensions[ImpinjInventoryReportOptions.ExtensionKey] = existing with
+        {
+            IncludeRfPhaseAngle = true,
+        };
+        return settings with
+        {
+            Extensions = new ReadOnlyDictionary<string, object?>(extensions),
+        };
     }
 
     public string? GetTidHex(TagReport report)
