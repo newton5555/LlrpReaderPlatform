@@ -1,6 +1,6 @@
 # LlrpReaderPlatform 应用框架与首个 WPF 消费者开发计划
 
-> 状态：持续维护计划（2026-08-16，首个 WPF 消费者已形成可交付版本，Virtual Reader 开发替身已接入独立开发模式）
+> 状态：持续维护计划（2026-08-16，首个 WPF 消费者已形成可交付版本，Virtual Reader 已完成首版；预设式 Data Source 作为长期规划保留）
 > 基线仓库：`LlrpReaderStudio` 将冻结，不作为新项目的 ProjectReference 或运行时依赖；仅作为已验证行为、迁移经验和测试样例的参考。
 > 目标：在新仓库中建设可被多个 UI 消费者复用的 LLRP 应用框架。第一个消费者是新的 `LlrpReaderPlatform.App.Wpf`，未来可增加其他 UI 框架，而不复制设备生命周期、能力判断和协议编译逻辑。
 > 当前验证基线：现有项目已验证标准 LLRP 1.0.1 设备和 Impinj R420；新项目以此为回归基线，逐步扩展到更多 LLRP 设备和厂商能力。自动化测试当前为 378 项全绿（含 Virtual Reader 场景与生命周期测试）；Windows x64 交付采用 NuGet SDK、自包含单文件 `LlrpReaderPlatform.exe`。
@@ -47,41 +47,41 @@
 
 ```
 LlrpReaderPlatform.slnx（新仓库）
-├── LlrpReaderPlatform.Contracts/         ★ UI 无关的公开模型、状态和设置契约
-│     目标框架：net10.0；不引用 WPF、SDK 或厂商扩展
-├── LlrpReaderPlatform.Services/          ★ 应用服务层（独立类库，正式产品）
-│     定位：多个 UI 消费者共享的生命周期、能力、设置和盘存服务
-│     目标框架：net10.0；依赖 Contracts + LlrpSdk（默认 NuGet，可选本地项目）
-│     ├── Lifecycle/      Reader 注册 / 激活 / 短连接 / Enable 语义
-│     ├── Settings/       能力驱动设置模型（ReaderFeatureCatalog / EffectiveSettingsLayout / SettingsCompiler）
-│     ├── Inventory/      标准 Inventory / TagReport / TagAccess 协调层
-│     ├── Capabilities/   ReaderCapabilities 内存缓存（不从 DB 持久化）
-│     ├── Modules/        IReaderExtensionModule 抽象和模块注册
-│     └── Persistence/    Profile/Snapshot/操作接口，不放具体 SQLite 实现
-├── LlrpReaderPlatform.Infrastructure/   ★ 持久化、发现、日志等基础设施实现
-│     目标框架：net10.0；依赖 Contracts + Services + EF Core/SQLite/Zeroconf 等
-├── LlrpReaderPlatform.Extensions.Impinj/ ★ Impinj R420 首个扩展模块
-│     目标框架：net10.0；依赖 Contracts + Services + Impinj SDK 扩展（默认 NuGet，可选本地项目）
-├── LlrpReaderPlatform.Extensions.Zebra/  ★ Zebra FX9600 实验性扩展模块
-│     目标框架：net10.0；依赖 Contracts + Services + Zebra SDK 扩展（默认 NuGet，可选本地项目）
-├── LlrpReaderPlatform.App.Wpf/          ★ 第一个 WPF 消费者
-│     目标框架：net10.0-windows；依赖 Contracts + Services + Infrastructure + 已启用的扩展模块 + WPF/MVVM/UI 库
-│     ├── Views/          页面视图（纯 UI）
-│     ├── ViewModels/     页面状态 / 命令（只消费服务层，不直接碰 SDK）
-│     ├── Messages/       ViewModel 间消息
-│     ├── Converters/     值转换
-│     └── Assets/         图标等
-├── LlrpReaderPlatform.VirtualReader/    ★ 开发/验收用完整进程内 Reader 替身
-│     场景、真实标签日志回放、跨 Session 设备状态和故障注入
-├── LlrpReaderPlatform.Services.Tests/   xunit + FakeSession/TestKit
-├── LlrpReaderPlatform.Extensions.Impinj.Tests/
-├── LlrpReaderPlatform.Extensions.Zebra.Tests/
-├── LlrpReaderPlatform.App.Wpf.Tests/     ViewModel/DataTemplate/DI 冒烟测试
-├── LlrpReaderPlatform.Architecture.Tests/ 依赖方向和公开 API 边界测试
-├── LlrpReaderPlatform.Hardware.Tests/     硬件验收 CLI
-├── LlrpReaderPlatform.TestKit/           可控的虚拟 Session/Reader 测试替身
-└── LlrpReaderPlatform.VirtualReader.Tests/ Virtual Reader 场景/生命周期/WPF 链路测试
+├── src/                                  ★ 可发布的产品项目
+│   ├── LlrpReaderPlatform.Contracts/     UI 无关的公开模型、状态和设置契约
+│   ├── LlrpReaderPlatform.Services/      生命周期、能力、设置和盘存编排
+│   │   ├── Lifecycle/                    Reader 注册 / 激活 / 短连接 / Enable 语义
+│   │   ├── Settings/                     能力驱动设置模型和协议编译
+│   │   ├── Inventory/                    Inventory / TagReport / Tag Access 协调
+│   │   ├── Capabilities/                 ReaderCapabilities 运行时缓存
+│   │   ├── Modules/                      IReaderExtensionModule 抽象和模块注册
+│   │   └── Persistence/                  持久化契约，不放具体 SQLite 实现
+│   ├── LlrpReaderPlatform.Infrastructure/ 持久化、发现和日志实现
+│   ├── LlrpReaderPlatform.Extensions.Impinj/ Impinj 扩展模块
+│   ├── LlrpReaderPlatform.Extensions.Zebra/  Zebra 扩展模块
+│   ├── LlrpReaderPlatform.VirtualReader/ 开发/验收用进程内 Reader 替身
+│   └── LlrpReaderPlatform.App.Wpf/       第一个 WPF 消费者
+│       ├── Views/                        页面视图（纯 UI）
+│       ├── ViewModels/                   页面状态 / 命令（只消费服务层）
+│       ├── Messages/                     ViewModel 间消息
+│       ├── Converters/                   值转换
+│       └── Assets/                       图标等
+└── tests/                                ★ 测试、测试支撑和人工硬件验收项目
+    ├── LlrpReaderPlatform.Contracts.Tests/
+    ├── LlrpReaderPlatform.TestKit/       可控 Session/Reader 测试替身
+    ├── LlrpReaderPlatform.Services.Tests/
+    ├── LlrpReaderPlatform.Infrastructure.Tests/
+    ├── LlrpReaderPlatform.Extensions.Impinj.Tests/
+    ├── LlrpReaderPlatform.Extensions.Zebra.Tests/
+    ├── LlrpReaderPlatform.VirtualReader.Tests/
+    ├── LlrpReaderPlatform.App.Wpf.Tests/
+    ├── LlrpReaderPlatform.Architecture.Tests/
+    └── LlrpReaderPlatform.Hardware.Tests/ 硬件验收 CLI（非自动化测试项目）
 ```
+
+产品项目统一放在顶层 `src/`，测试项目、测试支撑库和硬件验收工具统一放在顶层
+`tests/`；测试工程不得嵌套在对应产品项目目录中。`TestKit` 虽不是 xUnit 项目，仍属于
+测试专用支撑代码，不进入产品发布依赖。
 
 **设计铁律**：
 - Contracts 是 UI 与服务之间的稳定边界，**不暴露任何 `LlrpSdk`、`LlrpNet.Protocol`、WPF 控件、Dispatcher 或 ViewModel 类型**；
@@ -684,6 +684,61 @@ WPF 发现入口也已统一：主设备页和添加数据源页共享发现记�
 
 Virtual Reader 已作为独立开发替身接入：它复用同一 Session、ReaderManager、Settings、Inventory、Tag Memory、GPI/GPO 和 WPF 边界，不增加 WPF 特殊业务分支；详见 [Virtual Reader 开发模式](development/virtual-reader.md) 与 [ADR-0015](decisions/ADR-0015-virtual-reader-development-mode.md)。
 
+### 7.1 虚拟设备长期规划（未排期）
+
+本节是长期架构方向，不属于当前发布、近期迭代或默认下一任务。现阶段继续使用已经实现的
+`LLRP_VIRTUAL_SCENARIO` 单场景平台替身，以及 SDK 仓库已经实现的最小 TCP Virtual Reader。
+只有用户重新明确启动该工作包后，才按 VP1～VP6 和 SDK VR1～VR8 执行。
+
+虚拟设备分成两个互不混合的产品边界：
+
+```text
+LlrpReaderPlatform 主 WPF
+├── TCP Reader Data Source（真机或外部报文虚拟设备）
+└── Platform Virtual Reader Data Source（进程内 Session）
+
+LLRPCSharp 独立 Virtual Reader Manager
+└── 报文级 TCP/LLRP 虚拟设备
+```
+
+主 WPF 只维护平台级虚拟设备。报文级虚拟设备由相邻 SDK 仓库的独立 Manager
+创建和管理，主 WPF 只按普通 Host/Port 添加，不保存其虚拟类型、预设或 Host 生命周期。
+
+**用户入口与预设约束**：
+
+- 平台虚拟设备在 Data Sources 的添加流程中选择内置预设和实例名称，不显示 Host/Port；
+- 用户不能创建、编辑、复制或导入任意虚拟配方，能力、标签、GPIO 和故障行为由受测预设固定；
+- 首批平台预设为 Standard 1.0.1、Strict Standard、高速 Inventory 和生命周期故障；
+- 预设使用稳定 `PresetId`/`PresetVersion`，实例只持久化预设引用和用户意图；
+- 厂商预设当前不交付，但 Catalog 从第一版采用 Contributor 注册。未来 Impinj/Zebra 平台预设
+  通过独立模块贡献身份、能力、设置和报告行为，核心、Contracts 和 WPF 不增加厂商 `switch`；
+- 未安装或版本不匹配的预设显示“模块不可用”并禁止启动，不静默降级成标准设备。
+
+**平台实现阶段**：
+
+| 阶段 | 范围 | 出口 |
+|---|---|---|
+| VP1 决策与契约 | 落实 [ADR-0016](decisions/ADR-0016-platform-virtual-reader-data-sources.md)；把 `ReaderProfile` 的端点改为 `TcpReaderSource`/`PlatformVirtualReaderSource` 有类型来源 | Contracts 不含 SDK/WPF/厂商类型；平台虚拟来源不要求 Host/Port |
+| VP2 持久化与路由 | SQLite 保存 SourceKind、PresetId、PresetVersion、InstanceId；端点唯一索引只约束 TCP；增加 Routing SessionFactory | 同进程真实 Reader 与平台虚拟 Reader 可同时 Probe/Activate |
+| VP3 预设目录 | 将当前场景中的实例身份与行为模板分离；标准预设也通过 Contributor 注册；Catalog 为每个 InstanceId 维护独立状态 | 同一预设可创建两个不串设置、GPIO、Tag Memory 的设备实例 |
+| VP4 Data Sources UI | 添加来源选择；平台虚拟表单只显示名称、预设和启用状态；列表显示 `Platform Virtual · Preset` | 添加、启用、停用、删除和状态展示不依赖伪造端点 |
+| VP5 启动恢复 | 应用先加载虚拟实例和预设，再恢复 ReaderManager；删除时按 Session→Catalog→SQLite 顺序补偿清理 | 应用重启后实例可恢复，缺失预设给出结构化错误 |
+| VP6 首版验收 | 多平台虚拟、多真实/虚拟混合、设置、Inventory、Tag Memory、GPIO、Runs、错误状态 | WPF 全链路不增加页面级虚拟设备业务分支 |
+
+长期项目布局沿用当前解决方案规则：所有产品项目位于 `src/`，所有 `*.Tests` 和 TestKit
+位于顶层 `tests/`。未来厂商虚拟预设若需要独立程序集，产品模块放在
+`src/LlrpReaderPlatform.VirtualReader.Extensions.*`，对应测试放在
+`tests/LlrpReaderPlatform.VirtualReader.Extensions.*.Tests`；不得在 `src` 下嵌套测试工程。
+
+`LLRP_VIRTUAL_SCENARIO` 在 VP2 后不再全局替换 SessionFactory，只保留为开发期创建或
+导入单个平台虚拟实例的启动快捷方式。当前版本在 VP2 完成前仍是单场景开发模式，文档和 UI
+不得把规划能力表述为已经支持。
+
+**跨仓库边界**：SDK 仓库负责把现有最小 `LlrpVirtualReader` 拆成可复用 Core、内置报文预设
+与独立 Manager。Manager 用户只选择预设、设备名称和 TCP 监听地址/端口；端口被占用即失败，
+不自动换端口。标准和未来厂商报文预设通过协议模块/Handler Contributor 扩展，设备端实现不
+依赖客户端 `LlrpSdk.Extensions.*`。详细工作包和验收标准以 SDK 仓库 `docs/roadmap.md` 及对应 ADR 为准。
+
 ## 8. 文档关系
 
 - 本规划为**新仓库中的共享服务框架 + 第一个 WPF 消费者**开发计划；
@@ -706,6 +761,7 @@ Virtual Reader 已作为独立开发替身接入：它复用同一 Session、Rea
 | F9 | 测试与真机验收 | 自动化测试 378 项全绿（含 Virtual Reader 场景/回放/Session/ReaderManager 链路、本轮日志模式、快照、WPF 操作日志、Zebra 扩展语义投影和架构边界回归）；真机已完成标准 Probe/Settings Query、Impinj 扩展连接、有界 Inventory Start/Stop/Disconnect、WPF Settings Apply、设备列表刷新期间设置查询不被取消、GPI/GPO、GPI 状态查询和 GPI debounce 回写、真实 TagReport 聚合、EPC/TID/User/Reserved 四个 Memory Bank 读取、User Bank 写入恢复，以及按固件/SDK 能力画像完成 FastID/Phase/Search/Low Duty/固定频率 Apply/回读、FastID/Phase 扩展 TagReport 和 Doppler 隐藏；代码级 Connection Faulted、ReaderException、匹配 GPI Stop 触发器收敛与重新 Start、Activate/Inventory/短操作取消后的 Session 清理与取消后重新 Probe 恢复、旧 Session 迟到故障/GPI/定时停止事件和 TagReport 队列跨 Run 隔离已自动化验证；GPI/GPO 无能力查询的 Unsupported 降级已自动化验证；GPI 物理事件/触发、多 Reader、断网/重启现场恢复及其它 Memory Bank 写入仍待现场验收 |
 | F10 | EF SQLite、启动恢复与日志 | Reader Profile、Reader Settings JSON 快照、TagList、InventoryRun、AppSettings、基础 EF Migration、启动恢复和 CRUD 测试已完成；早期 schema 变化允许清空数据库重建，不承诺历史数据兼容；WPF 已分离 ui/platform/sdk 日志并过滤 EF SQL，盘存支持 Off/FinalSnapshot/RawReports |
 | F11～F14 | 完整设置、完整 Inventory、全应用迁移、多设备扩展 | 首版代码完成，自动化覆盖多 Reader 并行和设备异常生命周期；Virtual Reader 已支持场景导入、确定性回放、跨 Session 状态和 WPF 显式开发模式；持续进行真机深度验收、旧设置细节增强、更多标准/厂商设备与故障恢复验收 |
+| F15 | 平台虚拟设备 Data Source 化 | 长期规划、未排期；已记录 ADR-0016 与 VP1～VP6，当前继续使用 `LLRP_VIRTUAL_SCENARIO` 单场景全局工厂模式 |
 
 **测试基线**：`dotnet build LlrpReaderPlatform.slnx` 0 警告 0 错误；`dotnet test LlrpReaderPlatform.slnx --no-build` 378 项全绿（Contracts 5、Services 188、Infrastructure 10、App.Wpf 133、Architecture 9、Extensions.Impinj 17、Extensions.Zebra 6、VirtualReader 10）
 
