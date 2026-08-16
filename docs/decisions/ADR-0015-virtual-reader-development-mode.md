@@ -3,6 +3,9 @@
 - 状态：Accepted
 - 日期：2026-08-16
 
+> 后续的数据源持久化、内置预设、真实/虚拟 Session 路由和独立报文虚拟设备边界，
+> 由 [ADR-0016](ADR-0016-platform-virtual-reader-data-sources.md) 扩展；本文保留首版开发替身的决定。
+
 ## 背景
 
 WPF 页面和服务层需要在没有真机、没有天线或需要重复故障条件时验证完整的 Probe、设置、盘存、Tag Access、GPI/GPO 和停止生命周期。仅靠 `FakeSession` 不能提供跨连接的设备状态，也不能直接作为 WPF 的运行时设备。

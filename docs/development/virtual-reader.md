@@ -2,6 +2,10 @@
 
 Virtual Reader 是平台的开发/验收替身，不是第二套业务实现。它复用 `IReaderSession`、`ReaderManager`、设置编译、盘存聚合、Tag Access、GPI/GPO 和 WPF 页面，因此可以在没有真机的情况下验证完整的上位机链路。
 
+> 当前实现状态：本页“启用方式”描述的是已实现的单场景开发模式。将平台虚拟设备纳入
+> Data Sources、允许真实/虚拟 Reader 并存和改用内置预设，属于 [ADR-0016](../decisions/ADR-0016-platform-virtual-reader-data-sources.md)
+> 与[主计划 7.1](../llrp-framework-vision.md)中的长期 VP1～VP6，尚未实现且未排期。
+
 ## 启用方式
 
 在启动 WPF 应用前设置场景文件路径：
@@ -77,3 +81,7 @@ dotnet run --project src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj
 ## 边界
 
 Virtual Reader 是平台内进程 Session，用于 WPF 和 Services 全链路验收；它不模拟真实射频，也不替代 `LLRPCSharp` 中的 TCP LLRP 协议虚拟主机。协议编解码和真实 SDK 的 TCP 互操作继续由 SDK 的虚拟 Reader/协议测试覆盖。
+
+规划完成后，主 WPF 只管理平台级虚拟 Data Source；平台用户从内置预设中选择，不编辑任意
+场景参数，也不为无 TCP 的实例伪造 Host/Port。独立 Virtual Reader Manager 管理报文级 TCP
+设备，主 WPF 将其视为普通 LLRP 端点。平台预设与报文预设不共享运行时管理或强制共用格式。

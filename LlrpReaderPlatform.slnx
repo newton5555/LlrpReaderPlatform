@@ -58,6 +58,7 @@
     <File Path="docs/decisions/ADR-0013-report-capability-ownership.md" />
     <File Path="docs/decisions/ADR-0014-vendor-feature-ownership-and-ui-semantics.md" />
     <File Path="docs/decisions/ADR-0015-virtual-reader-development-mode.md" />
+    <File Path="docs/decisions/ADR-0016-platform-virtual-reader-data-sources.md" />
   </Folder>
   <Folder Name="/docs/templates/">
     <File Path="docs/templates/ADR-template.md" />
