@@ -440,7 +440,12 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             };
         }
 
-        if (compiled.Tari is int tari && tari != 0)
+        // “默认”模式表示不下发 C1G2RFControl。Tari 行在 WPF 中会被隐藏，
+        // 但它可能仍保留着用户刚才从显式 RF Mode 选择留下的值；不能让这个
+        // 旧值重新把默认模式编译成 Mode=0 + Tari!=0。
+        if (compiled.RfMode != RfModeDefaultSentinel
+            && compiled.Tari is int tari
+            && tari != 0)
         {
             inventory = inventory with { Tari = checked((ushort)tari) };
         }

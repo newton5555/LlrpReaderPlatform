@@ -441,6 +441,37 @@ public sealed class StandardSettingsCompilerTests
     }
 
     [Fact]
+    public void CompileSdk_clears_stale_tari_when_default_rf_mode_is_selected()
+    {
+        var compiler = new StandardSettingsCompiler();
+        ReaderRuntimeSnapshot snapshot = Snapshot(new ReaderAntennaInfo { AntennaId = 1, Name = "A1" });
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(
+                new ReaderSettings(),
+                new ManagedRoSpecSnapshot(
+                    new InventorySettings { AntennaIds = [1], ModeIndex = 13, Tari = 15_625 },
+                    InventoryRuntimeState.Disabled)),
+            CreateCapabilities(
+                rfModes:
+                [
+                    new C1G2RfModeEntry(13, "ZEBRA_MODE_13", true, 2, "PR_ASK", "DI", 40_000, 2_000, 15_625, 15_625, 0),
+                ]));
+
+        EffectiveSettingsLayout layout = compiler.BuildLayout(snapshot, runtime);
+        var draft = new SettingsDraft { ReaderId = ReaderId, CapabilityRevision = 7 };
+        draft.Values[SettingsKeys.AntennaIds] = "1";
+        draft.Values[SettingsKeys.RfMode] = -1;
+        // This is the stale value that can remain in the hidden WPF Tari row after
+        // switching from an explicit mode back to the Reader default.
+        draft.Values[SettingsKeys.Tari] = 15_625;
+
+        ReaderSettings compiled = compiler.CompileSdk(draft, layout, runtime, snapshot);
+
+        Assert.Equal((ushort)0, compiled.Inventory!.ModeIndex);
+        Assert.Equal((ushort)0, compiled.Inventory.Tari);
+    }
+
+    [Fact]
     public void CompileSdk_uses_fixed_mode_tari_when_readonly_tari_is_not_in_draft()
     {
         var compiler = new StandardSettingsCompiler();

@@ -242,6 +242,20 @@
                 <Setter Property="FontFamily" Value="Consolas, Courier New" />
             </Style>
 
+            <!-- 统一右键上下文菜单样式规范 -->
+            <Style TargetType="ContextMenu" BasedOn="{StaticResource MahApps.Styles.ContextMenu}">
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="Padding" Value="4,4" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray7}" />
+                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
+            </Style>
+
+            <Style TargetType="MenuItem" BasedOn="{StaticResource MahApps.Styles.MenuItem}">
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="Padding" Value="8,6" />
+            </Style>
+
             <!-- 常用转换器 -->
             <converters:TagMemoryBankDisplayConverter x:Key="TagMemoryBankDisplayConverter" />
             <converters:HexColorToBrushConverter x:Key="HexColorToBrushConverter" />

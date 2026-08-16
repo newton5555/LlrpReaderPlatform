@@ -41,7 +41,8 @@ public sealed class FakeSession : IReaderSession
         ushort? gpiCount = null,
         ushort? gpoCount = null,
         bool useProtocol11 = false,
-        bool isMultiwordBlockEraseAvailable = false)
+        bool isMultiwordBlockEraseAvailable = false,
+        IEnumerable<C1G2RfModeEntry>? rfModes = null)
     {
         IEnumerable<LlrpNet.Protocol.Parameters.ILlrpParameter> generalDeviceParameters = [];
         if (gpiCount is not null || gpoCount is not null)
@@ -99,7 +100,7 @@ public sealed class FakeSession : IReaderSession
                 Array.Empty<RxSensitivityEntry>(),
                 Array.Empty<uint>(),
                 Array.Empty<FrequencyHopTableEntry>(),
-                Array.Empty<C1G2RfModeEntry>(),
+                rfModes ?? Array.Empty<C1G2RfModeEntry>(),
                 isTagAccessAvailable,
                 false,
                 isMultiwordBlockEraseAvailable,

@@ -28,6 +28,26 @@ public partial class InventoryView : UserControl
         }
     }
 
+    private void CopyRowDetailsMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { CommandParameter: TagRowViewModel row })
+        {
+            string rowData = string.Join("\t",
+                row.Index,
+                row.Epc,
+                row.Tid,
+                row.ReadCount,
+                row.FirstSeen,
+                row.LastSeen,
+                row.ReaderName,
+                row.LastAntenna?.ToString() ?? string.Empty,
+                row.PeakRssi?.ToString() ?? string.Empty,
+                row.LastChannelIndex?.ToString() ?? string.Empty,
+                row.PcBitsHex ?? string.Empty);
+            TrySetClipboardText(rowData);
+        }
+    }
+
     private void OpenInTagMemoryMenuItem_Click(object sender, RoutedEventArgs e)
     {
         if (sender is MenuItem { CommandParameter: TagRowViewModel row } && !string.IsNullOrWhiteSpace(row.Epc))

@@ -365,6 +365,53 @@ public sealed class SettingsServiceTests
         Assert.Equal(PlatformErrorCode.InvalidSettings, invalid.ErrorCode);
     }
 
+    [Fact]
+    public async Task ApplyAsync_allows_rf_mode_transition_without_tari_field()
+    {
+        var h = new Harness();
+        h.RegisterSession.SetCapabilities(
+            maxNumberOfAntennas: 1,
+            rfModes:
+            [
+                new LlrpSdk.C1G2RfModeEntry(1, "CURRENT_MODE", true, 2, "PR_ASK", "DI", 40_000, 2_000, 10_000, 12_000, 1_000),
+                new LlrpSdk.C1G2RfModeEntry(13, "ZEBRA_MODE_13", true, 2, "PR_ASK", "DI", 40_000, 2_000, 15_625, 15_625, 0),
+            ]);
+        h.RegisterSession.SettingsSnapshot = new SdkReaderSettingsSnapshot(
+            new SdkReaderSettings(),
+            new LlrpSdk.ManagedRoSpecSnapshot(
+                new LlrpSdk.InventorySettings
+                {
+                    AntennaIds = [1],
+                    ModeIndex = 1,
+                    Tari = 10_000,
+                },
+                LlrpSdk.InventoryRuntimeState.Disabled));
+
+        await h.Manager.AddAsync(h.Profile, enableAfterAdding: false);
+        await h.Manager.ActivateAsync(h.Profile.Id);
+        SettingsEditorModel model = await h.Settings.QueryAsync(h.Profile.Id);
+
+        var draft = new SettingsDraft
+        {
+            ReaderId = h.Profile.Id,
+            CapabilityRevision = model.Snapshot.CapabilityRevision,
+        };
+        foreach ((string key, object? value) in model.Snapshot.Values)
+        {
+            draft.Values[key] = value;
+        }
+
+        // Mode 13 is fixed-Tari in the target layout, so the WPF draft omits Tari.
+        draft.Values[SettingsKeys.RfMode] = 13;
+        draft.Values.Remove(SettingsKeys.Tari);
+
+        SettingsApplyResult result = await h.Settings.ApplyAsync(h.Profile.Id, draft);
+
+        Assert.True(result.Succeeded, result.Error);
+        Assert.Equal((ushort)13, h.RegisterSession.LastAppliedSettings!.Inventory!.ModeIndex);
+        Assert.Equal((ushort)15_625, h.RegisterSession.LastAppliedSettings.Inventory.Tari);
+    }
+
     private sealed class ThrowingSettingsPresetStore : IReaderSettingsPresetStore
     {
         public int SaveCount { get; private set; }

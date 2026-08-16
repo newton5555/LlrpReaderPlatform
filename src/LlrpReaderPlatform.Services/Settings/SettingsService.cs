@@ -175,6 +175,7 @@ public sealed class SettingsService : IReaderSettingsService
             : compiler.BuildLayout(snapshot);
         var issues = new List<SettingsEntryIssue>();
         AddUnknownEntryIssues(draft, layout, issues);
+        bool rfModeSupplied = draft.Values.ContainsKey(SettingsKeys.RfMode);
         foreach (SettingsEntry entry in layout.Entries)
         {
             if (entry.IsReadOnly)
@@ -187,7 +188,8 @@ public sealed class SettingsService : IReaderSettingsService
                 // Report fields are intentionally not exposed by the WPF settings page.
                 // An omitted report value means "keep the current Reader value"; the SDK
                 // compiler already applies that baseline when it builds the next settings.
-                if (IsInventoryReportSetting(entry.Key))
+                if (IsInventoryReportSetting(entry.Key)
+                    || (rfModeSupplied && entry.Key == SettingsKeys.Tari))
                 {
                     continue;
                 }
@@ -195,7 +197,13 @@ public sealed class SettingsService : IReaderSettingsService
                 issues.Add(new SettingsEntryIssue(entry.Key, $"{entry.Title} 未设置。"));
                 continue;
             }
-            ValidateValue(entry, value, issues);
+            // Tari constraints belong to the selected target RF Mode. The layout here
+            // describes the current Reader mode, which may differ during a mode change.
+            ValidateValue(
+                entry,
+                value,
+                issues,
+                validateConstraints: !(rfModeSupplied && entry.Key == SettingsKeys.Tari));
         }
 
         if (issues.Count > 0)
@@ -385,6 +393,7 @@ public sealed class SettingsService : IReaderSettingsService
     {
         var issues = new List<SettingsEntryIssue>();
         AddUnknownEntryIssues(draft, layout, issues);
+        bool rfModeSupplied = draft.Values.ContainsKey(SettingsKeys.RfMode);
         foreach (SettingsEntry entry in layout.Entries)
         {
             if (entry.IsReadOnly)
@@ -397,7 +406,8 @@ public sealed class SettingsService : IReaderSettingsService
                 // Report fields are intentionally not exposed by the WPF settings page.
                 // ApplyAsync validates against the freshly queried live layout, so it must
                 // use the same omission rule as the preflight validation above.
-                if (IsInventoryReportSetting(entry.Key))
+                if (IsInventoryReportSetting(entry.Key)
+                    || (rfModeSupplied && entry.Key == SettingsKeys.Tari))
                 {
                     continue;
                 }
@@ -405,7 +415,11 @@ public sealed class SettingsService : IReaderSettingsService
                 issues.Add(new SettingsEntryIssue(entry.Key, $"{entry.Title} 未设置。"));
                 continue;
             }
-            ValidateValue(entry, value, issues);
+            ValidateValue(
+                entry,
+                value,
+                issues,
+                validateConstraints: !(rfModeSupplied && entry.Key == SettingsKeys.Tari));
         }
 
         return issues.Count == 0
@@ -431,13 +445,22 @@ public sealed class SettingsService : IReaderSettingsService
         }
     }
 
-    private static void ValidateValue(SettingsEntry entry, object value, List<SettingsEntryIssue> issues)
+    private static void ValidateValue(
+        SettingsEntry entry,
+        object value,
+        List<SettingsEntryIssue> issues,
+        bool validateConstraints = true)
     {
         // 类型检查和数值规范化。Validate 是公开契约边界，不能因为外部消费者
         // 传入了可转换但格式错误的字符串而把 FormatException 直接抛出。
         if (!TryNormalizeValue(entry.ValueType, value, out object? normalized))
         {
             issues.Add(new SettingsEntryIssue(entry.Key, $"{entry.Title} 值类型不正确。"));
+            return;
+        }
+
+        if (!validateConstraints)
+        {
             return;
         }
 
