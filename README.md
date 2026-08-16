@@ -9,7 +9,7 @@
 </p>
 
 <p align='center'>
-  <strong>v1.0.0</strong> · Windows x64 · self-contained single-file portable · <code>LlrpSdk</code> 1.4.0
+  <strong>v1.4.0</strong> · Windows x64 · self-contained single-file portable · <code>LlrpSdk</code> 1.4.0
 </p>
 
 <p align='center'>
@@ -24,7 +24,7 @@ LlrpReaderPlatform is a new LLRP application platform whose first deliverable is
 
 The frozen `../LlrpReaderStudio` repository is reference material only — it documents existing capabilities and migration boundaries and is never a runtime dependency.
 
-**Current baseline:** `1.0.0` · Windows x64 · self-contained single-file portable. The build is clean (0 warnings, 0 errors) and automated tests are green (378 tests, including the Virtual Reader suite). Most service tests use a `FakeSession`; the Virtual Reader suite exercises deterministic multi-step reader behavior. Real-device conclusions are recorded separately.
+**Current baseline:** `1.4.0` · Windows x64 · self-contained single-file portable. The build is clean (0 warnings, 0 errors) and automated tests are green (378 tests, including the Virtual Reader suite). Most service tests use a `FakeSession`; the Virtual Reader suite exercises deterministic multi-step reader behavior. Real-device conclusions are recorded separately.
 
 ## Architecture
 
@@ -110,7 +110,7 @@ The authoritative record is the [device compatibility matrix](docs/compatibility
 
 Official releases are produced by GitHub Actions as a ZIP containing the self-contained single-file app plus README/release notes:
 
-- `LlrpReaderPlatform-v1.0.0-win-x64.zip`
+- `LlrpReaderPlatform-v1.4.0-win-x64.zip`
 - matching `.sha256` checksum
 
 Requirements: Windows x64; the reader must be reachable over the network, default LLRP port `5084`. The single file bundles the .NET runtime, so target machines do not need a separate .NET Desktop Runtime.
@@ -149,7 +149,7 @@ By default the platform uses the centrally versioned `LlrpSdk` `1.4.0` and `Llrp
 - [Hardware validation runbook](docs/development/hardware-validation-runbook.md)
 - [Hardware test CLI project](tests/LlrpReaderPlatform.Hardware.Tests/LlrpReaderPlatform.Hardware.Tests.csproj)
 - [Device compatibility matrix](docs/compatibility/device-matrix.md)
-- [v1.0.0 release notes](docs/releases/v1.0.0.md)
+- [v1.4.0 release notes](docs/releases/v1.4.0.md)
 - [Release spec & pipeline](docs/development/release.md)
 
 ### For developers & extension authors

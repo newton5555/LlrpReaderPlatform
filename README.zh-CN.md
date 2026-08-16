@@ -9,7 +9,7 @@
 </p>
 
 <p align='center'>
-  <strong>v1.0.0</strong> · Windows x64 · 自包含单文件便携发布 · <code>LlrpSdk</code> 1.4.0
+  <strong>v1.4.0</strong> · Windows x64 · 自包含单文件便携发布 · <code>LlrpSdk</code> 1.4.0
 </p>
 
 <p align='center'>
@@ -24,7 +24,7 @@ LlrpReaderPlatform 是一个新的 LLRP 应用平台，首个交付物是 Window
 
 冻结的 `../LlrpReaderStudio` 仓库仅作参考，只记录现有能力和迁移边界，不作为运行时依赖。
 
-**当前基线：** `1.0.0` · Windows x64 · 自包含单文件便携发布。构建 0 警告、0 错误，自动化测试 378 项全绿（含 Virtual Reader 场景与生命周期测试）；服务测试主要使用 `FakeSession`，Virtual Reader 套件覆盖确定性设备行为，真机结论单独记录。
+**当前基线：** `1.4.0` · Windows x64 · 自包含单文件便携发布。构建 0 警告、0 错误，自动化测试 378 项全绿（含 Virtual Reader 场景与生命周期测试）；服务测试主要使用 `FakeSession`，Virtual Reader 套件覆盖确定性设备行为，真机结论单独记录。
 
 ## 架构
 
@@ -110,7 +110,7 @@ SDK 侧有两个出口：核心 `LlrpSdk`（标准 LLRP 适配，由 `Services` 
 
 正式发布由 GitHub Actions 生成，ZIP 内含自包含单文件应用以及 README/发布说明：
 
-- `LlrpReaderPlatform-v1.0.0-win-x64.zip`
+- `LlrpReaderPlatform-v1.4.0-win-x64.zip`
 - 对应的 `.sha256` 校验文件
 
 运行要求：Windows x64；Reader 网络可达，默认 LLRP 端口 `5084`。单文件已包含 .NET 运行时，目标机无需另装 .NET Desktop Runtime。
@@ -149,7 +149,7 @@ dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj `
 - [真机验收运行手册](docs/development/hardware-validation-runbook.md)
 - [硬件测试命令行项目](tests/LlrpReaderPlatform.Hardware.Tests/LlrpReaderPlatform.Hardware.Tests.csproj)
 - [设备兼容性矩阵](docs/compatibility/device-matrix.md)
-- [v1.0.0 发布说明](docs/releases/v1.0.0.md)
+- [v1.4.0 发布说明](docs/releases/v1.4.0.md)
 - [发布规范与应用流水线](docs/development/release.md)
 
 ### 开发与扩展
