@@ -129,12 +129,14 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
             }
 
             IReaderSession? restoredSession = null;
+            ProbeSessionLease? probeLease = null;
             bool registered = false;
             try
             {
                 // 启动恢复仍走标准 Probe → 扩展匹配两阶段流程；离线 Reader 也注册到
                 // 列表，稍后由用户手动激活，不因启动时网络不可用而丢失配置。
-                ReaderProbeResult probe = await ProbeCoreAsync(normalizedProfile, ct).ConfigureAwait(false);
+                probeLease = await ProbeSessionAsync(normalizedProfile, ct).ConfigureAwait(false);
+                ReaderProbeResult probe = probeLease.Result;
                 var probeInfo = new ReaderProbeInfo(
                     probe.ManufacturerId,
                     probe.ModelId,
@@ -142,10 +144,29 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                     probe.Model,
                     ToSdkProtocolVersion(probe.NegotiatedProtocolVersion));
                 IReadOnlyList<IReaderExtensionModule> applicable = GetApplicableExtensions(probeInfo);
-                restoredSession = sessionFactory.Create(normalizedProfile, applicable);
+
+                // 标准 Reader 的 Probe 连接已经完成身份/协议握手。启用恢复时直接
+                // 转交这个 Session 给 ReaderHandle，避免紧接着 Activate 再创建第二条
+                // TCP 连接。厂商扩展需要在 SDK Builder 构建阶段注册，因此仍然安全
+                // 释放 Probe Session 后创建带扩展的正式 Session。
+                if (normalizedProfile.IsEnabled
+                    && applicable.Count == 0
+                    && probeLease.TryDetach(out restoredSession))
+                {
+                    // The connected probe session becomes the activation session below.
+                }
+                else
+                {
+                    await probeLease.DisposeAsync().ConfigureAwait(false);
+                    probeLease = null;
+                    restoredSession = sessionFactory.Create(normalizedProfile, applicable);
+                }
+
+                IReaderSession activeSession = restoredSession
+                    ?? throw new InvalidOperationException("Reader session was not created during startup restore.");
                 var handle = new ReaderHandle(
                     normalizedProfile,
-                    restoredSession,
+                    activeSession,
                     NextSnapshot(normalizedProfile, normalizedProfile.IsEnabled, applicable),
                     applicable,
                     needsExtensionResolution: !probe.Succeeded);
@@ -191,6 +212,13 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                     await TryDisposeQuietlyAsync(restoredSession).ConfigureAwait(false);
                 }
             }
+            finally
+            {
+                if (probeLease is not null)
+                {
+                    await probeLease.DisposeAsync().ConfigureAwait(false);
+                }
+            }
         }
     }
 
@@ -214,7 +242,8 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
             return CreateDuplicateAddResult(profile);
         }
 
-        ReaderProbeResult probe = await ProbeCoreAsync(profile, ct).ConfigureAwait(false);
+        await using ProbeSessionLease probeLease = await ProbeSessionAsync(profile, ct).ConfigureAwait(false);
+        ReaderProbeResult probe = probeLease.Result;
         if (!probe.Succeeded)
         {
             return new ReaderAddResult(ReaderAddStatus.ProbeFailed, probe.Error)
@@ -310,7 +339,25 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
 
             try
             {
-                session = sessionFactory.Create(profile, applicable);
+                // WPF 添加流程会在 Probe 成功后立即 Activate。标准 Reader 可以直接
+                // 把已完成握手的 Probe Session 转交给 Handle，避免 Probe/Activate
+                // 在单客户端设备上形成两条重叠 TCP 连接。带厂商扩展时必须先释放
+                // 标准 Probe，再创建已配置扩展的 Session。
+                if (enableAfterAdding
+                    && applicable.Count == 0
+                    && probeLease.TryDetach(out session))
+                {
+                    // The connected probe session becomes the activation session below.
+                }
+                else
+                {
+                    await probeLease.DisposeAsync().ConfigureAwait(false);
+                    session = sessionFactory.Create(profile, applicable);
+                }
+                if (session is null)
+                {
+                    throw new InvalidOperationException("Reader session was not created during registration.");
+                }
                 var handle = new ReaderHandle(
                     persisted,
                     session,
@@ -2430,6 +2477,18 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
 
     private async Task<ReaderProbeResult> ProbeCoreAsync(ReaderProfile profile, CancellationToken ct)
     {
+        await using ProbeSessionLease lease = await ProbeSessionAsync(profile, ct).ConfigureAwait(false);
+        return lease.Result;
+    }
+
+    /// <summary>
+    /// Performs a standard probe and keeps its connected Session alive for the caller to
+    /// either promote to a ReaderHandle or dispose before creating a vendor-configured
+    /// replacement. Keeping the lease explicit prevents Probe from returning while its
+    /// TCP connection is still owned by an undisposed temporary Session.
+    /// </summary>
+    private async Task<ProbeSessionLease> ProbeSessionAsync(ReaderProfile profile, CancellationToken ct)
+    {
         ArgumentNullException.ThrowIfNull(profile);
         profile.Validate();
 
@@ -2451,31 +2510,34 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                 ToContractProtocolVersion(session.NegotiatedVersion));
             if (identity is null)
             {
-                return result;
+                return new ProbeSessionLease(result, session);
             }
 
             IReadOnlyList<string> matchedExtensions = GetApplicableExtensions(
                     ReaderProbeInfo.FromIdentity(identity, session.NegotiatedVersion))
                 .Select(static extension => extension.Id)
                 .ToArray();
-            return result with { MatchedExtensionIds = matchedExtensions };
+            return new ProbeSessionLease(result with { MatchedExtensionIds = matchedExtensions }, session);
         }
         catch (Exception ex)
         {
             if (ex is OperationCanceledException && ct.IsCancellationRequested)
             {
+                if (session is not null)
+                {
+                    await TryDisposeQuietlyAsync(session).ConfigureAwait(false);
+                }
+
                 throw;
             }
 
-            logger.LogDebug(ex, "Probe failed for {Host}:{Port}.", profile.Host, profile.Port);
-            return new ReaderProbeResult(null, null, ex.Message);
-        }
-        finally
-        {
             if (session is not null)
             {
-                await TryDisposeQuietlyAsync(session);
+                await TryDisposeQuietlyAsync(session).ConfigureAwait(false);
             }
+
+            logger.LogDebug(ex, "Probe failed for {Host}:{Port}.", profile.Host, profile.Port);
+            return new ProbeSessionLease(new ReaderProbeResult(null, null, ex.Message), null);
         }
     }
 
@@ -3364,6 +3426,28 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
         if (Volatile.Read(ref disposeStarted) != 0)
         {
             throw new ObjectDisposedException(nameof(ReaderManager));
+        }
+    }
+
+    private sealed class ProbeSessionLease(ReaderProbeResult result, IReaderSession? session) : IAsyncDisposable
+    {
+        private IReaderSession? currentSession = session;
+
+        public ReaderProbeResult Result { get; } = result;
+
+        public bool TryDetach(out IReaderSession? detached)
+        {
+            detached = Interlocked.Exchange(ref currentSession, null);
+            return detached is not null;
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            IReaderSession? sessionToDispose = Interlocked.Exchange(ref currentSession, null);
+            if (sessionToDispose is not null)
+            {
+                await TryDisposeQuietlyAsync(sessionToDispose).ConfigureAwait(false);
+            }
         }
     }
 

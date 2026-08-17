@@ -363,6 +363,20 @@ internal sealed class LlrpReaderSession : IReaderSession
         reader.GpiChanged -= OnGpiChanged;
         try
         {
+            // DisposeAsync must be a hard transport boundary for temporary Probe
+            // sessions.  The SDK normally closes the transport from DisposeAsync,
+            // but an exception while stopping its background pump can otherwise
+            // leave the TCP connection owned by a single-client Reader.  Make the
+            // graceful disconnect best-effort first, then always run SDK disposal.
+            try
+            {
+                await reader.DisconnectAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                logger?.LogDebug(ex, "LLRP session graceful disconnect failed during disposal; continuing with SDK disposal.");
+            }
+
             await reader.DisposeAsync().ConfigureAwait(false);
         }
         finally

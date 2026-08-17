@@ -47,6 +47,7 @@ Planning 文档是短期工作文档：完成后把结果归档回主计划/ADR/
 
 - [ADR 索引](decisions/README.md)
 - 当前 Inventory 生命周期事件的权威来源见 [ADR-0005](decisions/ADR-0005-inventory-lifecycle-events.md)；
+- Probe 到 Activate 的连接交接规则见 [ADR-0017](decisions/ADR-0017-probe-activate-session-handoff.md)；
   日志分类和盘存快照规则见 [ADR-0007](decisions/ADR-0007-layered-logging-and-inventory-snapshots.md)；
   SDK 引用切换规则见 [ADR-0008](decisions/ADR-0008-switchable-sdk-references.md)；
   Windows 单文件交付规则见 [ADR-0009](decisions/ADR-0009-windows-self-contained-single-file.md)；

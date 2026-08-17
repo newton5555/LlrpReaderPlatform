@@ -8,7 +8,9 @@
 因此 Remove 一旦开始清理，不会再有旧调用绕过注册表进入已释放的 Handle/Session；不同 Reader
 之间仍只竞争各自的 Reader Gate，不会被全局 registry gate 串行化：
 
-- Probe：使用临时 Session，不注册到 Fleet；
+- Probe：公开 Probe 使用临时 Session，不注册到 Fleet；在 Add 并立即启用或启动恢复已启用的标准
+  Reader 中，成功 Probe 的 Session 会通过显式 lease 交接给 `ReaderHandle`，避免紧接着 Activate
+  创建第二条 TCP 连接；
 - Activate：连接、读取身份/能力、更新 RuntimeSnapshot、断开；设置 Query/Apply 由独立短租约完成；
 - Settings、Tag Access、GPO：通过短连接租约完成，用完即断；启动恢复或故障后的陈旧 Session 在短操作入口自动执行必要的标准 Probe/扩展匹配和能力捕获，不要求先打开设置页；Tab2 的 GPI/GPO 组合状态读取在同一个短租约内完成一次 Query；
 - Tag Access 是否出现在能力目录、以及读写操作是否允许执行，以 ReaderCapabilities 的
@@ -24,7 +26,12 @@
 
 新增 Reader 会先对运行时端点做快速去重，再在 registry gate 内复核 Guid 和持久化端点；重复端点统一返回 `PlatformErrorCode.AlreadyExists`，不会落到 SQLite 唯一索引异常。Profile 持久化和 Session 注册仍在同一 registry gate 内完成，已注册的同一 Guid 不会被新 Profile 覆盖。Remove 也会持有同一 gate，直到旧 Handle 从注册表移除且 Profile 删除完成，避免同 Guid 的新 Add 被旧删除补偿误删。
 
-启动恢复时若 Reader 在 Probe 阶段离线，仍注册标准 Session 以保留用户配置；首次重新激活会重新执行标准 Probe，并在身份匹配后替换为带厂商扩展的 Session。故障、停用或 Inventory 启动失败也会使下一次激活/短操作重新解析扩展，因此同一网络地址更换 Reader 后不会复用旧设备的扩展判断。替换期间旧 Session 的迟到事件不得影响当前 Reader 生命周期。
+启动恢复时，已启用且成功探测的标准 Reader 直接交接 Probe Session 给 `ReaderHandle`，再由 Activate
+复用；若 Reader 在 Probe 阶段离线，仍注册标准 Session 以保留用户配置，首次重新激活会重新执行
+标准 Probe，并在身份匹配后替换为带厂商扩展的 Session。添加并立即启用遵循同一交接规则。需要
+厂商 Builder 扩展或必须重建时，旧 Probe/Session 的断开与 `DisposeAsync` 完成后才创建新 Session。
+故障、停用或 Inventory 启动失败也会使下一次激活/短操作重新解析扩展，因此同一网络地址更换 Reader
+后不会复用旧设备的扩展判断。替换期间旧 Session 的迟到事件不得影响当前 Reader 生命周期。
 
 `ReaderRuntimeSnapshot.ActiveExtensionIds` 与能力捕获同步更新，记录当前 Session 选择的扩展模块稳定 Id；空集合表示标准 LLRP 路径。该字段只用于运行时诊断和 UI 投影，不写入 SQLite，也不替代 `ReaderFeatureCatalog` 对具体能力的声明。
 

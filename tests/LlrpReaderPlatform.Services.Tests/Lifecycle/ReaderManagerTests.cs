@@ -175,6 +175,21 @@ public sealed class ReaderManagerTests
     }
 
     [Fact]
+    public async Task ProbeAsync_disposes_temporary_session_before_returning()
+    {
+        var sessionFactory = new FakeSessionFactory();
+        await using var manager = new ReaderManager(sessionFactory, new FakeProfileStore());
+        var session = new FakeSession();
+        sessionFactory.Queue.Enqueue(session);
+
+        ReaderProbeResult result = await manager.ProbeAsync(NewProfile());
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(1, session.DisposeCount);
+        Assert.False(session.IsConnected);
+    }
+
+    [Fact]
     public async Task InitializeAsync_restores_persisted_reader_without_requiring_it_to_be_online()
     {
         var sessionFactory = new FakeSessionFactory();
@@ -192,6 +207,25 @@ public sealed class ReaderManagerTests
         Assert.Equal(profile.Id, manager.Readers[0].ReaderId);
         Assert.True(manager.GetSnapshot(profile.Id).IsStale);
         Assert.False(restored.IsConnected);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_promotes_successful_probe_session_for_enabled_standard_reader()
+    {
+        var sessionFactory = new FakeSessionFactory();
+        var store = new FakeProfileStore();
+        ReaderProfile profile = NewProfile() with { IsEnabled = true };
+        await store.SaveAsync(profile);
+        FakeSession probeSession = new();
+        sessionFactory.Queue.Enqueue(probeSession);
+        await using var manager = new ReaderManager(sessionFactory, store);
+
+        await manager.InitializeAsync();
+
+        Assert.Single(sessionFactory.Created);
+        Assert.Equal(profile.Id, manager.Readers.Single().ReaderId);
+        Assert.Equal(ReaderState.Disconnected, manager.GetSnapshot(profile.Id).State);
+        Assert.Equal(1, probeSession.DisconnectCount);
     }
 
     [Fact]
@@ -219,13 +253,14 @@ public sealed class ReaderManagerTests
     [Fact]
     public async Task AddAsync_persists_enable_flag_when_enable_requested()
     {
-        var manager = CreateManager(out FakeProfileStore store, out _);
+        await using var manager = CreateManager(out FakeProfileStore store, out FakeSessionFactory sessionFactory);
 
         await manager.AddAsync(NewProfile(), enableAfterAdding: true);
 
         IReadOnlyList<ReaderProfile> saved = await store.GetAllAsync();
         Assert.Single(saved);
         Assert.True(saved[0].IsEnabled);
+        Assert.Single(sessionFactory.Created);
     }
 
     [Fact]
@@ -234,13 +269,17 @@ public sealed class ReaderManagerTests
         var manager = CreateManager(out FakeProfileStore store, out FakeSessionFactory sessionFactory);
         ReaderProfile profile = NewProfile();
         using var cancellation = new CancellationTokenSource();
-        var registered = new FakeSession
+        int connectAttempt = 0;
+        var registered = new FakeSession();
+        registered.BeforeConnect = () =>
         {
-            BeforeConnect = cancellation.Cancel,
-            ConnectThrows = new OperationCanceledException(),
+            if (++connectAttempt == 2)
+            {
+                cancellation.Cancel();
+                registered.ConnectThrows = new OperationCanceledException();
+            }
         };
-        sessionFactory.Queue.Enqueue(new FakeSession()); // probe
-        sessionFactory.Queue.Enqueue(registered); // registered session
+        sessionFactory.Queue.Enqueue(registered); // Probe 与 Activate 共用的 Session
 
         await Assert.ThrowsAsync<OperationCanceledException>(
             () => manager.AddAsync(profile, enableAfterAdding: true, cancellation.Token));
@@ -360,9 +399,17 @@ public sealed class ReaderManagerTests
         await using var manager = new ReaderManager(sessionFactory, store);
 
         ReaderProfile profile = NewProfile();
-        // probe 用第一个（成功），register 用第二个（激活时连接失败）。
-        sessionFactory.Queue.Enqueue(new FakeSession());
-        sessionFactory.Queue.Enqueue(new FakeSession { ConnectThrows = new TimeoutException("no reader") });
+        // Probe 与 Activate 共用同一个标准 Session；第二次 Connect 模拟激活阶段失败。
+        int connectAttempt = 0;
+        FakeSession session = new();
+        session.BeforeConnect = () =>
+        {
+            if (++connectAttempt == 2)
+            {
+                session.ConnectThrows = new TimeoutException("no reader");
+            }
+        };
+        sessionFactory.Queue.Enqueue(session);
 
         ReaderAddResult result = await manager.AddAsync(profile, enableAfterAdding: true);
 
