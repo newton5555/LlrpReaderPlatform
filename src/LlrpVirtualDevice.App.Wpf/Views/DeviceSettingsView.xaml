@@ -45,6 +45,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
                         <!-- 实例名称 -->
@@ -76,6 +77,11 @@
                         <TextBlock Grid.Row="5" Grid.Column="0" Text="最大天线通道数:" VerticalAlignment="Center" Margin="0,8" FontWeight="SemiBold" />
                         <mah:NumericUpDown Grid.Row="5" Grid.Column="1" Value="{Binding EditMaxAntennas}" IsEnabled="{Binding CanEditConfig}" Minimum="1" Maximum="32" Margin="0,4" Height="30" />
                         <TextBlock Grid.Row="5" Grid.Column="2" Text="模拟支持的天线端口总数 (1 ~ 32)" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource MahApps.Brushes.Gray2}" FontSize="11" />
+
+                        <!-- 隐式停止策略 -->
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="ROSpec 禁用策略:" VerticalAlignment="Center" Margin="0,8" FontWeight="SemiBold" />
+                        <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding EditAllowImplicitStopOnDisable}" IsEnabled="{Binding CanEditConfig}" Content="允许在 Disable 时隐式停止 ROSpec 执行" Margin="0,6" VerticalAlignment="Center" />
+                        <TextBlock Grid.Row="6" Grid.Column="2" Text="兼容传统上位机在 Disable 时不发 STOP 的行为" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource MahApps.Brushes.Gray2}" FontSize="11" />
                     </Grid>
 
                     <Separator Margin="0,12,0,16" Background="{DynamicResource MahApps.Brushes.Gray8}" />

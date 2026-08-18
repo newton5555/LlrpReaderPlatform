@@ -225,6 +225,7 @@ public sealed class VirtualDeviceManagerService : IVirtualDeviceManagerService
         {
             ListenAddress = ip,
             Port = config.Port,
+            AllowImplicitStopOnDisable = config.AllowImplicitStopOnDisable,
         };
 
         var tags = new List<VirtualTagDefinition>();

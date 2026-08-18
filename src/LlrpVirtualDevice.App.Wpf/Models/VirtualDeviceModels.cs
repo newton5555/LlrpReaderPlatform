@@ -27,6 +27,7 @@ public sealed class VirtualDeviceInstanceConfig
     public double DetectionProbability { get; set; } = 1.0;
     public int RssiJitterDb { get; set; } = 2;
     public int PresenceCycleRounds { get; set; } = 3;
+    public bool AllowImplicitStopOnDisable { get; set; } = true;
     public bool AutoStart { get; set; }
     public List<VirtualTagConfig> Tags { get; set; } = [];
 

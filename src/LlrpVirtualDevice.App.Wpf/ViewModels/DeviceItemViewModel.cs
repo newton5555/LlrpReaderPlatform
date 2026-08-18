@@ -74,6 +74,9 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     [ObservableProperty]
     private ushort _editMaxAntennas = 4;
 
+    [ObservableProperty]
+    private bool _editAllowImplicitStopOnDisable = true;
+
     public int DisplayPort => BoundPort > 0 ? BoundPort : Config.Port;
     public string EndpointDisplay => $"{Config.ListenAddress}:{DisplayPort}";
     public bool HasConnectedClients => ConnectedClients.Count > 0;
@@ -134,6 +137,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
         EditProtocolVersion = Config.ProtocolVersion;
         EditDeviceProfile = Config.DeviceProfile;
         EditMaxAntennas = Config.MaxAntennas;
+        EditAllowImplicitStopOnDisable = Config.AllowImplicitStopOnDisable;
     }
 
     public void UpdateHost(IVirtualLlrpDeviceHost newHost)
@@ -328,6 +332,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
         Config.ProtocolVersion = EditProtocolVersion;
         Config.DeviceProfile = EditDeviceProfile;
         Config.MaxAntennas = EditMaxAntennas;
+        Config.AllowImplicitStopOnDisable = EditAllowImplicitStopOnDisable;
 
         var newHost = await _managerService.CreateOrUpdateHostAsync(Config);
         UpdateHost(newHost);
