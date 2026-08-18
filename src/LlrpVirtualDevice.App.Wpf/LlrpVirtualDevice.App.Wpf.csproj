@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <RootNamespace>LlrpVirtualDevice.App.Wpf</RootNamespace>
+    <AssemblyName>LlrpVirtualDeviceStudio</AssemblyName>
+    <ApplicationIcon>Assets\LlrpReader_Pro_Icon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="artifacts\**" />
+    <EmbeddedResource Remove="artifacts\**" />
+    <None Remove="artifacts\**" />
+    <Page Remove="artifacts\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\LlrpReader_Pro_Icon.png" />
+    <Resource Include="Assets\LlrpReader_Pro_Icon_Light.png" />
+    <Resource Include="Assets\LlrpReader_Pro_Icon_Light_Title.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpDevice.Abstractions\LlrpDevice.Abstractions.csproj" />
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpDevice.Server\LlrpDevice.Server.csproj" />
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpDevice.Virtual\LlrpDevice.Virtual.csproj" />
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpDevice.Virtual.Hosting\LlrpDevice.Virtual.Hosting.csproj" />
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpNet\LlrpNet.Core\LlrpNet.Core.csproj" />
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpNet\LlrpNet.Protocol\LlrpNet.Protocol.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="FontAwesome.Sharp" />
+    <PackageReference Include="MahApps.Metro" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Extensions.Logging" />
+    <PackageReference Include="Serilog.Sinks.Async" />
+    <PackageReference Include="Serilog.Sinks.File" />
+  </ItemGroup>
+
+</Project>
