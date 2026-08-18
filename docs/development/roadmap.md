@@ -16,7 +16,7 @@
 8. **P7：WPF Consumer**——接入完整页面和 ViewModel，ViewModel 不直接碰 SDK、数据库或连接；
 9. **P8：真机与兼容性**——完成 R420、标准 Reader、未知设备、多 Reader 和故障恢复验收。
 10. **M1：多版本与多厂商推进**（dev 分支）——阶段 D（2.0 策略与版本模型）→ 阶段 A（双轴门控与语义键，ADR-0011/0012）→ 阶段 C0（Rx 灵敏度实际值显示）→ 阶段 B（1.0.1+Zebra 实验模块）→ 阶段 C（块级 Tag Access）→ 阶段 E（厂商轴扩展性）→ 阶段 F（验证收口）；范围、SDK 能力边界与缺口清单见[主计划 9.1](../llrp-framework-vision.md)。
-11. **M2：寻卡联动上报设置**（ADR-0013）——阶段 R1～R5 已完成（build 0 错误，测试全绿），R6 真机验证待设备现场；执行计划见 [planning 文档](../planning/inventory-report-linkage.md)（临时文档，完成后归档回[主计划 9.2](../llrp-framework-vision.md)并删除）。
+11. **M2：寻卡联动上报设置**（ADR-0013）——阶段 R1～R5 已完成（build 0 错误，测试全绿），R6 真机验证待设备现场；当前状态以[主计划 9.2](../llrp-framework-vision.md)、[ADR-0013](../decisions/ADR-0013-report-capability-ownership.md)和[设备矩阵](../compatibility/device-matrix.md)为准。
 ## 长期规划（未排期）
 
 - **平台虚拟设备 Data Source 化**（ADR-0016）——长期保留主计划 7.1 的 VP1～VP6：有类型来源契约 → SQLite 与路由 SessionFactory → 预设 Catalog/Contributor → Data Sources 添加与启动恢复 → 多 Reader WPF 验收。它不是当前执行顺序中的下一项；报文级虚拟设备由 SDK 仓库的独立 Virtual Reader Manager 长期规划负责。

@@ -833,7 +833,7 @@ Tab2 状态投影补充：主窗口状态刷新会重复向 Diagnostics 投影�
 ### 9.2 寻卡联动上报设置（ADR-0013 落地）
 
 > 决策：ADR-0013。实施进度：R1–R5 已完成（build 0 错误，测试全绿），R6 真机验证待设备现场。
-> 执行计划（临时文档，完成后归档并删除）：[寻卡联动上报设置实现计划](planning/inventory-report-linkage.md)。
+> 寻卡联动上报的当前状态与后续现场项，以本主计划、[ADR-0013](decisions/ADR-0013-report-capability-ownership.md) 和[设备矩阵](compatibility/device-matrix.md)为准。
 
 在初版三页 Tab 基础上，为对齐旧 `LlrpReaderStudio.Wpf` 的功能面已补充：
 
