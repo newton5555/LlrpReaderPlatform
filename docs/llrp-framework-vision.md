@@ -3,7 +3,7 @@
 > 状态：持续维护计划（2026-08-16，首个 WPF 消费者已形成可交付版本，Virtual Reader 已完成首版；预设式 Data Source 作为长期规划保留）
 > 基线仓库：`LlrpReaderStudio` 将冻结，不作为新项目的 ProjectReference 或运行时依赖；仅作为已验证行为、迁移经验和测试样例的参考。
 > 目标：在新仓库中建设可被多个 UI 消费者复用的 LLRP 应用框架。第一个消费者是新的 `LlrpReaderPlatform.App.Wpf`，未来可增加其他 UI 框架，而不复制设备生命周期、能力判断和协议编译逻辑。
-> 当前验证基线：现有项目已验证标准 LLRP 1.0.1 设备和 Impinj R420；新项目以此为回归基线，逐步扩展到更多 LLRP 设备和厂商能力。自动化测试当前为 378 项全绿（含 Virtual Reader 场景与生命周期测试）；Windows x64 交付采用 NuGet SDK、自包含单文件 `LlrpReaderPlatform.exe`。
+> 当前验证基线：现有项目已验证标准 LLRP 1.0.1 设备和 Impinj R420；新项目以此为回归基线，逐步扩展到更多 LLRP 设备和厂商能力。自动化测试当前为 382 项全绿（含 Virtual Reader 场景与生命周期测试）；Windows x64 交付采用 NuGet SDK、自包含单文件 `LlrpReaderPlatform.exe`。
 
 ## 0. 目标与定位
 
@@ -758,12 +758,12 @@ LLRPCSharp 独立 Virtual Reader Manager
 | F4 | 盘存、有界 Channel 聚合、ReaderBusy、TagAccess/GPI | 完成 |
 | F5 | Impinj 扩展模块与两阶段匹配 | 完成 |
 | F6～F8 | 首个 WPF 消费者（设备/设置/寻卡三页） | 完成首版：旧布局、原生 ProgressBar、Tab1 旧项目分组设置、Tab2 四路 GPO/GPI 状态、动态设置编辑器、实时 TagObserved、Tag Memory、Tag Lists、Inventory Runs、App Settings、About 均已接入真实服务；频率表已支持能力驱动的多选编辑，少量 L4 细节仍待增强 |
-| F9 | 测试与真机验收 | 自动化测试 378 项全绿（含 Virtual Reader 场景/回放/Session/ReaderManager 链路、本轮日志模式、快照、WPF 操作日志、Zebra 扩展语义投影和架构边界回归）；真机已完成标准 Probe/Settings Query、Impinj 扩展连接、有界 Inventory Start/Stop/Disconnect、WPF Settings Apply、设备列表刷新期间设置查询不被取消、GPI/GPO、GPI 状态查询和 GPI debounce 回写、真实 TagReport 聚合、EPC/TID/User/Reserved 四个 Memory Bank 读取、User Bank 写入恢复，以及按固件/SDK 能力画像完成 FastID/Phase/Search/Low Duty/固定频率 Apply/回读、FastID/Phase 扩展 TagReport 和 Doppler 隐藏；代码级 Connection Faulted、ReaderException、匹配 GPI Stop 触发器收敛与重新 Start、Activate/Inventory/短操作取消后的 Session 清理与取消后重新 Probe 恢复、旧 Session 迟到故障/GPI/定时停止事件和 TagReport 队列跨 Run 隔离已自动化验证；GPI/GPO 无能力查询的 Unsupported 降级已自动化验证；GPI 物理事件/触发、多 Reader、断网/重启现场恢复及其它 Memory Bank 写入仍待现场验收 |
+| F9 | 测试与真机验收 | 自动化测试 382 项全绿（含 Virtual Reader 场景/回放/Session/ReaderManager 链路、本轮日志模式、快照、WPF 操作日志、Zebra 扩展语义投影和架构边界回归）；真机已完成标准 Probe/Settings Query、Impinj 扩展连接、有界 Inventory Start/Stop/Disconnect、WPF Settings Apply、设备列表刷新期间设置查询不被取消、GPI/GPO、GPI 状态查询和 GPI debounce 回写、真实 TagReport 聚合、EPC/TID/User/Reserved 四个 Memory Bank 读取、User Bank 写入恢复，以及按固件/SDK 能力画像完成 FastID/Phase/Search/Low Duty/固定频率 Apply/回读、FastID/Phase 扩展 TagReport 和 Doppler 隐藏；代码级 Connection Faulted、ReaderException、匹配 GPI Stop 触发器收敛与重新 Start、Activate/Inventory/短操作取消后的 Session 清理与取消后重新 Probe 恢复、旧 Session 迟到故障/GPI/定时停止事件和 TagReport 队列跨 Run 隔离已自动化验证；GPI/GPO 无能力查询的 Unsupported 降级已自动化验证；GPI 物理事件/触发、多 Reader、断网/重启现场恢复及其它 Memory Bank 写入仍待现场验收 |
 | F10 | EF SQLite、启动恢复与日志 | Reader Profile、Reader Settings JSON 快照、TagList、InventoryRun、AppSettings、基础 EF Migration、启动恢复和 CRUD 测试已完成；早期 schema 变化允许清空数据库重建，不承诺历史数据兼容；WPF 已分离 ui/platform/sdk 日志并过滤 EF SQL，盘存支持 Off/FinalSnapshot/RawReports |
 | F11～F14 | 完整设置、完整 Inventory、全应用迁移、多设备扩展 | 首版代码完成，自动化覆盖多 Reader 并行和设备异常生命周期；Virtual Reader 已支持场景导入、确定性回放、跨 Session 状态和 WPF 显式开发模式；持续进行真机深度验收、旧设置细节增强、更多标准/厂商设备与故障恢复验收 |
 | F15 | 平台虚拟设备 Data Source 化 | 长期规划、未排期；已记录 ADR-0016 与 VP1～VP6，当前继续使用 `LLRP_VIRTUAL_SCENARIO` 单场景全局工厂模式 |
 
-**测试基线**：`dotnet build LlrpReaderPlatform.slnx` 0 警告 0 错误；`dotnet test LlrpReaderPlatform.slnx --no-build` 378 项全绿（Contracts 5、Services 188、Infrastructure 10、App.Wpf 133、Architecture 9、Extensions.Impinj 17、Extensions.Zebra 6、VirtualReader 10）
+**测试基线**：`dotnet build LlrpReaderPlatform.slnx` 0 警告 0 错误；`dotnet test LlrpReaderPlatform.slnx --no-build` 382 项全绿（Contracts 5、Services 192、Infrastructure 10、App.Wpf 133、Architecture 9、Extensions.Impinj 17、Extensions.Zebra 6、VirtualReader 10）
 
 本轮补充的运行时边界：退出清理由注册表 Gate 与释放闸门统一保护，关闭期间拒绝晚到 Add/Probe；已知能力下拒绝超范围 Inventory 天线；Tag Access 选择条件拒绝 LLRP `ushort` 长度溢出；GPO 端口 0 在 WPF Tab2 入口拦截；Impinj GPI debounce 按能力快照的 GPI 数量生成和回写，明确为 0 的设备不发送不存在的端口配置。
 Services/应用测试使用 `TestKit/FakeSession`，Infrastructure 测试使用内存 SQLite。
@@ -801,7 +801,7 @@ Tab2 状态投影补充：主窗口状态刷新会重复向 Diagnostics 投影�
 - 直接从寻卡页启动成功后，同一长连接会刷新身份、天线能力、CapabilityRevision 和 FeatureCatalog，再进入 `Inventorying`；因此“寻卡先于设置”不会留下能力陈旧的运行时快照。
 - Tag Memory、GPI/GPO 等短操作对启动恢复或故障后的陈旧 Session 也执行必要的标准 Probe、扩展匹配和能力捕获；页面不依赖用户先打开设置页，成功后仍按短租约断开并回到 `Disconnected`。
 
-> 2026-08-16 架构债务收口后，当前自动化基线以本文件 F9 表格为准：378 项全绿；新增
+> 2026-08-16 架构债务收口后，当前自动化基线以本文件 F9 表格为准：382 项全绿；新增
 > `Extensions.Zebra.Tests` 6 项，Architecture.Tests 9 项。历史小节中的早期测试数字仅保留
 > 为阶段记录，不代表当前基线。厂商 Feature 归属和 WPF 语义投影见 [ADR-0014](decisions/ADR-0014-vendor-feature-ownership-and-ui-semantics.md)。
 
@@ -809,7 +809,7 @@ Tab2 状态投影补充：主窗口状态刷新会重复向 Diagnostics 投影�
 
 > 决策依据：[ADR-0011](decisions/ADR-0011-settings-page-dual-axis-gating.md)（一页 UI、双轴正交门控：标准轴按 `NegotiatedProtocolVersion`、厂商轴按 `ManufacturerId` + 能力画像）、[ADR-0012](decisions/ADR-0012-semantic-feature-keys-and-graduation.md)（语义能力键 + `StandardizedSince` 毕业机制 + 标准优先仲裁）与 [ADR-0013](decisions/ADR-0013-report-capability-ownership.md)（报告字段走寻卡页联动、数据能力留在设置页）。本小节是本仓库当前唯一的多版本推进计划，不另建第二份阶段计划。
 
-**SDK 1.4.0 能力边界**（已核实，决定平台可做范围）：
+**SDK 1.5.0 能力边界**（已核实，决定平台可做范围）：
 
 - 三版本协议适配器（26 成员接口）齐全：Settings Query/Apply、Inventory、Tag Access、报告、事件均可经 SDK 托管层按协商版本下发；
 - 块级 Tag Access：`BlockErase` 与块写（`useBlockWrite`）三版本托管；`BlockPermalock`/Recommission 未托管；
@@ -825,7 +825,7 @@ Tab2 状态投影补充：主窗口状态刷新会重复向 Diagnostics 投影�
 4. ✅ **阶段 B：1.0.1+Zebra 扩展模块（实验性）**（完成）——新项目镜像 Impinj 四件套（本地 ProjectReference `LlrpNet.Protocol.Zebra`/`LlrpSdk.Extensions.Zebra`，NuGet 包双模式）；模块适用性 = 厂商 161 且 Version101；`UseZebra()`；报告投影 phase/gps/xpc 挂语义键；7+6 设置行仅 FX9600 画像（161/96008 + 固件 3.32.37.0）门控，未知 Zebra 只投影不给设置行；设置页 Zebra 分组标注 Experimental；寻卡页 Phase/GPS/XPC 三个可选列（默认隐藏，走列头选择器）；配套测试；未标定前不声明支持。
 5. ✅ **阶段 C：块级 Tag Access**（完成，版本无关）——Contracts 增块擦除/块写请求模型与 `StandardBlockTagAccess` 能力；Services 映射 `BlockEraseTagRequest` 与 `useBlockWrite`；Tag Memory UI 操作区按能力显隐；R420 真机验收块擦除/块写后回填矩阵。
 6. ✅ **阶段 E：厂商轴扩展性**（完成）——厂商模块 `IsApplicable` 统一带协商版本判定；新厂商接入步骤清单写入 [架构文档](architecture/extensions-and-settings.md)，为未来 1.1+其他厂商、2.0+厂商组合做准备。
-7. ⬜ **阶段 F：验证收口**（进行中/待办）——本地 SDK 与 NuGet 1.4.0 双模式 build/test 全绿；R420 真机回归（含块级操作与 Rx 显示回读）；Zebra 如有 FX9600 按 [真机验收运行手册](development/hardware-validation-runbook.md) 逐参数标定；设备矩阵与文档回填。
+7. ⬜ **阶段 F：验证收口**（进行中/待办）——本地 SDK 与 NuGet 1.5.0 双模式 build/test 全绿；R420 真机回归（含块级操作与 Rx 显示回读）；Zebra 如有 FX9600 按 [真机验收运行手册](development/hardware-validation-runbook.md) 逐参数标定；设备矩阵与文档回填。
 
 **SDK 未托管项的三层纪律**（“上层先做、留接口给 SDK”）：Contracts 契约与语义键先落地；Services 只留方法挂点；UI 行按 Feature 隐藏，不得以“页面可操作”冒充完成。**SDK 缺口跟踪清单**：BlockPermalock/Recommission、2.0 安全 Tag Access、标准 XPC——SDK 托管后按语义键点亮，不做迁移。
 

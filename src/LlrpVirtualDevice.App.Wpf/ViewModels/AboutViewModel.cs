@@ -16,9 +16,9 @@ public sealed partial class AboutViewModel : ObservableObject
 
     public string AppTitle => "LLRP 虚拟设备管理中心";
     public string AppEnglishTitle => "LLRP Virtual Device Center (Studio)";
-    public string Version => "v1.4.0";
+    public string Version => "v1.5.0";
     public string BuildDate => "2026-08";
-    public string EngineVersion => "LLRPCSharp Protocol Engine v1.4.0";
+    public string EngineVersion => "LLRPCSharp Protocol Engine v1.5.0";
     public string Description => "本软件是专用于 RFID 上位机开发与测试的独立虚拟设备管理平台。基于 EPCglobal LLRP 标准协议与 LLRPCSharp 核心引擎构建，支持多端口 TCP 报文级仿真、协议版本协商（LLRP 1.0.1 / 1.1 / 2.0）、虚拟标签库管理、RF 场景模拟以及全流程实时报文监控与故障注入。";
 
     public string DotNetVersion => RuntimeInformation.FrameworkDescription;
