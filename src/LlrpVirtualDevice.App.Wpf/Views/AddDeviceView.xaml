@@ -39,6 +39,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <!-- 实例名称 -->
@@ -64,6 +65,10 @@
                 <!-- 天线数量 -->
                 <TextBlock Grid.Row="5" Grid.Column="0" Text="最大天线数量:" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13" Opacity="0.85" Margin="0,8" />
                 <mah:NumericUpDown Grid.Row="5" Grid.Column="1" Value="{Binding MaxAntennas}" Minimum="1" Maximum="32" Margin="0,4" Padding="6,4" FontSize="13" HorizontalAlignment="Left" Width="140" />
+
+                <!-- 隐式停止策略 -->
+                <TextBlock Grid.Row="6" Grid.Column="0" Text="ROSpec 禁用策略:" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13" Opacity="0.85" Margin="0,8" />
+                <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding AllowImplicitStopOnDisable}" Content="允许在 Disable 时隐式停止 ROSpec 执行" Margin="0,6" VerticalAlignment="Center" />
             </Grid>
 
             <Separator Margin="0,0,0,16" Background="{DynamicResource MahApps.Brushes.Gray7}" />

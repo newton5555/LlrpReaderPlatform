@@ -26,6 +26,9 @@ public sealed partial class AddDeviceViewModel : ObservableObject
     private ushort _maxAntennas = 4;
 
     [ObservableProperty]
+    private bool _allowImplicitStopOnDisable = true;
+
+    [ObservableProperty]
     private VirtualRfScenario _scenario = VirtualRfScenario.Static;
 
     [ObservableProperty]
@@ -51,6 +54,7 @@ public sealed partial class AddDeviceViewModel : ObservableObject
         ProtocolVersion = config.ProtocolVersion;
         DeviceProfile = config.DeviceProfile;
         MaxAntennas = config.MaxAntennas;
+        AllowImplicitStopOnDisable = config.AllowImplicitStopOnDisable;
         Scenario = config.Scenario;
         DetectionProbability = config.DetectionProbability;
         RssiJitterDb = config.RssiJitterDb;
@@ -68,6 +72,7 @@ public sealed partial class AddDeviceViewModel : ObservableObject
             ProtocolVersion = ProtocolVersion,
             DeviceProfile = DeviceProfile,
             MaxAntennas = MaxAntennas,
+            AllowImplicitStopOnDisable = AllowImplicitStopOnDisable,
             Scenario = Scenario,
             DetectionProbability = DetectionProbability,
             RssiJitterDb = RssiJitterDb,
