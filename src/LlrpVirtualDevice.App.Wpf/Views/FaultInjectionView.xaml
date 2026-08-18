@@ -1,0 +1,83 @@
+<UserControl x:Class="LlrpVirtualDevice.App.Wpf.Views.FaultInjectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="clr-namespace:FontAwesome.Sharp;assembly=FontAwesome.Sharp"
+             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+        <StackPanel>
+            <Border Style="{StaticResource StandardCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="事件与故障模拟注入 (Event &amp; Fault Injection)" FontSize="15" FontWeight="Bold" Margin="0,0,0,8" Foreground="{DynamicResource MahApps.Brushes.Text}" />
+                    <TextBlock Text="向已连接的上位机客户端主动发送异步通知与硬件事件，用于测试客户端在断网重连、天线掉线告警以及外部 GPI 信号触发时的容错与响应逻辑。" Foreground="{DynamicResource MahApps.Brushes.Gray2}" TextWrapping="Wrap" LineHeight="20" />
+                </StackPanel>
+            </Border>
+
+            <!-- 天线事件卡片 -->
+            <Border Style="{StaticResource StandardCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="天线连接状态事件 (Antenna Event)" FontSize="13" FontWeight="Bold" Margin="0,0,0,12" Foreground="{DynamicResource MahApps.Brushes.Text}" />
+                    <WrapPanel>
+                        <Button Command="{Binding InjectAntennaEventCommand}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
+                            <StackPanel Orientation="Horizontal">
+                                <fa:IconBlock Icon="TowerBroadcast" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#16A34A" />
+                                <TextBlock Text="注入: 天线 1 已连接 (Antenna Connected)" />
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding InjectAntennaEventCommand}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
+                            <StackPanel Orientation="Horizontal">
+                                <fa:IconBlock Icon="TriangleExclamation" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#DC2626" />
+                                <TextBlock Text="注入: 天线 1 意外断开 (Antenna Disconnected)" />
+                            </StackPanel>
+                        </Button>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- GPI 输入触发事件卡片 -->
+            <Border Style="{StaticResource StandardCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="GPI 外部输入事件 (General Purpose Input Event)" FontSize="13" FontWeight="Bold" Margin="0,0,0,12" Foreground="{DynamicResource MahApps.Brushes.Text}" />
+                    <WrapPanel>
+                        <Button Command="{Binding InjectGpiEventCommand}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
+                            <StackPanel Orientation="Horizontal">
+                                <fa:IconBlock Icon="Bolt" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#D29922" />
+                                <TextBlock Text="注入: GPI 1 电平变高 (Port 1 High)" />
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding InjectGpiEventCommand}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
+                            <StackPanel Orientation="Horizontal">
+                                <fa:IconBlock Icon="Bolt" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#8B949E" />
+                                <TextBlock Text="注入: GPI 1 电平变低 (Port 1 Low)" />
+                            </StackPanel>
+                        </Button>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 设备运行告警卡片 -->
+            <Border Style="{StaticResource StandardCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="读写器异常告警事件 (Reader Event Notification)" FontSize="13" FontWeight="Bold" Margin="0,0,0,12" Foreground="{DynamicResource MahApps.Brushes.Text}" />
+                    <WrapPanel>
+                        <Button Command="{Binding InjectGpiEventCommand}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
+                            <StackPanel Orientation="Horizontal">
+                                <fa:IconBlock Icon="CircleExclamation" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#DC2626" />
+                                <TextBlock Text="注入: 报告缓冲区溢出 (Buffer Full Warning)" />
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding InjectGpiEventCommand}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
+                            <StackPanel Orientation="Horizontal">
+                                <fa:IconBlock Icon="HeartPulse" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#1F6FEB" />
+                                <TextBlock Text="注入: 发送 KeepAlive 心跳请求" />
+                            </StackPanel>
+                        </Button>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

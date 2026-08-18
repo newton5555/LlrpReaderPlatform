@@ -1,0 +1,100 @@
+<UserControl x:Class="LlrpVirtualDevice.App.Wpf.Views.PacketInspectorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="clr-namespace:FontAwesome.Sharp;assembly=FontAwesome.Sharp"
+             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="150" />
+        </Grid.RowDefinitions>
+
+        <!-- 顶部工具栏 (StandardCardStyle) -->
+        <Border Grid.Row="0" Style="{StaticResource StandardCardStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="实时报文监控台 (Packet Inspector)" FontSize="14" FontWeight="Bold" Margin="0,0,16,0" VerticalAlignment="Center" Foreground="{DynamicResource MahApps.Brushes.Text}" />
+                    <Border Background="{DynamicResource MahApps.Brushes.Gray8}" CornerRadius="4" Padding="8,2" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding ObservedMessages.Count, StringFormat='{}缓冲区: {0} / 500 条'}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MahApps.Brushes.Text}" />
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Command="{Binding ClearMessagesCommand}" Style="{StaticResource FlatActionButtonStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <fa:IconBlock Icon="Eraser" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="清空报文缓冲区" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 报文流水列表 DataGrid -->
+        <Border Grid.Row="1" Style="{StaticResource StandardCardStyle}" Margin="0,0,0,12">
+            <DataGrid ItemsSource="{Binding ObservedMessages}"
+                      SelectedItem="{Binding SelectedMessage}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      CanUserAddRows="False"
+                      GridLinesVisibility="Horizontal"
+                      HorizontalGridLinesBrush="{DynamicResource MahApps.Brushes.Gray8}"
+                      RowHeight="36"
+                      FontSize="12"
+                      BorderThickness="1"
+                      BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                      VirtualizingPanel.IsVirtualizing="True"
+                      VirtualizingPanel.VirtualizationMode="Recycling">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="时间戳" Binding="{Binding Timestamp, StringFormat='{}{0:HH:mm:ss.fff}'}" Width="120" ElementStyle="{StaticResource CenteredMonoCellTextStyle}" />
+                    <DataGridTemplateColumn Header="方向" Width="80">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border CornerRadius="3" Padding="8,2" HorizontalAlignment="Center" VerticalAlignment="Center" Background="{Binding Direction, Converter={StaticResource DirectionToBrushConverter}}">
+                                    <TextBlock Text="{Binding Direction}" Foreground="White" FontWeight="Bold" FontSize="11" />
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="版本" Binding="{Binding ProtocolVersion}" Width="80" ElementStyle="{StaticResource CenteredCellTextStyle}" />
+                    <DataGridTextColumn Header="消息类型 (Type)" Binding="{Binding MessageType}" Width="110" ElementStyle="{StaticResource CenteredMonoCellTextStyle}" />
+                    <DataGridTextColumn Header="消息名称 (Message Name)" Binding="{Binding MessageName}" Width="260" ElementStyle="{StaticResource LeftMonoCellTextStyle}" />
+                    <DataGridTextColumn Header="Message ID" Binding="{Binding MessageId}" Width="100" ElementStyle="{StaticResource CenteredMonoCellTextStyle}" />
+                    <DataGridTextColumn Header="摘要 / 状态详情" Binding="{Binding Detail}" Width="*" ElementStyle="{StaticResource LeftCellTextStyle}" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <!-- 底部选中报文详情 -->
+        <Border Grid.Row="2" Style="{StaticResource StandardCardStyle}" Margin="0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock Text="报文详情与字段分析 (Message Detail)" FontWeight="Bold" FontSize="12" Margin="0,0,0,8" Foreground="{DynamicResource MahApps.Brushes.Gray2}" />
+                <TextBox Grid.Row="1"
+                         IsReadOnly="True"
+                         TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto"
+                         Background="{DynamicResource MahApps.Brushes.Gray10}"
+                         BorderThickness="1"
+                         BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
+                         FontFamily="Consolas, Courier New"
+                         FontSize="12"
+                         Padding="8"
+                         Text="{Binding SelectedMessage.Detail, TargetNullValue='请在上方列表点击选中一条 LLRP 报文以查看结构与字段详情...'}" />
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
