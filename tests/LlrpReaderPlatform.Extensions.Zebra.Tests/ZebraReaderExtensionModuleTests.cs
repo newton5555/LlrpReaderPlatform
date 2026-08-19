@@ -128,6 +128,10 @@ public sealed class ZebraReaderExtensionModuleTests
                             [ZebraReaderConfiguration.ExtensionKey] = new ZebraReaderConfiguration
                             {
                                 RadioPowerState = true,
+                                SaveConfiguration = false,
+                                SaveTagData = false,
+                                SaveTagEventData = false,
+                                EnableNxpSetAndResetQuietCommands = false,
                             },
                         },
                     },
@@ -149,6 +153,18 @@ public sealed class ZebraReaderExtensionModuleTests
         Assert.Equal(SettingsSemantics.PhaseReport, phase.SemanticId);
         Assert.Equal(SettingsGroups.Report, phase.GroupKey);
         Assert.True(phase.IsReadOnly);
+
+        string[] optionalKeys =
+        [
+            ZebraSettingsContributor.SaveConfiguration,
+            ZebraSettingsContributor.SaveTagData,
+            ZebraSettingsContributor.SaveTagEventData,
+            ZebraSettingsContributor.EnableNxpQuietCommands,
+        ];
+        Assert.Equal(4, entries.Count(entry => optionalKeys.Contains(entry.Key, StringComparer.Ordinal)));
+        Assert.All(
+            entries.Where(entry => optionalKeys.Contains(entry.Key, StringComparer.Ordinal)),
+            static entry => Assert.True(entry.IsOptional));
     }
 
     private static ReaderProbeInfo Probe(

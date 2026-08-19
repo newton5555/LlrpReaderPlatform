@@ -60,10 +60,10 @@ public sealed class ZebraSettingsContributor : ISettingsExtensionContributor
             AddBool(entries, RadioPowerState, "Zebra radio power state", configuration?.RadioPowerState, groupKey: SettingsGroups.Other);
             AddByte(entries, RadioTransmitDelay, "Zebra radio transmit delay", configuration?.RadioTransmitDelay, groupKey: SettingsGroups.Other);
             AddBool(entries, AutonomousModeState, "Zebra autonomous mode state", configuration?.AutonomousModeState, groupKey: SettingsGroups.Other);
-            AddBool(entries, SaveConfiguration, "Zebra save configuration", configuration?.SaveConfiguration, groupKey: SettingsGroups.Other);
-            AddBool(entries, SaveTagData, "Zebra save tag data", configuration?.SaveTagData, groupKey: SettingsGroups.Other);
-            AddBool(entries, SaveTagEventData, "Zebra save tag event data", configuration?.SaveTagEventData, groupKey: SettingsGroups.Other);
-            AddBool(entries, EnableNxpQuietCommands, "Zebra NXP set/reset-quiet (experimental)", configuration?.EnableNxpSetAndResetQuietCommands, groupKey: SettingsGroups.Other);
+            AddBool(entries, SaveConfiguration, "Zebra save configuration", configuration?.SaveConfiguration, groupKey: SettingsGroups.Other, isOptional: true);
+            AddBool(entries, SaveTagData, "Zebra save tag data", configuration?.SaveTagData, groupKey: SettingsGroups.Other, isOptional: true);
+            AddBool(entries, SaveTagEventData, "Zebra save tag event data", configuration?.SaveTagEventData, groupKey: SettingsGroups.Other, isOptional: true);
+            AddBool(entries, EnableNxpQuietCommands, "Zebra NXP set/reset-quiet (experimental)", configuration?.EnableNxpSetAndResetQuietCommands, groupKey: SettingsGroups.Other, isOptional: true);
         }
 
         if (supportsInventory)
@@ -132,7 +132,8 @@ public sealed class ZebraSettingsContributor : ISettingsExtensionContributor
         bool? currentValue,
         string? readOnlyReason = null,
         string? semanticId = null,
-        string? groupKey = null)
+        string? groupKey = null,
+        bool isOptional = false)
     {
         if (currentValue is null)
         {
@@ -150,6 +151,7 @@ public sealed class ZebraSettingsContributor : ISettingsExtensionContributor
             ReadOnlyReason = readOnlyReason,
             SemanticId = semanticId,
             GroupKey = groupKey,
+            IsOptional = isOptional,
         });
     }
 

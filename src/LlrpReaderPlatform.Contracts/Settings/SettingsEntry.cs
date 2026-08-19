@@ -71,6 +71,12 @@ public sealed record SettingsEntry
     /// <summary>只读原因（能力不支持、需要连接等）；null 表示可编辑。</summary>
     public string? ReadOnlyReason { get; init; }
 
+    /// <summary>
+    /// 是否允许保存 Draft 时省略此项。可选项通常表示厂商扩展或由其他页面联动的
+    /// 设置；如果 UI 没有提供该项，省略不应被当作“未设置”错误。
+    /// </summary>
+    public bool IsOptional { get; init; }
+
     public SettingsSource Source { get; init; } = SettingsSource.Standard;
 
     public bool IsReadOnly => ReadOnlyReason is not null;

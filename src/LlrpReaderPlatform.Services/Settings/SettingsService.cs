@@ -188,7 +188,8 @@ public sealed class SettingsService : IReaderSettingsService
                 // Report fields are intentionally not exposed by the WPF settings page.
                 // An omitted report value means "keep the current Reader value"; the SDK
                 // compiler already applies that baseline when it builds the next settings.
-                if (IsInventoryReportSetting(entry.Key)
+                if (entry.IsOptional
+                    || IsInventoryReportSetting(entry.Key)
                     || (rfModeSupplied && entry.Key == SettingsKeys.Tari))
                 {
                     continue;
@@ -406,7 +407,8 @@ public sealed class SettingsService : IReaderSettingsService
                 // Report fields are intentionally not exposed by the WPF settings page.
                 // ApplyAsync validates against the freshly queried live layout, so it must
                 // use the same omission rule as the preflight validation above.
-                if (IsInventoryReportSetting(entry.Key)
+                if (entry.IsOptional
+                    || IsInventoryReportSetting(entry.Key)
                     || (rfModeSupplied && entry.Key == SettingsKeys.Tari))
                 {
                     continue;
@@ -796,6 +798,7 @@ public sealed class SettingsService : IReaderSettingsService
         Range = entry.Range,
         VisibleWhen = entry.VisibleWhen,
         ReadOnlyReason = entry.ReadOnlyReason,
+        IsOptional = entry.IsOptional,
         Source = entry.Source,
     };
 
@@ -859,6 +862,7 @@ public sealed class SettingsService : IReaderSettingsService
                     Range = cached.Range,
                     VisibleWhen = cached.VisibleWhen,
                     ReadOnlyReason = cached.ReadOnlyReason,
+                    IsOptional = cached.IsOptional,
                     Source = cached.Source,
                 });
             }
@@ -917,6 +921,7 @@ public sealed class SettingsService : IReaderSettingsService
         public SettingsRange? Range { get; init; }
         public string? VisibleWhen { get; init; }
         public string? ReadOnlyReason { get; init; }
+        public bool IsOptional { get; init; }
         public SettingsSource Source { get; init; }
     }
 
