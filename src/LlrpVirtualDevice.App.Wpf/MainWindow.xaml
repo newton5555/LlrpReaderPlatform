@@ -274,19 +274,19 @@
                                     <TextBlock Text="重启" />
                                 </StackPanel>
                             </Button>
-                            <Button Command="{Binding StopCommand}" IsEnabled="{Binding CanStop}" Style="{StaticResource FlatActionButtonStyle}" Height="32" Margin="0,0,8,0" ToolTip="停止虚拟服务">
+                            <Button Command="{Binding StopCommand}" IsEnabled="{Binding CanStop}" Style="{StaticResource DangerActionButtonStyle}" Height="32" Margin="0,0,8,0" ToolTip="停止虚拟服务">
                                 <StackPanel Orientation="Horizontal">
-                                    <fa:IconBlock Icon="Stop" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" Foreground="#DC2626" />
-                                    <TextBlock Text="停止" Foreground="#DC2626" />
+                                    <fa:IconBlock Icon="Stop" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="停止" />
                                 </StackPanel>
                             </Button>
                             <Button Command="{Binding DataContext.DeleteDeviceCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                     CommandParameter="{Binding}"
                                     IsEnabled="{Binding CanEditConfig}"
-                                    Style="{StaticResource FlatCircleButtonStyle}"
+                                    Style="{StaticResource DangerCircleButtonStyle}"
                                     Width="32" Height="32"
                                     ToolTip="删除读写器 (运行中不可删除)">
-                                <fa:IconBlock Icon="Trash" FontSize="12" Foreground="#DC2626" />
+                                <fa:IconBlock Icon="Trash" FontSize="12" />
                             </Button>
                         </StackPanel>
                     </Grid>

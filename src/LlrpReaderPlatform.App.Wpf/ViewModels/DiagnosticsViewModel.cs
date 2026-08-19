@@ -87,9 +87,24 @@ public partial class DiagnosticsViewModel : ObservableObject, IPageOperationOwne
         lifetimeToken = lifetimeCts.Token;
         operationScopeCts = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
         inventory.GpiChanged += OnGpiChanged;
+        ResetGpis(4);
     }
 
     public ObservableCollection<GpiPortStatus> Gpis { get; } = [];
+
+    private void ResetGpis(int count)
+    {
+        Gpis.Clear();
+        for (ushort port = 1; port <= count; port++)
+        {
+            Gpis.Add(new GpiPortStatus
+            {
+                PortNumber = port,
+                Configured = false,
+                State = false,
+            });
+        }
+    }
 
     /// <summary>设备设置页切换 Reader 时同步诊断 Tab 的目标 Reader。</summary>
     public void SelectReader(Guid? readerId)
@@ -165,7 +180,15 @@ public partial class DiagnosticsViewModel : ObservableObject, IPageOperationOwne
                 Gpo2 = false;
                 Gpo3 = false;
                 Gpo4 = false;
-                Gpis.Clear();
+                if (nextGpiStatusAvailable)
+                {
+                    int count = gpiCount ?? 4;
+                    ResetGpis(count);
+                }
+                else
+                {
+                    Gpis.Clear();
+                }
             }
             finally
             {

@@ -1391,11 +1391,13 @@ public sealed partial class LegacyGpiSettingsRowViewModel : ObservableObject
         }
     }
 
+    public static IReadOnlyList<string> LevelChoices { get; } = ["High", "Low"];
+
     public ushort Port { get; }
     public bool IsStartEditable => IsEditable(startEnabled) && IsEditable(startPort);
-    public bool IsStartLevelEditable => IsEditable(startLevel);
+    public bool IsStartLevelEditable => StartEnabled && IsEditable(startLevel);
     public bool IsStopEditable => IsEditable(stopEnabled) && IsEditable(stopPort);
-    public bool IsStopLevelEditable => IsEditable(stopLevel);
+    public bool IsStopLevelEditable => StopEnabled && IsEditable(stopLevel);
     public bool IsDebounceEnabled => debounce is not null && !debounce.IsReadOnly;
 
     public bool StartEnabled
@@ -1485,8 +1487,10 @@ public sealed partial class LegacyGpiSettingsRowViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(StartEnabled));
         OnPropertyChanged(nameof(StartLevel));
+        OnPropertyChanged(nameof(IsStartLevelEditable));
         OnPropertyChanged(nameof(StopEnabled));
         OnPropertyChanged(nameof(StopLevel));
+        OnPropertyChanged(nameof(IsStopLevelEditable));
     }
 
     private bool IsPortSelected(SettingsEntryRowViewModel? enabled, SettingsEntryRowViewModel? selectedPort) =>

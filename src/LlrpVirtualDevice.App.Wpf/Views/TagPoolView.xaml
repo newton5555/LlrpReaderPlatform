@@ -47,10 +47,10 @@
                                 <TextBlock Text="快速生成 20 张" />
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding DeleteSelectedTagCommand}" IsEnabled="{Binding CanEditConfig}" Style="{StaticResource FlatActionButtonStyle}">
+                        <Button Command="{Binding DeleteSelectedTagCommand}" IsEnabled="{Binding CanEditConfig}" Style="{StaticResource DangerActionButtonStyle}">
                             <StackPanel Orientation="Horizontal">
-                                <fa:IconBlock Icon="Trash" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" Foreground="#DC2626" />
-                                <TextBlock Text="删除所选" Foreground="#DC2626" />
+                                <fa:IconBlock Icon="Trash" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Text="删除所选" />
                             </StackPanel>
                         </Button>
                     </StackPanel>

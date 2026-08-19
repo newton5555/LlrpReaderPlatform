@@ -7,7 +7,7 @@
     <UserControl.Resources>
         <local:BindingProxy x:Key="InventoryVmProxy" Data="{Binding}" />
         <Style x:Key="InventoryLifecycleButtonStyle" TargetType="Button"
-               BasedOn="{StaticResource FlatActionButtonStyle}">
+               BasedOn="{StaticResource PrimaryActionButtonStyle}">
             <Setter Property="Padding" Value="14,8" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="FontWeight" Value="SemiBold" />
@@ -41,6 +41,8 @@
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding IsInventoryRunning}" Value="True">
                                     <Setter Property="Content" Value="Stop" />
+                                    <Setter Property="Background" Value="#DC2626" />
+                                    <Setter Property="BorderBrush" Value="#DC2626" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
