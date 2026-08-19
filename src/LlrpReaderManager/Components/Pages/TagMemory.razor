@@ -1,0 +1,365 @@
+@page "/tag-memory"
+@implements IDisposable
+@inject ReaderManagerState State
+
+<div class="section-header">
+    <div>
+        <h1 class="section-title">Tag Memory</h1>
+        <p class="section-subtitle">Execute and inspect one complete Tag Access short-connection operation.</p>
+    </div>
+    <div class="toolbar">
+        <label class="form-label" for="tag-memory-reader">Reader</label>
+        <select id="tag-memory-reader" style="width: min(300px, 55vw);" value="@SelectedReaderText" @onchange="SelectReader">
+            <option value="">Choose Reader</option>
+            @foreach (ReaderRuntimeSnapshot reader in State.Readers)
+            {
+                <option value="@reader.ReaderId">@reader.Profile.Name · @reader.Profile.Host</option>
+            }
+        </select>
+    </div>
+</div>
+
+@if (SelectedReader is null)
+{
+    <div class="card empty-state">
+        <h2>Select a Reader</h2>
+        <p>Tag Memory uses a short connection and remains separate from the Inventory run.</p>
+    </div>
+}
+else
+{
+    <div class="tag-access-layout">
+        <div class="stack">
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">Target</h2>
+                        <div class="form-hint settings-card-description">@SelectedReader.Profile.Host:@SelectedReader.Profile.Port · @SelectedReader.State</div>
+                    </div>
+                    <span class="status-badge @(SelectedReader.IsEnabled ? "ok" : "warn")">@(SelectedReader.IsEnabled ? "Enabled" : "Disabled")</span>
+                </div>
+                <div class="card-pad stack">
+                    <div class="card-grid">
+                        <div class="form-group">
+                            <label class="form-label">Match bank</label>
+                            <select @bind="selectionBank">
+                                <option value="Epc">EPC</option>
+                                <option value="Tid">TID</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Target EPC / TID</label>
+                            <input type="text" @bind="target" list="tag-targets" placeholder="Enter hexadecimal target" />
+                            <datalist id="tag-targets">
+                                @foreach (TagObservation tag in Tags)
+                                {
+                                    <option value="@tag.Epc" />
+                                    @if (!string.IsNullOrWhiteSpace(tag.Tid))
+                                    {
+                                        <option value="@tag.Tid" />
+                                    }
+                                }
+                            </datalist>
+                        </div>
+                    </div>
+                    <div class="form-hint">Inventory observations are suggestions only. The value remains manually editable.</div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Memory request</h2>
+                    <span class="status-badge neutral">C1G2</span>
+                </div>
+                <div class="card-pad stack">
+                    <div class="card-grid">
+                        <div class="form-group">
+                            <label class="form-label">Memory bank</label>
+                            <select @bind="memoryBank">
+                                <option value="Reserved">Reserved</option>
+                                <option value="Epc">EPC</option>
+                                <option value="Tid">TID</option>
+                                <option value="User">User</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Word pointer</label>
+                            <input type="number" min="0" @bind="wordPointer" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Word count</label>
+                            <input type="number" min="1" @bind="wordCount" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Access password</label>
+                            <input type="text" @bind="accessPassword" placeholder="00000000" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Data (hex)</label>
+                        <textarea @bind="dataHex" placeholder="Read returns data here. Enter an even-length hexadecimal value before Write."></textarea>
+                    </div>
+                    <div class="toolbar">
+                        <button class="btn btn-primary" @onclick="ReadAsync" disabled="@pageBusy">Read memory</button>
+                        <button class="btn" @onclick="WriteAsync" disabled="@pageBusy">Write memory</button>
+                        @if (pageBusy)
+                        {
+                            <span class="status-badge warn">Connecting and executing</span>
+                        }
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(validationMessage))
+                    {
+                        <div class="notice error">@validationMessage</div>
+                    }
+                </div>
+            </section>
+
+            @if (selectedOperation is not null)
+            {
+                <section class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Operation detail</h2>
+                        <span class="status-badge @(selectedOperation.Succeeded ? "ok" : "danger")">@(selectedOperation.Succeeded ? "Succeeded" : "Failed")</span>
+                    </div>
+                    <div class="card-pad stack">
+                        <div class="operation-detail-grid">
+                            <div><div class="field-label">Operation</div><div class="field-value">@selectedOperation.Kind</div></div>
+                            <div><div class="field-label">Reader</div><div class="field-value mono">@selectedOperation.ReaderEndpoint</div></div>
+                            <div><div class="field-label">Started</div><div class="field-value mono">@selectedOperation.StartedAt.ToLocalTime().ToString("HH:mm:ss.fff")</div></div>
+                            <div><div class="field-label">Duration</div><div class="field-value mono">@FormatDuration(selectedOperation.Duration)</div></div>
+                            <div><div class="field-label">Target</div><div class="field-value mono">@selectedOperation.SelectionBank · @selectedOperation.Target</div></div>
+                            <div><div class="field-label">Request</div><div class="field-value mono">@selectedOperation.MemoryBank · word @selectedOperation.WordPointer · @selectedOperation.WordCount word(s)</div></div>
+                            <div><div class="field-label">Error code</div><div class="field-value mono">@selectedOperation.ErrorCode</div></div>
+                            <div><div class="field-label">Completed</div><div class="field-value mono">@selectedOperation.CompletedAt.ToLocalTime().ToString("HH:mm:ss.fff")</div></div>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(selectedOperation.DataHex))
+                        {
+                            <div class="operation-payload">
+                                <div class="field-label">Returned / written data</div>
+                                <div class="mono">@selectedOperation.DataHex</div>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(selectedOperation.Error))
+                        {
+                            <div class="notice error">@selectedOperation.Error</div>
+                        }
+                    </div>
+                </section>
+            }
+        </div>
+
+        <aside class="stack">
+            <section class="card">
+                <div class="card-header"><h2 class="card-title">Observed targets</h2><span class="status-badge neutral">@Tags.Count</span></div>
+                @if (Tags.Count == 0)
+                {
+                    <div class="card-pad muted">No observed tags for this Reader. Enter a target manually.</div>
+                }
+                else
+                {
+                    <div class="observed-target-list">
+                        @foreach (TagObservation tag in Tags.Take(20))
+                        {
+                            <div class="observed-target">
+                                <button class="btn btn-sm" @onclick="() => SelectTarget(tag.Epc, TagMemoryBank.Epc)">Use EPC</button>
+                                <div class="mono target-value">@tag.Epc</div>
+                                @if (!string.IsNullOrWhiteSpace(tag.Tid))
+                                {
+                                    <button class="btn btn-sm" @onclick="() => SelectTarget(tag.Tid, TagMemoryBank.Tid)">Use TID</button>
+                                    <div class="mono target-value">@tag.Tid</div>
+                                }
+                                <div class="form-hint">@tag.ReadCount reads · @tag.LastSeen.ToLocalTime().ToString("HH:mm:ss.fff")</div>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Session history</h2>
+                    <span class="status-badge neutral">@history.Count</span>
+                </div>
+                @if (history.Count == 0)
+                {
+                    <div class="card-pad muted">Operations completed in this app session appear here.</div>
+                }
+                else
+                {
+                    <div class="operation-history">
+                        @foreach (TagAccessOperation operation in history)
+                        {
+                            <button class="operation-history-row @(ReferenceEquals(operation, selectedOperation) ? "selected" : string.Empty)" @onclick="() => selectedOperation = operation">
+                                <span class="status-dot @(operation.Succeeded ? "online" : string.Empty)"></span>
+                                <span>
+                                    <strong>@operation.Kind · @operation.MemoryBank</strong>
+                                    <small>@operation.StartedAt.ToLocalTime().ToString("HH:mm:ss") · @FormatDuration(operation.Duration)</small>
+                                </span>
+                                <span class="mono">@operation.ErrorCode</span>
+                            </button>
+                        }
+                    </div>
+                }
+            </section>
+        </aside>
+    </div>
+}
+
+@code {
+    private readonly List<TagAccessOperation> history = [];
+    private string? selectedReaderText;
+    private string target = string.Empty;
+    private TagMemoryBank selectionBank = TagMemoryBank.Epc;
+    private TagMemoryBank memoryBank = TagMemoryBank.User;
+    private ushort wordPointer;
+    private ushort wordCount = 1;
+    private string accessPassword = "00000000";
+    private string dataHex = string.Empty;
+    private string? validationMessage;
+    private bool pageBusy;
+    private TagAccessOperation? selectedOperation;
+
+    private string SelectedReaderText => selectedReaderText ?? State.SelectedReaderId?.ToString() ?? string.Empty;
+    private ReaderRuntimeSnapshot? SelectedReader => State.Find(ParseReaderId(SelectedReaderText));
+    private IReadOnlyList<TagObservation> Tags => SelectedReader is { } reader ? State.GetTags(reader.ReaderId) : [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        State.Changed += OnChanged;
+        await State.InitializeAsync();
+        if (State.SelectedReaderId is null)
+        {
+            State.Select(State.Readers.FirstOrDefault()?.ReaderId);
+        }
+
+        selectedReaderText = State.SelectedReaderId?.ToString();
+    }
+
+    private void SelectReader(ChangeEventArgs args)
+    {
+        selectedReaderText = args.Value?.ToString();
+        State.Select(ParseReaderId(selectedReaderText));
+    }
+
+    private void SelectTarget(string value, TagMemoryBank bank)
+    {
+        target = value;
+        selectionBank = bank;
+        validationMessage = null;
+    }
+
+    private Task ReadAsync() => ExecuteAsync(
+        "Read",
+        readerId => State.Inventory.ReadTagMemoryAsync(readerId, new TagReadRequest
+        {
+            Epc = target.Trim(),
+            SelectionBank = selectionBank,
+            MemoryBank = memoryBank,
+            OffsetWords = wordPointer,
+            WordCount = wordCount,
+            AccessPasswordHex = accessPassword,
+        }),
+        wordCount);
+
+    private Task WriteAsync() => ExecuteAsync(
+        "Write",
+        readerId => State.Inventory.WriteTagMemoryAsync(readerId, new TagWriteRequest
+        {
+            Epc = target.Trim(),
+            SelectionBank = selectionBank,
+            MemoryBank = memoryBank,
+            OffsetWords = wordPointer,
+            DataHex = dataHex.Trim(),
+            AccessPasswordHex = accessPassword,
+        }),
+        (ushort)Math.Max(1, dataHex.Trim().Length / 4));
+
+    private async Task ExecuteAsync(
+        string kind,
+        Func<Guid, Task<TagAccessResult>> execute,
+        ushort requestWordCount)
+    {
+        if (SelectedReader is not { } reader || pageBusy)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(target))
+        {
+            validationMessage = "Enter or select a target EPC/TID before executing the operation.";
+            return;
+        }
+
+        validationMessage = null;
+        pageBusy = true;
+        DateTimeOffset startedAt = DateTimeOffset.UtcNow;
+        TagAccessResult? result = null;
+        Exception? failure = null;
+        try
+        {
+            result = await execute(reader.ReaderId);
+            if (kind == "Read" && result.Succeeded)
+            {
+                dataHex = result.DataHex ?? string.Empty;
+            }
+        }
+        catch (Exception exception)
+        {
+            failure = exception;
+        }
+        finally
+        {
+            DateTimeOffset completedAt = DateTimeOffset.UtcNow;
+            var operation = new TagAccessOperation(
+                kind,
+                $"{reader.Profile.Host}:{reader.Profile.Port}",
+                target.Trim(),
+                selectionBank,
+                memoryBank,
+                wordPointer,
+                requestWordCount,
+                startedAt,
+                completedAt,
+                result?.Succeeded == true,
+                result?.ErrorCode.ToString() ?? "Exception",
+                result?.Error ?? failure?.Message,
+                kind == "Write" ? dataHex.Trim() : result?.DataHex);
+            history.Insert(0, operation);
+            if (history.Count > 20)
+            {
+                history.RemoveAt(history.Count - 1);
+            }
+
+            selectedOperation = operation;
+            pageBusy = false;
+        }
+    }
+
+    private static string FormatDuration(TimeSpan duration) => duration.TotalSeconds >= 1
+        ? $"{duration.TotalSeconds:0.00} s"
+        : $"{duration.TotalMilliseconds:0} ms";
+
+    private static Guid? ParseReaderId(string? value) => Guid.TryParse(value, out Guid id) ? id : null;
+
+    private void OnChanged(object? sender, EventArgs args) => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => State.Changed -= OnChanged;
+
+    private sealed record TagAccessOperation(
+        string Kind,
+        string ReaderEndpoint,
+        string Target,
+        TagMemoryBank SelectionBank,
+        TagMemoryBank MemoryBank,
+        ushort WordPointer,
+        ushort WordCount,
+        DateTimeOffset StartedAt,
+        DateTimeOffset CompletedAt,
+        bool Succeeded,
+        string ErrorCode,
+        string? Error,
+        string? DataHex)
+    {
+        public TimeSpan Duration => CompletedAt - StartedAt;
+    }
+}

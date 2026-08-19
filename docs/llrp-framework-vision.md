@@ -1,14 +1,15 @@
 # LlrpReaderPlatform 应用框架与首个 WPF 消费者开发计划
 
-> 状态：持续维护计划（2026-08-19，真实 Reader 客户端与报文级 Virtual Device Manager UI 首版已形成可交付版本；平台级预设式 Data Source 作为长期规划保留）
+> 状态：持续维护计划（2026-08-19，真实 Reader 客户端、报文级 Virtual Device Manager UI 和 `LlrpReaderManager` 跨平台 Blazor 消费者首版已落地；平台级预设式 Data Source 作为长期规划保留）
 > 基线仓库：`LlrpReaderStudio` 将冻结，不作为新项目的 ProjectReference 或运行时依赖；仅作为已验证行为、迁移经验和测试样例的参考。
-> 目标：在新仓库中建设可被多个 UI 消费者复用的 LLRP 应用框架。主要交付对象是新的真实 Reader 客户端 `LlrpReaderPlatform.App.Wpf`；另有独立的 `LlrpVirtualDevice.App.Wpf` 报文级虚拟设备管理 UI，二者职责不混合。
+> 目标：在新仓库中建设可被多个 UI 消费者复用的 LLRP 应用框架。主要交付对象是新的真实 Reader 客户端 `LlrpReaderPlatform.App.Wpf`；`LlrpReaderManager` 是共享服务的 MAUI Blazor 跨平台消费者，另有独立的 `LlrpVirtualDevice.App.Wpf` 报文级虚拟设备管理 UI。
 > 当前验证基线：现有项目已验证标准 LLRP 1.0.1 设备和 Impinj R420；新项目以此为回归基线，逐步扩展到更多 LLRP 设备和厂商能力。自动化测试当前为 382 项全绿（含 Virtual Reader 场景与生命周期测试）；Windows x64 交付采用 NuGet SDK、自包含单文件 `LlrpReaderPlatform.exe`。
 
 ## 0. 目标与定位
 
 - 新建**厂商无关的 LLRP 应用服务层（独立类库）**，作为正式产品长期维护；
 - 新建 **WPF UI 应用**（`App.Wpf`），作为第一个消费者；未来其他 UI 框架复用相同的 Contracts/Services/Infrastructure；
+- 新建 **MAUI Blazor UI 应用**（`LlrpReaderManager`），验证共享服务在桌面和手持屏幕上的响应式消费方式；
 - 提供独立的 **虚拟设备管理 WPF UI**（`LlrpVirtualDevice.App.Wpf`），作为 SDK TCP/LLRP Virtual Device 的消费者，不把虚拟设备管理逻辑下沉到真实 Reader 客户端服务层；
 - 依赖底层 `LlrpSdk`（标准 LLRP 核心 + 厂商扩展架构），**不重造协议层**；
 - 服务层**不直接依赖** `LlrpSdk.Extensions.Impinj/.Seuic`，厂商能力通过扩展模块接入；
@@ -67,6 +68,10 @@ LlrpReaderPlatform.slnx（新仓库）
 │       ├── Messages/                     ViewModel 间消息
 │       ├── Converters/                   值转换
 │       └── Assets/                       图标等
+│   ├── LlrpReaderManager/                MAUI Blazor 跨平台 Reader 管理消费者
+│       ├── Components/Pages/             Readers、Settings、Inventory、Tag Access、Runs、TOI、GPI/GPO
+│       ├── State/                         UI 状态投影，不持有 SDK Session
+│       └── VirtualDevices/                SDK 报文虚拟设备挂件与 Reader 注册交接
 │   └── LlrpVirtualDevice.App.Wpf/        报文级 TCP 虚拟设备管理 UI（辅助工具）
 └── tests/                                ★ 测试、测试支撑和人工硬件验收项目
     ├── LlrpReaderPlatform.Contracts.Tests/
@@ -88,6 +93,9 @@ LlrpReaderPlatform.slnx（新仓库）
 其中 `LlrpReaderPlatform.App.Wpf` 是本项目面向用户的主要客户端，复用平台 Services、Contracts、
 Infrastructure 和厂商扩展；`LlrpVirtualDevice.App.Wpf` 是独立的报文级虚拟设备管理 UI，直接消费
 SDK 的 Virtual Device Hosting 边界，管理 TCP 虚拟 Reader，不改变主客户端的 Reader 生命周期架构。
+`LlrpReaderManager` 同样复用平台 Services、Contracts、Infrastructure 和厂商扩展；它是 MAUI Blazor
+Hybrid 消费者，Reader 页面启动 SDK Virtual Device Host 后，把 loopback TCP endpoint 通过正常的
+`IReaderManager.AddAsync` 注册为普通 Reader，虚拟设备不创建第二套 Reader 生命周期。
 
 **设计铁律**：
 - Contracts 是 UI 与服务之间的稳定边界，**不暴露任何 `LlrpSdk`、`LlrpNet.Protocol`、WPF 控件、Dispatcher 或 ViewModel 类型**；
@@ -748,7 +756,7 @@ LLRPCSharp 独立 Virtual Reader Manager
 
 ## 8. 文档关系
 
-- 本规划为**新仓库中的共享服务框架 + 第一个 WPF 消费者**开发计划；
+- 本规划为**新仓库中的共享服务框架 + WPF/MAUI Blazor 消费者**开发计划；WPF 仍是当前真机验收主客户端，Blazor 是共享服务的跨平台消费者；
 - [冻结项目说明](legacy/README.md) 仅作为旧仓库地址和当前架构参考，不能替代本规划中的 Contracts、Infrastructure、扩展注册和测试契约；
 - 现有实现的验证基线为标准 LLRP 1.0.1 和 Impinj R420；更多厂商/型号必须通过设备矩阵逐步提升支持等级；
 - 本规划随开发推进持续更新（每阶段完成回填状态）。
@@ -767,10 +775,10 @@ LLRPCSharp 独立 Virtual Reader Manager
 | F6～F8 | 首个 WPF 消费者（设备/设置/寻卡三页） | 完成首版：旧布局、原生 ProgressBar、Tab1 旧项目分组设置、Tab2 四路 GPO/GPI 状态、动态设置编辑器、实时 TagObserved、Tag Memory、Tag Lists、Inventory Runs、App Settings、About 均已接入真实服务；频率表已支持能力驱动的多选编辑，少量 L4 细节仍待增强 |
 | F9 | 测试与真机验收 | 自动化测试 382 项全绿（含 Virtual Reader 场景/回放/Session/ReaderManager 链路、本轮日志模式、快照、WPF 操作日志、Zebra 扩展语义投影和架构边界回归）；真机已完成标准 Probe/Settings Query、Impinj 扩展连接、有界 Inventory Start/Stop/Disconnect、WPF Settings Apply、设备列表刷新期间设置查询不被取消、GPI/GPO、GPI 状态查询和 GPI debounce 回写、真实 TagReport 聚合、EPC/TID/User/Reserved 四个 Memory Bank 读取、User Bank 写入恢复，以及按固件/SDK 能力画像完成 FastID/Phase/Search/Low Duty/固定频率 Apply/回读、FastID/Phase 扩展 TagReport 和 Doppler 隐藏；代码级 Connection Faulted、ReaderException、匹配 GPI Stop 触发器收敛与重新 Start、Activate/Inventory/短操作取消后的 Session 清理与取消后重新 Probe 恢复、旧 Session 迟到故障/GPI/定时停止事件和 TagReport 队列跨 Run 隔离已自动化验证；GPI/GPO 无能力查询的 Unsupported 降级已自动化验证；GPI 物理事件/触发、多 Reader、断网/重启现场恢复及其它 Memory Bank 写入仍待现场验收 |
 | F10 | EF SQLite、启动恢复与日志 | Reader Profile、Reader Settings JSON 快照、TagList、InventoryRun、AppSettings、基础 EF Migration、启动恢复和 CRUD 测试已完成；早期 schema 变化允许清空数据库重建，不承诺历史数据兼容；WPF 已分离 ui/platform/sdk 日志并过滤 EF SQL，盘存支持 Off/FinalSnapshot/RawReports |
-| F11～F14 | 完整设置、完整 Inventory、全应用迁移、多设备扩展 | 首版代码完成，自动化覆盖多 Reader 并行和设备异常生命周期；平台 Virtual Reader 已支持场景导入、确定性回放、跨 Session 状态和 WPF 显式开发模式；报文级 Virtual Device Manager UI 已完成首版；硬件深度验收、更多标准/厂商设备与故障恢复证据持续补齐 |
+| F11～F14 | 完整设置、完整 Inventory、全应用迁移、多设备扩展 | 首版代码完成，自动化覆盖多 Reader 并行和设备异常生命周期；平台 Virtual Reader 已支持场景导入、确定性回放、跨 Session 状态和 WPF 显式开发模式；报文级 Virtual Device Manager UI 已完成首版；`LlrpReaderManager` MAUI Blazor 消费者已落地首版页面、响应式布局和 Virtual Device widget；硬件深度验收、更多标准/厂商设备、Android 打包与故障恢复证据持续补齐 |
 | F15 | 平台虚拟设备 Data Source 化 | 长期规划、未排期；已记录 ADR-0016 与 VP1～VP6，当前继续使用 `LLRP_VIRTUAL_SCENARIO` 单场景平台工厂模式；报文级管理 UI 不属于本阶段 |
 
-**测试基线**：`dotnet build LlrpReaderPlatform.slnx` 0 警告 0 错误；`dotnet test LlrpReaderPlatform.slnx --no-build` 382 项全绿（Contracts 5、Services 192、Infrastructure 10、App.Wpf 133、Architecture 9、Extensions.Impinj 17、Extensions.Zebra 6、VirtualReader 10）
+**测试基线**：既有平台/WPF 基线为 `dotnet test LlrpReaderPlatform.slnx --no-build` 382 项全绿（Contracts 5、Services 192、Infrastructure 10、App.Wpf 133、Architecture 9、Extensions.Impinj 17、Extensions.Zebra 6、VirtualReader 10）；本轮新增 `LlrpReaderManager` Windows TFM 已以 0 警告、0 错误编译，Architecture 9 项和 App.Wpf 134 项回归通过。MAUI Android 包还原受本机 NuGet 缓存/工作负载环境影响，尚未宣称 Android 构建通过。
 
 本轮补充的运行时边界：退出清理由注册表 Gate 与释放闸门统一保护，关闭期间拒绝晚到 Add/Probe；已知能力下拒绝超范围 Inventory 天线；Tag Access 选择条件拒绝 LLRP `ushort` 长度溢出；GPO 端口 0 在 WPF Tab2 入口拦截；Impinj GPI debounce 按能力快照的 GPI 数量生成和回写，明确为 0 的设备不发送不存在的端口配置。
 Services/应用测试使用 `TestKit/FakeSession`，Infrastructure 测试使用内存 SQLite。
@@ -876,3 +884,19 @@ Tab2 状态投影补充：主窗口状态刷新会重复向 Diagnostics 投影�
 管理 UI 只负责交互、实例配置和 Host 生命周期；TCP 监听、LLRP 报文编解码、设备能力档案和标签盘存行为由
 相邻 `LLRPCSharp` SDK 提供。2.0.0 起正式构建使用 `LlrpDevice.Virtual.Hosting` 顶层
 NuGet 包；跨仓库开发联调仍可显式切换为 SDK 项目引用，其他依赖由 NuGet 传递解析。
+
+### 10.3 `LlrpReaderManager` Blazor 消费者
+
+`src/LlrpReaderManager` 是一个独立的 MAUI Blazor Hybrid 应用，不替代 WPF，也不复制 Reader
+生命周期逻辑。当前首版页面覆盖 Reader 添加/发现、设备设置、Inventory、Tag Memory、Inventory Runs、
+Tag Lists 和 GPI/GPO；页面通过 `ReaderManagerState` 消费平台 Contracts/Services，使用同一套
+Probe、Activate、Session Gate、短操作和 Inventory 生命周期。
+
+报文虚拟设备在该应用中只是 Reader 页面上的挂件：用户选择 SDK 能力预设、端口和名称后，应用启动
+`LlrpDevice.Virtual.Hosting` 的 loopback TCP Host，再把实际绑定的 IP/端口作为普通 `ReaderProfile`
+加入 `IReaderManager`。停止挂件时按“停用 Reader → 移除注册 → 释放 Host”顺序收尾；不会把虚拟 Host
+类型泄漏到 Contracts 或 Services。
+
+布局沿用归档 `LLRPReaderManagement` 的深色顶栏、侧边导航、卡片和绿色强调色，并通过 CSS media
+queries 在桌面双栏和手持设备窄屏之间切换。该消费者当前属于开发中的跨平台首版，Windows 目标已编译
+验证，Android/其他平台的打包和真机适配仍按单独验收矩阵推进。

@@ -69,6 +69,7 @@
   <Folder Name="/docs/legacy/">
     <File Path="docs/legacy/README.md" />
   </Folder>
+  <Folder Name="/src/" />
 
   <!-- Source projects -->
   <Folder Name="/src/LlrpReaderPlatform/">
@@ -83,6 +84,10 @@
 
   <Folder Name="/src/VirtualDeviceManager/">
     <Project Path="src/LlrpVirtualDevice.App.Wpf/LlrpVirtualDevice.App.Wpf.csproj" />
+  </Folder>
+
+  <Folder Name="/src/LlrpReaderManager/">
+    <Project Path="src/LlrpReaderManager/LlrpReaderManager.csproj" />
   </Folder>
 
   <!-- Test projects -->

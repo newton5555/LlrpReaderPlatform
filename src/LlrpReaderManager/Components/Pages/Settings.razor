@@ -1,0 +1,379 @@
+@page "/settings"
+@implements IDisposable
+@inject ReaderManagerState State
+
+<div class="section-header">
+    <div>
+        <h1 class="section-title">Reader Settings</h1>
+        <p class="section-subtitle">The same capability-driven settings model used by the WPF consumer, projected into Blazor controls.</p>
+    </div>
+    <div class="toolbar">
+        <label class="form-label" for="settings-reader">Reader</label>
+        <select id="settings-reader" style="width: min(280px, 55vw);" value="@SelectedReaderText" @onchange="SelectReader">
+            <option value="">Choose Reader</option>
+            @foreach (ReaderRuntimeSnapshot reader in State.Readers)
+            {
+                <option value="@reader.ReaderId">@reader.Profile.Name · @reader.Profile.Host</option>
+            }
+        </select>
+    </div>
+</div>
+
+<div class="toolbar" style="margin-bottom: var(--space-4);">
+    <button class="btn" @onclick="() => LoadAsync(false)" disabled="@(pageBusy || SelectedReader is null)">Refresh from Reader</button>
+    <button class="btn" @onclick="() => LoadAsync(true)" disabled="@(pageBusy || SelectedReader is null)">Load SDK defaults</button>
+    <span class="toolbar-spacer"></span>
+    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@(pageBusy || SettingsModel is null)">Save configuration</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="notice @(messageIsError ? "error" : "info")" style="margin-bottom: var(--space-4);">@message</div>
+}
+
+@if (SettingsModel is null)
+{
+    <div class="card empty-state"><h2>No settings model</h2><p>Choose an activated Reader and load its capability-driven settings.</p></div>
+}
+else
+{
+    <div class="notice info" style="margin-bottom: var(--space-4);">Capability revision @SettingsModel.Layout.CapabilityRevision · @SettingsModel.Layout.Entries.Count settings · optional vendor controls are not required when omitted.</div>
+    <section class="settings-card-grid">
+        @foreach (SettingsGroup group in BuildSettingsGroups())
+        {
+            <article class="card settings-card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">@group.Title</h2>
+                        <div class="form-hint settings-card-description">@group.Description</div>
+                    </div>
+                    <span class="status-badge neutral">@group.Entries.Count</span>
+                </div>
+                <div class="settings-card-body">
+                    @foreach (SettingsEntry entry in group.Entries)
+                    {
+                        <div class="setting-row">
+                            <div>
+                                <div class="setting-title">@entry.Title</div>
+                                <div class="setting-meta">@entry.Key · @entry.Source@(entry.IsOptional ? " · optional" : string.Empty)</div>
+                            </div>
+                            <div>
+                                @if (entry.IsReadOnly)
+                                {
+                                    <div class="mono muted">@DisplayValue(entry)</div>
+                                    <div class="form-hint">@entry.ReadOnlyReason</div>
+                                }
+                                else if (entry.EditorKind == EditorKind.Boolean)
+                                {
+                                    <label class="check-line"><input type="checkbox" checked="@ReadBoolean(entry)" @onchange="args => ChangeValue(entry, args)" /> Enabled</label>
+                                }
+                                else if (entry.EditorKind == EditorKind.Choice)
+                                {
+                                    <select value="@DisplayValue(entry)" @onchange="args => ChangeValue(entry, args)">
+                                        @foreach (SettingsOption option in entry.Options)
+                                        {
+                                            <option value="@OptionValue(option)">@(@option.Display ?? OptionValue(option))</option>
+                                        }
+                                    </select>
+                                }
+                                else if (entry.EditorKind == EditorKind.Collection)
+                                {
+                                    <input type="text" value="@DisplayValue(entry)" @onchange="args => ChangeValue(entry, args)" />
+                                    <div class="form-hint">Comma separated values</div>
+                                }
+                                else
+                                {
+                                    <input type="@(entry.EditorKind is EditorKind.Integer or EditorKind.Decimal ? "number" : "text")" value="@DisplayValue(entry)" @onchange="args => ChangeValue(entry, args)" />
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </article>
+        }
+    </section>
+}
+
+@code {
+    private SettingsEditorModel? SettingsModel;
+    private string? selectedReaderText;
+    private Dictionary<string, object?> values = new(StringComparer.Ordinal);
+    private string? message;
+    private bool messageIsError;
+    private bool pageBusy;
+
+    private string SelectedReaderText => selectedReaderText ?? State.SelectedReaderId?.ToString() ?? string.Empty;
+
+    private ReaderRuntimeSnapshot? SelectedReader => State.Find(ParseReaderId(SelectedReaderText));
+
+    protected override async Task OnInitializedAsync()
+    {
+        State.Changed += OnChanged;
+        await State.InitializeAsync();
+        if (State.SelectedReaderId is null)
+        {
+            State.Select(State.Readers.FirstOrDefault()?.ReaderId);
+        }
+
+        selectedReaderText = State.SelectedReaderId?.ToString();
+        await LoadAsync(false);
+    }
+
+    private void SelectReader(ChangeEventArgs args)
+    {
+        selectedReaderText = args.Value?.ToString();
+        State.Select(ParseReaderId(selectedReaderText));
+        _ = LoadAsync(false);
+    }
+
+    private async Task LoadAsync(bool defaults)
+    {
+        if (SelectedReader is not { } reader || pageBusy)
+        {
+            return;
+        }
+
+        pageBusy = true;
+        message = null;
+        try
+        {
+            SettingsModel = defaults
+                ? await State.Settings.GetDefaultsAsync(reader.ReaderId)
+                : await State.Settings.QueryAsync(reader.ReaderId);
+            values = SettingsModel.Snapshot.Values.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+            message = defaults ? "SDK defaults loaded." : "Reader settings refreshed.";
+            messageIsError = false;
+        }
+        catch (Exception exception)
+        {
+            message = exception.Message;
+            messageIsError = true;
+        }
+        finally
+        {
+            pageBusy = false;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (SelectedReader is not { } reader || SettingsModel is null || pageBusy)
+        {
+            return;
+        }
+
+        pageBusy = true;
+        try
+        {
+            var draft = new SettingsDraft
+            {
+                ReaderId = reader.ReaderId,
+                CapabilityRevision = SettingsModel.Snapshot.CapabilityRevision,
+            };
+            foreach ((string key, object? value) in values)
+            {
+                if (value is not null)
+                {
+                    draft.Values[key] = value;
+                }
+            }
+
+            SettingsValidationResult validation = State.Settings.Validate(draft);
+            if (!validation.IsValid)
+            {
+                message = string.Join(" ", validation.Issues.Select(issue => $"{issue.Key}: {issue.Message}"));
+                messageIsError = true;
+                return;
+            }
+
+            SettingsApplyResult result = await State.Settings.ApplyAsync(reader.ReaderId, draft);
+            message = result.Succeeded ? "Settings saved and reread from Reader." : result.Error ?? "Settings save failed.";
+            messageIsError = !result.Succeeded;
+            if (result.Succeeded)
+            {
+                await LoadAsync(false);
+            }
+        }
+        catch (Exception exception)
+        {
+            message = exception.Message;
+            messageIsError = true;
+        }
+        finally
+        {
+            pageBusy = false;
+        }
+    }
+
+    private void ChangeValue(SettingsEntry entry, ChangeEventArgs args)
+    {
+        object? value = ParseValue(entry, args.Value);
+        values[entry.Key] = value;
+    }
+
+    private bool ReadBoolean(SettingsEntry entry) => values.TryGetValue(entry.Key, out object? value)
+        && value is bool boolean && boolean;
+
+    private string DisplayValue(SettingsEntry entry) => values.TryGetValue(entry.Key, out object? value)
+        ? Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty
+        : Convert.ToString(entry.CurrentValue, CultureInfo.InvariantCulture) ?? string.Empty;
+
+    private static string OptionValue(SettingsOption option) => Convert.ToString(option.Value, CultureInfo.InvariantCulture) ?? string.Empty;
+
+    private static object? ParseValue(SettingsEntry entry, object? raw)
+    {
+        string text = Convert.ToString(raw, CultureInfo.InvariantCulture) ?? string.Empty;
+        if (entry.ValueType == typeof(bool))
+        {
+            return raw is bool boolean ? boolean : bool.TryParse(text, out bool parsed) && parsed;
+        }
+
+        if (entry.ValueType == typeof(ushort))
+        {
+            return ushort.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out ushort parsed) ? parsed : raw;
+        }
+
+        if (entry.ValueType == typeof(int))
+        {
+            return int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) ? parsed : raw;
+        }
+
+        if (entry.ValueType == typeof(decimal))
+        {
+            return decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal parsed) ? parsed : raw;
+        }
+
+        return text;
+    }
+
+    private static Guid? ParseReaderId(string? value) => Guid.TryParse(value, out Guid id) ? id : null;
+
+    private IReadOnlyList<SettingsGroup> BuildSettingsGroups() => SettingsModel?.Layout.Entries
+        .GroupBy(ResolveGroupKey, StringComparer.Ordinal)
+        .OrderBy(group => GroupOrder(group.Key))
+        .Select(group => new SettingsGroup(
+            GroupTitle(group.Key),
+            GroupDescription(group.Key),
+            group.ToArray()))
+        .ToArray()
+        ?? [];
+
+    private static string ResolveGroupKey(SettingsEntry entry)
+    {
+        if (!string.IsNullOrWhiteSpace(entry.GroupKey))
+        {
+            return entry.GroupKey;
+        }
+
+        string key = entry.Key;
+        if (key.StartsWith("filter-", StringComparison.Ordinal))
+        {
+            return SettingsGroups.Filter;
+        }
+
+        if (key.StartsWith("state-aware-", StringComparison.Ordinal))
+        {
+            return SettingsGroups.StateAware;
+        }
+
+        if (key.StartsWith("start-gpi-", StringComparison.Ordinal)
+            || key.StartsWith("stop-gpi-", StringComparison.Ordinal)
+            || key.Contains("gpi-debounce-ms.", StringComparison.Ordinal))
+        {
+            return SettingsGroups.Gpi;
+        }
+
+        if (key.Contains("fixed-frequency-", StringComparison.Ordinal))
+        {
+            return SettingsGroups.Frequency;
+        }
+
+        if (key.Contains("low-duty-cycle", StringComparison.Ordinal)
+            || key.Contains("empty-field-timeout-ms", StringComparison.Ordinal)
+            || key.Contains("field-ping-interval-ms", StringComparison.Ordinal))
+        {
+            return SettingsGroups.LowDuty;
+        }
+
+        if (key.StartsWith("report-", StringComparison.Ordinal))
+        {
+            return SettingsGroups.Report;
+        }
+
+        if (key is SettingsKeys.TxPowerIndex
+            or SettingsKeys.RxSensitivityIndex
+            or SettingsKeys.AntennaIds
+            or SettingsKeys.IndividualAntennaSettings)
+        {
+            return SettingsGroups.Power;
+        }
+
+        if (key.StartsWith("antenna-", StringComparison.Ordinal))
+        {
+            return SettingsGroups.Antenna;
+        }
+
+        if (key is SettingsKeys.Antenna
+            or SettingsKeys.Session
+            or SettingsKeys.TagPopulation
+            or SettingsKeys.ReportEvery
+            or SettingsKeys.RfMode
+            or SettingsKeys.Tari)
+        {
+            return SettingsGroups.Manual;
+        }
+
+        return SettingsGroups.Other;
+    }
+
+    private static int GroupOrder(string key) => key switch
+    {
+        SettingsGroups.Manual => 0,
+        SettingsGroups.Power => 1,
+        SettingsGroups.Antenna => 2,
+        SettingsGroups.Filter => 3,
+        SettingsGroups.StateAware => 4,
+        SettingsGroups.Gpi => 5,
+        SettingsGroups.Frequency => 6,
+        SettingsGroups.LowDuty => 7,
+        SettingsGroups.Report => 8,
+        _ => 9,
+    };
+
+    private static string GroupTitle(string key) => key switch
+    {
+        SettingsGroups.Manual => "Inventory & RF",
+        SettingsGroups.Power => "Power defaults",
+        SettingsGroups.Antenna => "Per-antenna RF",
+        SettingsGroups.Filter => "Tag filters",
+        SettingsGroups.StateAware => "State-aware singulation",
+        SettingsGroups.Gpi => "GPI triggers",
+        SettingsGroups.Frequency => "Frequency",
+        SettingsGroups.LowDuty => "Low-duty cycle",
+        SettingsGroups.Report => "Tag report content",
+        _ => "Vendor & other",
+    };
+
+    private static string GroupDescription(string key) => key switch
+    {
+        SettingsGroups.Manual => "Inventory behavior and air-protocol parameters.",
+        SettingsGroups.Power => "Shared RF values and participating antennas.",
+        SettingsGroups.Antenna => "Capability-table indices written for each antenna.",
+        SettingsGroups.Filter => "EPC, TID, user-memory and action filters.",
+        SettingsGroups.StateAware => "State target and selected-flag behavior.",
+        SettingsGroups.Gpi => "Reader-side start and stop trigger conditions.",
+        SettingsGroups.Frequency => "Vendor-supported channel selection.",
+        SettingsGroups.LowDuty => "Reader-side idle and field timing controls.",
+        SettingsGroups.Report => "Fields requested in inventory reports.",
+        _ => "Additional capability-driven Reader settings.",
+    };
+
+    private sealed record SettingsGroup(
+        string Title,
+        string Description,
+        IReadOnlyList<SettingsEntry> Entries);
+
+    private void OnChanged(object? sender, EventArgs args) => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => State.Changed -= OnChanged;
+}

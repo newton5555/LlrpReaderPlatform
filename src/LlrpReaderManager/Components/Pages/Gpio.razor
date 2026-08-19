@@ -1,0 +1,212 @@
+@page "/gpio"
+@implements IDisposable
+@inject ReaderManagerState State
+
+<div class="section-header">
+    <div>
+        <h1 class="section-title">GPI / GPO</h1>
+        <p class="section-subtitle">Read input status and control standard LLRP output ports through the platform service.</p>
+    </div>
+    <div class="toolbar">
+        <label class="form-label">Reader</label>
+        <select style="width: min(300px, 55vw);" value="@SelectedReaderText" @onchange="SelectReader">
+            <option value="">Choose Reader</option>
+            @foreach (ReaderRuntimeSnapshot reader in State.Readers)
+            {
+                <option value="@reader.ReaderId">@reader.Profile.Name · @reader.Profile.Host</option>
+            }
+        </select>
+        <button class="btn btn-sm" @onclick="LoadAsync" disabled="@(pageBusy || SelectedReader is null)">Refresh</button>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="notice @(messageIsError ? "error" : "info")" style="margin-bottom: var(--space-4);">@message</div>
+}
+
+@if (SelectedReader is null)
+{
+    <div class="card empty-state">
+        <h2>Select a Reader</h2>
+        <p>GPI/GPO uses the same short-operation lifecycle as the WPF consumer. Inventory must be stopped before querying or changing ports.</p>
+    </div>
+}
+else
+{
+    <div class="split">
+        <section class="card">
+            <div class="card-header">
+                <h2 class="card-title">GPI inputs</h2>
+                <span class="status-badge neutral">Reader reported</span>
+            </div>
+            @if (snapshot?.Gpis.Count is not > 0)
+            {
+                <div class="card-pad muted">No GPI status has been loaded, or this Reader has no standard GPI ports.</div>
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead><tr><th>Port</th><th>Configured</th><th>State</th><th>Timestamp</th></tr></thead>
+                        <tbody>
+                            @foreach (GpiPortStatus port in snapshot!.Gpis)
+                            {
+                                <tr>
+                                    <td class="mono">@port.PortNumber</td>
+                                    <td>@(port.Configured ? "Yes" : "No")</td>
+                                    <td><span class="status-badge @(port.State ? "ok" : "neutral")">@(port.State ? "ON" : "OFF")</span></td>
+                                    <td>@(port.Timestamp?.ToLocalTime().ToString("HH:mm:ss.fff") ?? "—")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <h2 class="card-title">GPO outputs</h2>
+                <span class="status-badge neutral">Short operation</span>
+            </div>
+            @if (snapshot?.Gpos.Count is not > 0)
+            {
+                <div class="card-pad muted">No GPO status has been loaded, or this Reader has no standard GPO ports.</div>
+            }
+            else
+            {
+                <div class="stack" style="padding: var(--space-3) var(--space-4);">
+                    @foreach (GpoPortStatus port in snapshot!.Gpos)
+                    {
+                        <div class="settings-row">
+                            <div>
+                                <div class="field-value">GPO @port.PortNumber</div>
+                                <div class="form-hint">Current state: @(port.State ? "ON" : "OFF")</div>
+                            </div>
+                            <button class="btn btn-sm @(port.State ? "btn-danger" : "btn-primary")"
+                                    @onclick="() => SetGpoAsync(port)"
+                                    disabled="@pageBusy">
+                                @(port.State ? "Turn OFF" : "Turn ON")
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+}
+
+@code {
+    private string? selectedReaderText;
+    private GpioStatusSnapshot? snapshot;
+    private string? message;
+    private bool messageIsError;
+    private bool pageBusy;
+
+    private string SelectedReaderText => selectedReaderText ?? State.SelectedReaderId?.ToString() ?? string.Empty;
+    private ReaderRuntimeSnapshot? SelectedReader => State.Find(ParseReaderId(SelectedReaderText));
+
+    protected override async Task OnInitializedAsync()
+    {
+        State.Changed += OnChanged;
+        State.Inventory.GpiChanged += OnGpiChanged;
+        await State.InitializeAsync();
+        if (State.SelectedReaderId is null)
+        {
+            State.Select(State.Readers.FirstOrDefault()?.ReaderId);
+        }
+
+        selectedReaderText = State.SelectedReaderId?.ToString();
+        if (SelectedReader is not null)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private void SelectReader(ChangeEventArgs args)
+    {
+        selectedReaderText = args.Value?.ToString();
+        snapshot = null;
+        State.Select(ParseReaderId(selectedReaderText));
+    }
+
+    private async Task LoadAsync()
+    {
+        if (SelectedReader is not { } reader)
+        {
+            return;
+        }
+
+        pageBusy = true;
+        try
+        {
+            snapshot = await State.GetGpioStatusAsync(reader.ReaderId);
+            SetMessage($"Loaded {snapshot.Gpis.Count} GPI and {snapshot.Gpos.Count} GPO ports.", false);
+        }
+        catch (Exception exception)
+        {
+            SetMessage(exception.Message, true);
+        }
+        finally
+        {
+            pageBusy = false;
+        }
+    }
+
+    private async Task SetGpoAsync(GpoPortStatus port)
+    {
+        if (SelectedReader is not { } reader)
+        {
+            return;
+        }
+
+        pageBusy = true;
+        try
+        {
+            await State.SetGpoAsync(reader.ReaderId, port.PortNumber, !port.State);
+            snapshot = await State.GetGpioStatusAsync(reader.ReaderId);
+            SetMessage($"GPO {port.PortNumber} confirmed as {(port.State ? "OFF" : "ON")}.", false);
+        }
+        catch (Exception exception)
+        {
+            SetMessage(exception.Message, true);
+        }
+        finally
+        {
+            pageBusy = false;
+        }
+    }
+
+    private void OnGpiChanged(object? sender, GpiObservedEventArgs args)
+    {
+        if (SelectedReader?.ReaderId != args.ReaderId || snapshot is null)
+        {
+            return;
+        }
+
+        IReadOnlyList<GpiPortStatus> gpis = snapshot.Gpis
+            .Where(port => port.PortNumber != args.Status.PortNumber)
+            .Append(args.Status)
+            .OrderBy(port => port.PortNumber)
+            .ToArray();
+        snapshot = snapshot with { Gpis = gpis };
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void OnChanged(object? sender, EventArgs args) => InvokeAsync(StateHasChanged);
+
+    private void SetMessage(string value, bool error)
+    {
+        message = value;
+        messageIsError = error;
+    }
+
+    private static Guid? ParseReaderId(string? value) => Guid.TryParse(value, out Guid id) ? id : null;
+
+    public void Dispose()
+    {
+        State.Changed -= OnChanged;
+        State.Inventory.GpiChanged -= OnGpiChanged;
+    }
+}

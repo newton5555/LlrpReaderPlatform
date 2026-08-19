@@ -1,0 +1,89 @@
+@page "/runs"
+@inject ReaderManagerState State
+@inject IInventoryRunStore RunsStore
+
+<div class="section-header">
+    <div>
+        <h1 class="section-title">Inventory Runs</h1>
+        <p class="section-subtitle">Completed run summaries are loaded from the shared SQLite store; live tags remain on the inventory page.</p>
+    </div>
+    <div class="toolbar">
+        <label class="form-label">Reader</label>
+        <select style="width: min(280px, 55vw);" value="@selectedReaderText" @onchange="SelectReader">
+            <option value="">Choose Reader</option>
+            @foreach (ReaderRuntimeSnapshot reader in State.Readers)
+            {
+                <option value="@reader.ReaderId">@reader.Profile.Name · @reader.Profile.Host</option>
+            }
+        </select>
+        <button class="btn btn-sm" @onclick="LoadAsync" disabled="@pageBusy">Refresh</button>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <div class="notice error" style="margin-bottom: var(--space-4);">@error</div>
+}
+
+<section class="card">
+    <div class="card-header"><h2 class="card-title">Run history</h2><span class="status-badge neutral">@runs.Count records</span></div>
+    @if (runs.Count == 0)
+    {
+        <div class="empty-state"><h2>No completed runs</h2><p>Start inventory on a Reader first. This page intentionally shows summaries, not the live tag table.</p></div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Started</th><th>Ended</th><th>Reason</th><th>Total reads</th><th>Unique tags</th><th>Snapshot</th></tr></thead>
+                <tbody>
+                    @foreach (InventoryRunRecord run in runs)
+                    {
+                        <tr>
+                            <td class="mono">@run.StartedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td class="mono">@(run.EndedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "Running")</td>
+                            <td><span class="tag-pill">@run.StopReason</span></td>
+                            <td class="mono">@run.TotalReadCount</td>
+                            <td class="mono">@run.UniqueTagCount</td>
+                            <td class="mono">@(string.IsNullOrWhiteSpace(run.SnapshotFilePath) ? "—" : run.SnapshotFilePath)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@code {
+    private string? selectedReaderText;
+    private List<InventoryRunRecord> runs = [];
+    private string? error;
+    private bool pageBusy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await State.InitializeAsync();
+        selectedReaderText = State.SelectedReaderId?.ToString() ?? State.Readers.FirstOrDefault()?.ReaderId.ToString();
+        await LoadAsync();
+    }
+
+    private void SelectReader(ChangeEventArgs args)
+    {
+        selectedReaderText = args.Value?.ToString();
+        State.Select(ParseReaderId(selectedReaderText));
+        _ = LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        Guid? readerId = ParseReaderId(selectedReaderText);
+        if (readerId is null || pageBusy) { runs = []; return; }
+        pageBusy = true;
+        error = null;
+        try { runs = (await RunsStore.GetForReaderAsync(readerId.Value)).ToList(); }
+        catch (Exception exception) { error = exception.Message; }
+        finally { pageBusy = false; }
+    }
+
+    private static Guid? ParseReaderId(string? value) => Guid.TryParse(value, out Guid id) ? id : null;
+}

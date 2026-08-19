@@ -1,0 +1,68 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject ReaderManagerState State
+@inject VirtualReaderWidgetService VirtualDevices
+
+<div class="app-shell">
+    <header class="app-topbar">
+        <button class="brand-button" @onclick="ToggleNavigation" aria-label="Toggle navigation">
+            <span class="brand-mark" aria-hidden="true">RF</span>
+            <span>LLRP Reader Manager</span>
+        </button>
+        <div class="topbar-meta">
+            <span>SDK managed</span>
+            <span class="topbar-separator">|</span>
+            <span>@State.Readers.Count Reader(s)</span>
+            <span class="topbar-time">@DateTime.Now.ToString("HH:mm:ss")</span>
+        </div>
+    </header>
+
+    <aside class="app-sidebar @(navigationCollapsed ? "collapsed" : string.Empty)">
+        <nav aria-label="Primary navigation">
+            <div class="nav-section">Overview</div>
+            <NavLink href="/" Match="NavLinkMatch.All"><span class="nav-icon">⌂</span><span>Dashboard</span></NavLink>
+            <NavLink href="/readers"><span class="nav-icon">▣</span><span>Readers</span></NavLink>
+            <div class="nav-section">Operations</div>
+            <NavLink href="/inventory"><span class="nav-icon">◈</span><span>Tag Inventory</span></NavLink>
+            <NavLink href="/tag-memory"><span class="nav-icon">▤</span><span>Tag Memory</span></NavLink>
+            <NavLink href="/runs"><span class="nav-icon">◷</span><span>Inventory Runs</span></NavLink>
+            <div class="nav-section">Configuration</div>
+            <NavLink href="/settings"><span class="nav-icon">⚙</span><span>Reader Settings</span></NavLink>
+            <NavLink href="/gpio"><span class="nav-icon">⌁</span><span>GPI / GPO</span></NavLink>
+            <NavLink href="/tag-lists"><span class="nav-icon">●</span><span>TOI</span></NavLink>
+        </nav>
+        <div class="sidebar-footer">
+            <span class="status-dot @(State.IsInitialized ? "online" : "pending")"></span>
+            <span>@(State.IsInitialized ? "Platform ready" : "Loading platform")</span>
+        </div>
+    </aside>
+
+    <main class="app-content">
+        @Body
+    </main>
+
+    @if (State.IsBusy || VirtualDevices.IsBusy)
+    {
+        <div class="busy-strip">Working with Reader services…</div>
+    }
+</div>
+
+@code {
+    private bool navigationCollapsed;
+
+    protected override void OnInitialized()
+    {
+        State.Changed += OnChanged;
+        VirtualDevices.Changed += OnChanged;
+    }
+
+    private void ToggleNavigation() => navigationCollapsed = !navigationCollapsed;
+
+    private void OnChanged(object? sender, EventArgs args) => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        State.Changed -= OnChanged;
+        VirtualDevices.Changed -= OnChanged;
+    }
+}

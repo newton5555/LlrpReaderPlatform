@@ -1,0 +1,133 @@
+@page "/tag-lists"
+@inject ITagListStore TagListsStore
+
+<div class="section-header">
+    <div>
+        <h1 class="section-title">Tags of Interest (TOI)</h1>
+        <p class="section-subtitle">Maintain the EPC, TOI name and display color used by Inventory.</p>
+    </div>
+    <button class="btn btn-primary" @onclick="CreateAsync" disabled="@pageBusy">Add tag list</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <div class="notice error" style="margin-bottom: var(--space-4);">@error</div>
+}
+
+<div class="split">
+    <section class="stack">
+        @if (lists.Count == 0)
+        {
+            <div class="card empty-state"><h2>No tag lists</h2><p>Create one to give a group of tags a name and color.</p></div>
+        }
+        else
+        {
+            @foreach (TagListDefinition list in lists)
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <div style="display: flex; align-items: center; gap: 10px;"><span style="width: 14px; height: 14px; border-radius: 50%; background: @list.ColorHex;"></span><h2 class="card-title" style="color: var(--fg);">@list.Name</h2></div>
+                        <span class="status-badge @(list.IsEnabled ? "ok" : "neutral")">@(list.IsEnabled ? "Enabled" : "Disabled")</span>
+                    </div>
+                    <div class="card-pad">
+                        <div class="toolbar" style="margin-bottom: var(--space-3);"><span class="muted">@list.Entries.Count tag entries</span><span class="toolbar-spacer"></span><button class="btn btn-sm" @onclick="() => ToggleAsync(list)">@(list.IsEnabled ? "Disable" : "Enable")</button><button class="btn btn-sm btn-danger" @onclick="() => DeleteAsync(list.Id)">Delete</button></div>
+                        @if (list.Entries.Count > 0)
+                        {
+                            <div class="table-wrap"><table style="min-width: 0;"><thead><tr><th>Name</th><th>EPC</th><th>Color</th></tr></thead><tbody>@foreach (TagListEntry entry in list.Entries) { <tr><td>@entry.DisplayName</td><td class="mono">@entry.EpcHex</td><td><span class="tag-pill">@(entry.ColorHex ?? list.ColorHex)</span></td></tr> }</tbody></table></div>
+                        }
+                        else
+                        {
+                            <div class="form-hint">No explicit entries. The list color can still be used as a tag-table classification.</div>
+                        }
+                        @if (selectedListId == list.Id)
+                        {
+                            <div class="inline-form" style="margin-top: var(--space-4); grid-template-columns: 1fr 1.5fr auto;">
+                                <div class="form-group"><label class="form-label">Entry name</label><input type="text" @bind="entryName" placeholder="Dock tag" /></div>
+                                <div class="form-group"><label class="form-label">EPC</label><input type="text" @bind="entryEpc" placeholder="E200..." /></div>
+                                <button class="btn btn-sm btn-primary" @onclick="() => AddEntryAsync(list)">Add tag</button>
+                            </div>
+                        }
+                        else
+                        {
+                            <button class="btn btn-sm" style="margin-top: var(--space-3);" @onclick="() => BeginEntry(list.Id)">Add tag entry</button>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </section>
+
+    <aside class="card action-panel">
+        <div class="card-header"><h2 class="card-title">New list</h2></div>
+        <div class="card-pad stack">
+            <div class="form-group"><label class="form-label">Name</label><input type="text" @bind="newName" placeholder="Shipping tags" /></div>
+            <div class="form-group"><label class="form-label">Color</label><input type="color" @bind="newColor" title="Choose TOI color" /></div>
+            <button class="btn btn-primary" @onclick="CreateAsync" disabled="@pageBusy">Save tag list</button>
+        </div>
+    </aside>
+</div>
+
+@code {
+    private List<TagListDefinition> lists = [];
+    private string newName = string.Empty;
+    private string newColor = "#5EEAD4";
+    private Guid? selectedListId;
+    private string entryName = string.Empty;
+    private string entryEpc = string.Empty;
+    private string? error;
+    private bool pageBusy;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        pageBusy = true;
+        error = null;
+        try { lists = (await TagListsStore.GetAllAsync()).ToList(); }
+        catch (Exception exception) { error = exception.Message; }
+        finally { pageBusy = false; }
+    }
+
+    private async Task CreateAsync()
+    {
+        if (string.IsNullOrWhiteSpace(newName)) { error = "Tag list name is required."; return; }
+        await TagListsStore.SaveAsync(new TagListDefinition { Id = Guid.NewGuid(), Name = newName.Trim(), ColorHex = string.IsNullOrWhiteSpace(newColor) ? "#5EEAD4" : newColor.Trim(), IsEnabled = true });
+        newName = string.Empty;
+        await LoadAsync();
+    }
+
+    private async Task ToggleAsync(TagListDefinition list)
+    {
+        await TagListsStore.SaveAsync(list with { IsEnabled = !list.IsEnabled });
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        await TagListsStore.DeleteAsync(id);
+        if (selectedListId == id) selectedListId = null;
+        await LoadAsync();
+    }
+
+    private void BeginEntry(Guid listId) => selectedListId = listId;
+
+    private async Task AddEntryAsync(TagListDefinition list)
+    {
+        if (string.IsNullOrWhiteSpace(entryEpc)) { error = "EPC is required."; return; }
+        try
+        {
+            string epc = entryEpc.Trim().Replace(" ", string.Empty, StringComparison.Ordinal).ToUpperInvariant();
+            if (!epc.All(Uri.IsHexDigit) || epc.Length == 0) { error = "EPC must be hexadecimal."; return; }
+            if (list.Entries.Any(entry => entry.EpcHex.Equals(epc, StringComparison.OrdinalIgnoreCase))) { error = "The EPC is already in this list."; return; }
+            await TagListsStore.SaveAsync(list with
+            {
+                Entries = list.Entries.Append(new TagListEntry { Id = Guid.NewGuid(), TagListId = list.Id, EpcHex = epc, DisplayName = string.IsNullOrWhiteSpace(entryName) ? epc : entryName.Trim() }).ToArray(),
+            });
+            entryName = string.Empty;
+            entryEpc = string.Empty;
+            selectedListId = null;
+            await LoadAsync();
+        }
+        catch (Exception exception) { error = exception.Message; }
+    }
+}

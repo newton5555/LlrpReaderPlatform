@@ -1,0 +1,241 @@
+@page "/inventory"
+@implements IDisposable
+@inject ReaderManagerState State
+
+<div class="section-header">
+    <div>
+        <h1 class="section-title">Tag Inventory</h1>
+        <p class="section-subtitle">Start and stop a complete LLRP inventory lease; the page consumes platform lifecycle events.</p>
+    </div>
+    <div class="toolbar">
+        <label class="form-label" for="inventory-reader">Reader</label>
+        <select id="inventory-reader" style="width: min(280px, 55vw);" value="@SelectedReaderText" @onchange="SelectReader">
+            <option value="">Choose Reader</option>
+            @foreach (ReaderRuntimeSnapshot reader in State.Readers)
+            {
+                <option value="@reader.ReaderId">@reader.Profile.Name · @reader.Profile.Host</option>
+            }
+        </select>
+    </div>
+</div>
+
+@if (SelectedReader is null)
+{
+    <div class="card empty-state">
+        <h2>Select a Reader</h2>
+        <p>Inventory uses the same reader session ownership and stop reasons as the WPF consumer.</p>
+        <a class="btn btn-primary" href="/readers">Open Readers</a>
+    </div>
+}
+else
+{
+    <div class="card" style="margin-bottom: var(--space-4);">
+        <div class="card-pad">
+            <div class="toolbar">
+                <div>
+                    <div class="field-label">Selected endpoint</div>
+                    <div class="mono">@SelectedReader.Profile.Name · @SelectedReader.Profile.Host:@SelectedReader.Profile.Port</div>
+                </div>
+                <div class="toolbar-spacer"></div>
+                <div class="form-group" style="width: 130px;">
+                    <label class="form-label">Duration (s)</label>
+                    <input type="number" min="0" @bind="durationText" placeholder="0 = manual" />
+                </div>
+                @if (SelectedReader.State == ReaderState.Inventorying)
+                {
+                    <button class="btn btn-danger" @onclick="StopAsync" disabled="@State.IsBusy">Stop inventory</button>
+                }
+                else
+                {
+                    <button class="btn btn-primary" @onclick="StartAsync" disabled="@(State.IsBusy || !SelectedReader.IsEnabled)">Start inventory</button>
+                }
+                <button class="btn" @onclick="StartAllAsync" disabled="@State.IsBusy">Start all enabled</button>
+                <button class="btn" @onclick="StopAllAsync" disabled="@State.IsBusy">Stop all</button>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <div class="notice @(messageIsError ? "error" : "info")" style="margin-bottom: var(--space-4);">@message</div>
+    }
+
+    <div class="card-grid" style="margin-bottom: var(--space-4);">
+        <div class="card card-pad"><div class="stat-label">Lifecycle</div><div class="stat-value" style="font-size: 20px;">@SelectedReader.State</div><div class="stat-note">@SelectedReader.Error</div></div>
+        <div class="card card-pad"><div class="stat-label">Unique tags</div><div class="stat-value">@Tags.Count</div><div class="stat-note">Aggregated live table</div></div>
+        <div class="card card-pad"><div class="stat-label">Total reads</div><div class="stat-value">@Tags.Sum(tag => tag.ReadCount)</div><div class="stat-note">Platform aggregation count</div></div>
+    </div>
+
+    <section class="card">
+        <div class="card-header"><h2 class="card-title">Live tag table</h2><span class="status-badge @(SelectedReader.State == ReaderState.Inventorying ? "ok" : "neutral")">@(SelectedReader.State == ReaderState.Inventorying ? "Live" : "Idle")</span></div>
+        @if (Tags.Count == 0)
+        {
+            <div class="empty-state"><h3>No tags in this run</h3><p>Start inventory or connect a virtual reader with its default tag pool.</p></div>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>EPC</th><th>TID</th><th>Reads</th><th>RSSI</th><th>Antenna</th><th>Last seen</th></tr></thead>
+                    <tbody>
+                        @foreach (TagObservation tag in Tags)
+                        {
+                            <tr><td class="mono">@tag.Epc</td><td class="mono">@(string.IsNullOrWhiteSpace(tag.Tid) ? "—" : tag.Tid)</td><td class="mono">@tag.ReadCount</td><td class="mono">@(tag.LastRssi?.ToString() ?? "—")</td><td class="mono">@(tag.LastAntenna?.ToString() ?? "—")</td><td class="mono">@tag.LastSeen.ToLocalTime().ToString("HH:mm:ss.fff")</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private string? selectedReaderText;
+    private string durationText = string.Empty;
+    private string? message;
+    private bool messageIsError;
+
+    private string SelectedReaderText => selectedReaderText ?? State.SelectedReaderId?.ToString() ?? string.Empty;
+
+    private ReaderRuntimeSnapshot? SelectedReader => State.Find(ParseReaderId(SelectedReaderText));
+
+    private IReadOnlyList<TagObservation> Tags => SelectedReader is { } reader ? State.GetTags(reader.ReaderId) : [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        State.Changed += OnChanged;
+        await State.InitializeAsync();
+        if (State.SelectedReaderId is null)
+        {
+            State.Select(State.Readers.FirstOrDefault()?.ReaderId);
+        }
+        selectedReaderText = State.SelectedReaderId?.ToString();
+    }
+
+    private void SelectReader(ChangeEventArgs args)
+    {
+        selectedReaderText = args.Value?.ToString();
+        State.Select(ParseReaderId(selectedReaderText));
+    }
+
+    private async Task StartAsync()
+    {
+        if (SelectedReader is not { } reader)
+        {
+            return;
+        }
+
+        int? duration = int.TryParse(durationText, NumberStyles.Integer, CultureInfo.InvariantCulture, out int seconds) && seconds > 0
+            ? seconds
+            : null;
+        StartInventoryResult result = await State.StartInventoryAsync(reader.ReaderId, new InventorySpec
+        {
+            DurationSeconds = duration,
+            Report = new InventoryReportSpec
+            {
+                IncludeAntennaId = true,
+                IncludeChannelIndex = true,
+                IncludePeakRssi = true,
+                IncludeFirstSeenTimestamp = true,
+                IncludeLastSeenTimestamp = true,
+                IncludeTagSeenCount = true,
+            },
+        });
+        SetMessage(result.Succeeded ? "Inventory started." : result.Message ?? "Inventory failed to start.", !result.Succeeded);
+    }
+
+    private async Task StopAsync()
+    {
+        if (SelectedReader is not { } reader)
+        {
+            return;
+        }
+
+        try
+        {
+            await State.StopInventoryAsync(reader.ReaderId);
+            SetMessage("Inventory stop requested; waiting for the lifecycle event.", false);
+        }
+        catch (Exception exception)
+        {
+            SetMessage(exception.Message, true);
+        }
+    }
+
+    private async Task StartAllAsync()
+    {
+        IReadOnlyList<Guid> readerIds = State.Readers
+            .Where(reader => reader.IsEnabled)
+            .Select(reader => reader.ReaderId)
+            .ToArray();
+        if (readerIds.Count == 0)
+        {
+            SetMessage("No enabled Readers are available.", true);
+            return;
+        }
+
+        try
+        {
+            StartInventoryResult[] results = (await State.StartInventoryForReadersAsync(readerIds, BuildSpec())).ToArray();
+            int started = results.Count(result => result.Succeeded);
+            SetMessage($"Inventory start returned for {started}/{results.Length} enabled Reader(s).", started == 0);
+        }
+        catch (Exception exception)
+        {
+            SetMessage(exception.Message, true);
+        }
+    }
+
+    private async Task StopAllAsync()
+    {
+        IReadOnlyList<Guid> readerIds = State.Readers
+            .Where(reader => reader.State == ReaderState.Inventorying)
+            .Select(reader => reader.ReaderId)
+            .ToArray();
+        if (readerIds.Count == 0)
+        {
+            SetMessage("No Readers are currently inventorying.", false);
+            return;
+        }
+
+        try
+        {
+            await State.StopInventoryForReadersAsync(readerIds);
+            SetMessage($"Stop requested for {readerIds.Count} Reader(s); waiting for lifecycle events.", false);
+        }
+        catch (Exception exception)
+        {
+            SetMessage(exception.Message, true);
+        }
+    }
+
+    private InventorySpec BuildSpec() => new()
+    {
+        DurationSeconds = ParseDuration(),
+        Report = new InventoryReportSpec
+        {
+            IncludeAntennaId = true,
+            IncludeChannelIndex = true,
+            IncludePeakRssi = true,
+            IncludeFirstSeenTimestamp = true,
+            IncludeLastSeenTimestamp = true,
+            IncludeTagSeenCount = true,
+        },
+    };
+
+    private int? ParseDuration() => int.TryParse(durationText, NumberStyles.Integer, CultureInfo.InvariantCulture, out int seconds) && seconds > 0
+        ? seconds
+        : null;
+
+    private static Guid? ParseReaderId(string? value) => Guid.TryParse(value, out Guid id) ? id : null;
+
+    private void SetMessage(string value, bool error)
+    {
+        message = value;
+        messageIsError = error;
+    }
+
+    private void OnChanged(object? sender, EventArgs args) => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => State.Changed -= OnChanged;
+}

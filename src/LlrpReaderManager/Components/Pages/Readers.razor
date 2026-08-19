@@ -1,0 +1,340 @@
+@page "/readers"
+@implements IDisposable
+@inject ReaderManagerState State
+@inject VirtualReaderWidgetService VirtualDevices
+
+<div class="section-header">
+    <div>
+        <h1 class="section-title">Reader Management</h1>
+        <p class="section-subtitle">Reader profiles stay enabled; TCP connections are leased by operations, and Inventory owns the long-running connection.</p>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="notice @(messageIsError ? "error" : "info")" style="margin-bottom: var(--space-4);">@message</div>
+}
+
+<div class="split">
+    <section class="stack">
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">Discover Readers</h2>
+                    <div class="form-hint" style="margin-top: 4px;">Search the local network for LLRP service announcements.</div>
+                </div>
+                <button class="btn btn-sm" @onclick="DiscoverAsync" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">Scan</button>
+            </div>
+            @if (State.DiscoveredReaders.Count == 0)
+            {
+                <div class="card-pad muted">No discovered endpoints. You can still add an IP address manually.</div>
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="data-table compact-table">
+                        <thead><tr><th>Name</th><th>Endpoint</th><th></th></tr></thead>
+                        <tbody>
+                            @foreach (DiscoveredReader discovered in State.DiscoveredReaders)
+                            {
+                                <tr>
+                                    <td>@discovered.DisplayName</td>
+                                    <td class="mono">@discovered.IpAddress:@discovered.Port</td>
+                                    <td class="table-actions"><button class="btn btn-sm" @onclick="() => AddDiscoveredAsync(discovered)" disabled="@State.IsBusy">Add</button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Add physical Reader</h2>
+                <span class="status-badge neutral">LLRP client</span>
+            </div>
+            <div class="card-pad">
+                <div class="inline-form">
+                    <div class="form-group">
+                        <label class="form-label">Name</label>
+                        <input type="text" @bind="physicalName" placeholder="Warehouse reader" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Host / IP</label>
+                        <input type="text" @bind="physicalHost" placeholder="192.168.40.87" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">LLRP port</label>
+                        <input type="number" @bind="physicalPort" min="1" max="65535" />
+                    </div>
+                    <button class="btn btn-primary" @onclick="AddPhysicalAsync" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">Add</button>
+                </div>
+                <div class="form-hint" style="margin-top: var(--space-3);">The platform performs Probe → extension match → persist → capability synchronization, then releases the connection.</div>
+            </div>
+        </div>
+
+        <div class="card virtual-widget">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">Protocol virtual device widget</h2>
+                    <div class="form-hint" style="margin-top: 4px;">Starts an SDK TCP server, then registers its loopback endpoint as a normal Reader.</div>
+                </div>
+                <span class="status-badge neutral">No special UI path</span>
+            </div>
+            <div class="card-pad">
+                <div class="inline-form">
+                    <div class="form-group">
+                        <label class="form-label">Capability profile</label>
+                        <select @bind="virtualProfileId">
+                            @foreach (VirtualDeviceProfileInfo profile in VirtualDeviceProfiles.All)
+                            {
+                                <option value="@profile.Id">@profile.Name · @profile.ProtocolVersion</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Widget name</label>
+                        <input type="text" @bind="virtualName" placeholder="Virtual standard reader" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">TCP port</label>
+                        <input type="number" @bind="virtualPort" min="0" max="65535" />
+                    </div>
+                    <button class="btn btn-primary" @onclick="StartVirtualAsync" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">Run</button>
+                </div>
+                <div class="form-hint" style="margin-top: var(--space-3);">Port 0 selects an available loopback port. The displayed port is the actual TCP endpoint.</div>
+            </div>
+        </div>
+
+        @if (State.Readers.Count == 0)
+        {
+            <div class="card empty-state">
+                <h2>No Reader profiles</h2>
+                <p>Use either form above. Virtual devices will appear here immediately after activation.</p>
+            </div>
+        }
+        else
+        {
+            @foreach (ReaderRuntimeSnapshot reader in State.Readers)
+            {
+                <div class="card reader-card">
+                    <div class="reader-head">
+                        <div class="reader-heading">
+                            <div class="reader-icon @(IsVirtual(reader.ReaderId) ? "virtual" : string.Empty)">@(IsVirtual(reader.ReaderId) ? "V" : "RF")</div>
+                            <div>
+                                <div class="reader-name">@reader.Profile.Name</div>
+                                <div class="reader-endpoint">@reader.Profile.Host:@reader.Profile.Port · @ProtocolText(reader)</div>
+                            </div>
+                        </div>
+                        <div class="reader-statuses">
+                            <span class="status-badge @(reader.IsEnabled ? "ok" : "neutral")">@(reader.IsEnabled ? "Enabled" : "Disabled")</span>
+                            <span class="status-badge @StatusClass(reader.State)">@reader.State</span>
+                        </div>
+                    </div>
+                    <div class="reader-body">
+                        <div><div class="field-label">Model</div><div class="field-value">@(reader.Model ?? "Not captured")</div></div>
+                        <div><div class="field-label">Firmware</div><div class="field-value">@(reader.Firmware ?? "—")</div></div>
+                        <div><div class="field-label">Antennas</div><div class="field-value">@(reader.Antennas.Count > 0 ? reader.Antennas.Count : 0)</div></div>
+                        <div><div class="field-label">GPI / GPO</div><div class="field-value">@(reader.GpiCount?.ToString() ?? "—") / @(reader.GpoCount?.ToString() ?? "—")</div></div>
+                    </div>
+                    <div class="reader-actions">
+                        <button class="btn btn-sm" @onclick="() => ToggleReaderAsync(reader)" disabled="@State.IsBusy">@(reader.IsEnabled ? "Disable" : "Enable")</button>
+                        <a class="btn btn-sm" href="/settings">Settings</a>
+                        <a class="btn btn-sm" href="/inventory">Inventory</a>
+                        @if (IsVirtual(reader.ReaderId))
+                        {
+                            <button class="btn btn-sm btn-danger push-right" @onclick="() => StopVirtualAsync(reader.ReaderId)" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">Stop virtual</button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-sm btn-danger push-right" @onclick="() => RemoveReaderAsync(reader.ReaderId)" disabled="@State.IsBusy">Remove</button>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </section>
+
+    <aside class="stack">
+        <section class="card action-panel">
+            <div class="card-header"><h2 class="card-title">Virtual hosts</h2></div>
+            @if (VirtualDevices.Instances.Count == 0)
+            {
+                <div class="card-pad muted">No local TCP host is running.</div>
+            }
+            else
+            {
+                <div class="stack" style="padding: var(--space-3) var(--space-4);">
+                    @foreach (VirtualReaderInstance instance in VirtualDevices.Instances)
+                    {
+                        <div class="notice">
+                            <div style="display: flex; justify-content: space-between; gap: 8px;"><strong>@instance.Name</strong><span class="status-badge ok">@instance.State</span></div>
+                            <div class="mono muted" style="margin-top: 4px;">127.0.0.1:@instance.Port · clients @instance.ConnectedClientCount</div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+    </aside>
+</div>
+
+@code {
+    private string physicalName = string.Empty;
+    private string physicalHost = string.Empty;
+    private int physicalPort = 5084;
+    private string virtualProfileId = VirtualDeviceProfiles.Standard101Id;
+    private string virtualName = string.Empty;
+    private int virtualPort;
+    private string? message;
+    private bool messageIsError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        State.Changed += OnChanged;
+        VirtualDevices.Changed += OnChanged;
+        await State.InitializeAsync();
+    }
+
+    private async Task AddPhysicalAsync()
+    {
+        try
+        {
+            ReaderAddResult result = await State.AddAsync(new ReaderProfile
+            {
+                Id = Guid.NewGuid(),
+                Name = string.IsNullOrWhiteSpace(physicalName) ? physicalHost : physicalName.Trim(),
+                Host = physicalHost.Trim(),
+                Port = physicalPort,
+                LlrpVersion = LlrpProtocolVersionOption.Auto,
+                IsEnabled = true,
+            }, enableAfterAdding: true);
+            SetMessage(result.Succeeded ? "Reader added and activated." : result.Error ?? "Reader add failed.", !result.Succeeded);
+            if (result.Succeeded)
+            {
+                physicalName = string.Empty;
+                physicalHost = string.Empty;
+            }
+        }
+        catch (Exception exception)
+        {
+            SetMessage(exception.Message, true);
+        }
+    }
+
+    private async Task DiscoverAsync()
+    {
+        try
+        {
+            await State.DiscoverAsync(TimeSpan.FromSeconds(3));
+            SetMessage($"Discovery completed: {State.DiscoveredReaders.Count} endpoint(s) found.", false);
+        }
+        catch (Exception exception)
+        {
+            SetMessage(exception.Message, true);
+        }
+    }
+
+    private async Task AddDiscoveredAsync(DiscoveredReader discovered)
+    {
+        try
+        {
+            ReaderAddResult result = await State.AddAsync(new ReaderProfile
+            {
+                Id = Guid.NewGuid(),
+                Name = discovered.DisplayName,
+                Host = discovered.IpAddress,
+                Port = discovered.Port,
+                LlrpVersion = LlrpProtocolVersionOption.Auto,
+                IsEnabled = true,
+            }, enableAfterAdding: true);
+            SetMessage(result.Succeeded ? $"{discovered.DisplayName} added and activated." : result.Error ?? "Reader add failed.", !result.Succeeded);
+        }
+        catch (Exception exception)
+        {
+            SetMessage(exception.Message, true);
+        }
+    }
+
+    private async Task StartVirtualAsync()
+    {
+        VirtualReaderStartResult result = await VirtualDevices.StartAsync(virtualProfileId, virtualName, virtualPort);
+        SetMessage(result.Succeeded
+            ? $"Virtual Reader started on 127.0.0.1:{result.Instance!.Port} and added to Readers."
+            : result.Error ?? "Virtual Reader start failed.", !result.Succeeded);
+        if (result.Succeeded)
+        {
+            virtualName = string.Empty;
+            virtualPort = 0;
+        }
+    }
+
+    private async Task ToggleReaderAsync(ReaderRuntimeSnapshot reader)
+    {
+        try
+        {
+            await State.SetEnabledAsync(reader.ReaderId, !reader.IsEnabled);
+            SetMessage(
+                reader.IsEnabled
+                    ? "Reader disabled and its active connection released."
+                    : "Reader enabled, capabilities synchronized, and the connection released.",
+                false);
+        }
+        catch (Exception exception)
+        {
+            SetMessage(exception.Message, true);
+        }
+    }
+
+    private async Task RemoveReaderAsync(Guid readerId)
+    {
+        try
+        {
+            await State.RemoveAsync(readerId);
+            SetMessage("Reader removed.", false);
+        }
+        catch (Exception exception)
+        {
+            SetMessage(exception.Message, true);
+        }
+    }
+
+    private async Task StopVirtualAsync(Guid readerId)
+    {
+        try
+        {
+            await VirtualDevices.StopAsync(readerId);
+            SetMessage("Virtual host stopped and removed from Readers.", false);
+        }
+        catch (Exception exception)
+        {
+            SetMessage(exception.Message, true);
+        }
+    }
+
+    private bool IsVirtual(Guid readerId) => VirtualDevices.Instances.Any(instance => instance.ReaderId == readerId);
+
+    private static string ProtocolText(ReaderRuntimeSnapshot reader) => reader.NegotiatedProtocolVersion?.ToString() ?? "LLRP auto";
+
+    private static string StatusClass(ReaderState state) => state switch
+    {
+        ReaderState.Connected or ReaderState.Inventorying => "ok",
+        ReaderState.Connecting or ReaderState.Stopping or ReaderState.Disconnecting => "warn",
+        ReaderState.Faulted => "danger",
+        _ => "neutral",
+    };
+
+    private void SetMessage(string value, bool error)
+    {
+        message = value;
+        messageIsError = error;
+    }
+
+    private void OnChanged(object? sender, EventArgs args) => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        State.Changed -= OnChanged;
+        VirtualDevices.Changed -= OnChanged;
+    }
+}

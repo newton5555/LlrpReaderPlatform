@@ -7,7 +7,7 @@
 ## 分层
 
 ```text
-App.Wpf composition root
+WPF / MAUI Blazor composition root
   -> Services -> Contracts
   -> Infrastructure -> Services/Contracts
   -> Extensions.* -> Services/Contracts + vendor SDK adapter
@@ -23,6 +23,7 @@ View/ViewModel -> Services -> Contracts
 - `Extensions.*`：厂商模块，引用 Services 与对应本地 SDK 扩展项目；
 - `App.*`：UI 组合根和展示层，注册 Services、Infrastructure 和扩展模块。
 - `LlrpVirtualDevice.App.Wpf`：独立的报文级 TCP 虚拟设备管理 UI，直接消费 SDK Virtual Device Hosting；不进入真实 Reader 客户端的 Services 链路。
+- `LlrpReaderManager`：MAUI Blazor 跨平台消费者，注册共享平台服务；Reader 页面上的 Virtual Device widget 直接消费 SDK Host，并通过 `IReaderManager` 把 loopback endpoint 注册为普通 Reader。
 
 ## 解决方案结构
 
@@ -34,6 +35,7 @@ LlrpReaderPlatform.slnx
 ├── LlrpReaderPlatform.Extensions.Impinj
 ├── LlrpReaderPlatform.Extensions.Zebra
 ├── LlrpReaderPlatform.App.Wpf
+├── LlrpReaderManager                     MAUI Blazor 跨平台 Reader 管理消费者
 ├── LlrpReaderPlatform.VirtualReader      进程内开发/验收用 Reader 替身
 ├── LlrpVirtualDevice.App.Wpf              报文级 TCP 虚拟设备管理 UI（辅助工具）
 ├── LlrpReaderPlatform.Services.Tests
@@ -58,9 +60,13 @@ Services ──> LlrpSdk (NuGet default / local projects optional)
 
 LlrpVirtualDevice.App.Wpf
   └── LlrpDevice.Virtual.Hosting (SDK; top-level NuGet, local project reference optional)
+
+LlrpReaderManager (MAUI Blazor composition root)
+  ├── Services / Infrastructure / Extensions.* ──> shared platform contracts
+  └── VirtualReaderWidgetService ──> LlrpDevice.Virtual.Hosting (SDK)
 ```
 
-- `Contracts` 和 `Services` 使用 `net10.0`；`App.Wpf` 使用 `net10.0-windows`；
+- `Contracts` 和 `Services` 使用 `net10.0`；`App.Wpf` 使用 `net10.0-windows`；`LlrpReaderManager` 使用 `net10.0-android` 与 `net10.0-windows10.0.19041.0`，并在项目目录关闭仓库的单目标默认值；
 - `Contracts` 不引用任何 UI、SDK 或厂商程序集；
 - `Services` 不设置 `UseWPF`，只依赖 Contracts 和 SDK 适配项目；
 - Infrastructure 不把 SQLite、Zeroconf 或日志实现暴露给 Contracts；
@@ -84,6 +90,10 @@ LlrpVirtualDevice.App.Wpf
 
 `LlrpVirtualDevice.App.Wpf` 是独立的辅助 UI，管理 SDK 提供的报文级 TCP/LLRP 虚拟 Reader。它拥有自己的
 实例、Host、端口、报文观察和 Tag Pool 生命周期，不复用真实 Reader 客户端的 TOI 或 ReaderManager。
+
+`LlrpReaderManager` 是另一种消费者形态：它不维护第二套 Reader 服务，而是通过共享 Services 管理真实
+Reader；虚拟设备仅在页面中作为 SDK Host 挂件启动，启动后以 loopback `ReaderProfile` 进入同一套 Probe /
+Activate / Inventory 流程。其 Razor 组件不得直接创建真实 Reader Session 或调用 SDK 协议 API。
 
 WPF 可以拥有自己的 View、ViewModel、DataTemplate、Dispatcher、导航和窗口行为，以及 WPF 控件到 `EditorKind` 的映射。这些内容不得下沉到 Contracts 或 Services。
 

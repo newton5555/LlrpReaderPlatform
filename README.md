@@ -5,7 +5,7 @@
 </p>
 
 <p align='center'>
-  <strong>WPF operator tool and extensible application platform for real LLRP readers</strong>
+  <strong>WPF and cross-platform Blazor operator tools for real LLRP readers</strong>
 </p>
 
 <p align='center'>
@@ -24,9 +24,11 @@ LlrpReaderPlatform is a new LLRP application platform whose first deliverable is
 
 The frozen `../LlrpReaderStudio` repository is reference material only — it documents existing capabilities and migration boundaries and is never a runtime dependency.
 
-The primary deliverable is the real-reader client `LlrpReaderPlatform.App.Wpf`. The solution also contains
-`LlrpVirtualDevice.App.Wpf`, a separate auxiliary manager for SDK TCP/LLRP virtual devices; it is not part
-of the real-reader client service path.
+The primary real-reader client is `LlrpReaderPlatform.App.Wpf`. The solution also contains
+`LlrpReaderManager`, a MAUI Blazor cross-platform consumer with a responsive desktop/handheld layout, and
+`LlrpVirtualDevice.App.Wpf`, a separate auxiliary manager for SDK TCP/LLRP virtual devices. The Blazor
+consumer and WPF client share the same platform services; the standalone virtual-device manager remains
+outside the real-reader client service path.
 
 **Current baseline:** `2.0.0` · Windows x64 · self-contained single-file portable. The build is clean (0 warnings, 0 errors) and automated tests are green (382 tests, including the Virtual Reader suite). Most service tests use a `FakeSession`; the Virtual Reader suite exercises deterministic multi-step reader behavior. Real-device conclusions are recorded separately.
 
@@ -47,6 +49,7 @@ UI consumer -> Services -> Contracts
 - **Infrastructure** — SQLite, presets/profiles, discovery, and logging implementations.
 - **Extensions.\*** — pluggable vendor modules (Impinj baseline, Zebra experimental); they never pollute the common contracts.
 - **App.Wpf** — the first UI consumer (WPF, CommunityToolkit.Mvvm, MahApps.Metro); future UI frameworks can reuse the same services and contracts.
+- **LlrpReaderManager** — a MAUI Blazor Hybrid consumer with Reader, Settings, Inventory, Tag Memory, Runs, TOI, and GPI/GPO pages. Its Reader page can start an SDK protocol virtual-device widget and register its loopback endpoint through the normal `IReaderManager` path.
 - **LlrpVirtualDevice.App.Wpf** — an independent virtual-device manager UI; it consumes the SDK virtual-host boundary directly and does not add virtual-device branches to the client services.
 
 On the SDK side there are two outlets: core `LlrpSdk` (the standard LLRP adapter consumed by `Services`) and `LlrpSdk.Extensions.Impinj` / `LlrpSdk.Extensions.Zebra` (the vendor adapters consumed by `Extensions.*`).
@@ -116,6 +119,7 @@ The authoritative record is the [device compatibility matrix](docs/compatibility
 ### For users & validation
 
 - [WPF user guide & troubleshooting](docs/development/wpf-user-and-troubleshooting.md)
+- [LlrpReaderManager Blazor development mode](docs/development/reader-manager.md)
 - [Hardware validation runbook](docs/development/hardware-validation-runbook.md)
 - [Hardware test CLI project](tests/LlrpReaderPlatform.Hardware.Tests/LlrpReaderPlatform.Hardware.Tests.csproj)
 - [Device compatibility matrix](docs/compatibility/device-matrix.md)
@@ -136,7 +140,7 @@ The authoritative record is the [device compatibility matrix](docs/compatibility
 
 ## Project boundaries
 
-This repository contains the new platform services, infrastructure, the primary real-reader WPF client, the auxiliary virtual-device manager UI, and automated tests. The frozen legacy `LlrpReaderStudio` is used only for behavior and migration reference, never as a runtime dependency. No platform class-library NuGet packages are published — the SDK NuGet packages are input dependencies only.
+This repository contains the new platform services, infrastructure, the primary real-reader WPF client, the responsive MAUI Blazor consumer, the auxiliary virtual-device manager UI, and automated tests. The frozen legacy `LlrpReaderStudio` is used only for behavior and migration reference, never as a runtime dependency. No platform class-library NuGet packages are published — the SDK NuGet packages are input dependencies only.
 
 ## Virtual Device Manager UI
 
@@ -156,3 +160,14 @@ is currently only an interaction placeholder and is not described as a working i
 The virtual-device manager's source run, build, and packaging instructions are in
 [Virtual Reader development mode](docs/development/virtual-reader.md). The primary client's download and
 release procedure is in [Release spec & pipeline](docs/development/release.md).
+
+## LlrpReaderManager Blazor UI
+
+`src/LlrpReaderManager` is the cross-platform MAUI Blazor consumer. It uses the archived
+`LLRPReaderManagement` visual language while consuming the current platform Contracts/Services/Infrastructure
+and SDK extension modules. It supports Reader discovery/addition, settings, inventory, Tag Access, runs, TOI,
+and GPI/GPO. The embedded protocol virtual-device widget starts `LlrpDevice.Virtual.Hosting` and then adds
+the bound loopback endpoint as an ordinary Reader, so virtual and physical Readers exercise the same lifecycle.
+
+The current project is a development consumer rather than a separate release package. See
+[LlrpReaderManager development mode](docs/development/reader-manager.md) for workload, build, and run commands.

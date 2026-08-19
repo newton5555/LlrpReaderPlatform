@@ -1,0 +1,125 @@
+@page "/"
+@implements IDisposable
+@inject ReaderManagerState State
+@inject VirtualReaderWidgetService VirtualDevices
+
+<div class="section-header">
+    <div>
+        <h1 class="section-title">Reader Operations</h1>
+        <p class="section-subtitle">A cross-platform LLRP workbench backed by the shared platform services.</p>
+    </div>
+    <div class="toolbar">
+        <a class="btn btn-primary" href="/readers">Manage readers</a>
+        <a class="btn" href="/inventory">Open inventory</a>
+    </div>
+</div>
+
+@if (!State.IsInitialized)
+{
+    <div class="notice info">Loading persisted Reader profiles and capability state…</div>
+}
+@if (!string.IsNullOrWhiteSpace(State.LastError))
+{
+    <div class="notice error">@State.LastError</div>
+}
+
+<div class="card-grid">
+    <div class="card card-pad">
+        <div class="stat-label">Readers</div>
+        <div class="stat-value">@State.Readers.Count</div>
+        <div class="stat-note">@ConnectedCount connected or inventorying</div>
+    </div>
+    <div class="card card-pad">
+        <div class="stat-label">Inventory leases</div>
+        <div class="stat-value">@InventoryCount</div>
+        <div class="stat-note">Lifecycle state comes from the platform service</div>
+    </div>
+    <div class="card card-pad">
+        <div class="stat-label">Live tags</div>
+        <div class="stat-value">@TagCount</div>
+        <div class="stat-note">Aggregated per Reader, not raw SDK objects</div>
+    </div>
+    <div class="card card-pad">
+        <div class="stat-label">Virtual widgets</div>
+        <div class="stat-value">@VirtualDevices.Instances.Count</div>
+        <div class="stat-note">SDK TCP hosts attached to Readers</div>
+    </div>
+</div>
+
+<div class="split" style="margin-top: var(--space-4);">
+    <section class="card">
+        <div class="card-header">
+            <h2 class="card-title">Reader status</h2>
+            <a class="btn btn-sm" href="/readers">View all</a>
+        </div>
+        @if (State.Readers.Count == 0)
+        {
+            <div class="empty-state">
+                <h3>No Readers yet</h3>
+                <p>Add a physical endpoint or launch a local protocol virtual Reader.</p>
+                <a class="btn btn-primary" href="/readers">Add Reader</a>
+            </div>
+        }
+        else
+        {
+            <div class="stack" style="padding: var(--space-3) var(--space-4);">
+                @foreach (ReaderRuntimeSnapshot reader in State.Readers)
+                {
+                    <div class="reader-head card" style="box-shadow: none;">
+                        <div class="reader-heading">
+                            <div class="reader-icon">RF</div>
+                            <div>
+                                <div class="reader-name">@reader.Profile.Name</div>
+                                <div class="reader-endpoint">@reader.Profile.Host:@reader.Profile.Port</div>
+                            </div>
+                        </div>
+                        <span class="status-badge @StatusClass(reader.State)">@reader.State</span>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="card virtual-widget">
+        <div class="card-header">
+            <h2 class="card-title">Protocol virtual device</h2>
+            <span class="status-badge neutral">SDK host</span>
+        </div>
+        <div class="card-pad">
+            <p class="muted">Launch a real TCP/LLRP endpoint from the UI, then attach it to the same Reader list used by hardware.</p>
+            <a class="btn btn-primary" style="margin-top: var(--space-4);" href="/readers">Open virtual device widget</a>
+        </div>
+    </section>
+</div>
+
+@code {
+    private int ConnectedCount => State.Readers.Count(reader =>
+        reader.State is ReaderState.Connected or ReaderState.Inventorying);
+
+    private int InventoryCount => State.Readers.Count(reader => reader.State == ReaderState.Inventorying);
+
+    private int TagCount => State.Readers.Sum(reader => State.GetTags(reader.ReaderId).Count);
+
+    protected override async Task OnInitializedAsync()
+    {
+        State.Changed += OnChanged;
+        VirtualDevices.Changed += OnChanged;
+        await State.InitializeAsync();
+    }
+
+    private static string StatusClass(ReaderState state) => state switch
+    {
+        ReaderState.Connected or ReaderState.Inventorying => "ok",
+        ReaderState.Connecting or ReaderState.Stopping or ReaderState.Disconnecting => "warn",
+        ReaderState.Faulted => "danger",
+        _ => "neutral",
+    };
+
+    private void OnChanged(object? sender, EventArgs args) => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        State.Changed -= OnChanged;
+        VirtualDevices.Changed -= OnChanged;
+    }
+}

@@ -1,0 +1,8 @@
+<Project>
+  <!-- This MAUI consumer owns its multi-target TargetFrameworks declaration. -->
+  <PropertyGroup>
+    <UseDefaultTargetFramework>false</UseDefaultTargetFramework>
+  </PropertyGroup>
+
+  <Import Project="..\..\Directory.Build.props" />
+</Project>

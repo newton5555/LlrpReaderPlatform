@@ -29,6 +29,7 @@
 - [旧 WPF 功能迁移矩阵](development/legacy-feature-matrix.md)
 - [真机验收运行手册](development/hardware-validation-runbook.md)
 - [WPF 用户操作与故障排查](development/wpf-user-and-troubleshooting.md)
+- [LlrpReaderManager Blazor 开发模式](development/reader-manager.md)
 - [Virtual Reader 开发模式](development/virtual-reader.md)
 - [发布规范、单文件交付与 SDK 切换](development/release.md)
 

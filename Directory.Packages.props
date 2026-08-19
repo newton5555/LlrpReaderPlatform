@@ -10,6 +10,10 @@
     <PackageVersion Include="FontAwesome.Sharp" Version="6.6.0" />
     <PackageVersion Include="MahApps.Metro" Version="2.4.11" />
 
+    <!-- MAUI Blazor consumer -->
+    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.20" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.20" />
+
     <!-- Platform services and infrastructure -->
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.10" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.10" />
