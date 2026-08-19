@@ -58,6 +58,24 @@
                 </Setter>
             </Style>
 
+            <Style x:Key="IconActionButtonStyle"
+                   TargetType="Button"
+                   BasedOn="{StaticResource FlatCircleButtonStyle}">
+                <Setter Property="Width" Value="32" />
+                <Setter Property="Height" Value="32" />
+                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Accent}" />
+            </Style>
+
+            <Style x:Key="IconPrimaryButtonStyle"
+                   TargetType="Button"
+                   BasedOn="{StaticResource FlatCircleButtonStyle}">
+                <Setter Property="Width" Value="32" />
+                <Setter Property="Height" Value="32" />
+                <Setter Property="Background" Value="#2563EB" />
+                <Setter Property="BorderBrush" Value="#2563EB" />
+                <Setter Property="Foreground" Value="#FFFFFF" />
+            </Style>
+
             <Style x:Key="FlatMiniButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatCircleButtonStyle}">
                 <Setter Property="Width" Value="24" />
                 <Setter Property="Height" Value="24" />

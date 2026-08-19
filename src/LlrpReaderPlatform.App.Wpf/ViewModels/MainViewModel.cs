@@ -128,11 +128,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
             TagMemory.SelectReaderFromSidebar(value);
         }
         Settings.SetReaderContext(value);
-        if (ReferenceEquals(CurrentPage, InventoryRuns)
-            && InventoryRuns.ReaderId != value?.ReaderId)
-        {
-            InventoryRuns.SelectReader(value?.ReaderId, value?.Name);
-        }
     }
 
     /// <summary>当前导航页（ContentControl 路由）。</summary>
@@ -221,6 +216,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         OnPropertyChanged(nameof(HasNoReaders));
         TagMemory.UpdateAvailableReaders(Readers, SelectedReader?.ReaderId);
+        InventoryRuns.UpdateAvailableReaders(Readers, SelectedReader?.ReaderId);
         logger.LogTrace("WPF reader list refreshed: {ReaderCount}, selected {ReaderId}.", Readers.Count, SelectedReader?.ReaderId);
 
         // Apply the final item once, after the ListBox's transient null selection
@@ -477,7 +473,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         else if (string.Equals(page, "InventoryRuns", StringComparison.Ordinal))
         {
-            InventoryRuns.SelectReader(SelectedReader?.ReaderId, SelectedReader?.Name);
+            InventoryRuns.UpdateAvailableReaders(Readers, SelectedReader?.ReaderId);
         }
     }
 

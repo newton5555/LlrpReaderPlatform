@@ -41,6 +41,19 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         new(3, "S3"),
     ];
 
+    private static readonly SettingsOption[] StateAwareSelectedFlagOptions =
+    [
+        new(0, "Set"),
+        new(1, "Clear"),
+        new(2, "All"),
+    ];
+
+    private static readonly SettingsOption[] StateAwareSelectedFlagOptions101 =
+    [
+        new(0, "Set"),
+        new(1, "Clear"),
+    ];
+
     public EffectiveSettingsLayout BuildLayout(ReaderRuntimeSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
@@ -353,7 +366,11 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             });
         }
 
-        AddFilterEntries(entries, inventory, runtime.Capabilities?.CanDoTagInventoryStateAwareSingulation == true);
+        AddFilterEntries(
+            entries,
+            inventory,
+            runtime.Capabilities?.CanDoTagInventoryStateAwareSingulation == true,
+            snapshot.NegotiatedProtocolVersion);
         AddTriggerEntries(
             entries,
             inventory,
@@ -478,7 +495,11 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         {
             AntennaConfigurations = BuildAntennaConfigurations(draft, inventory, runtime.Capabilities, individual),
             Filters = BuildFilters(draft, inventory.Filters, runtime.Capabilities?.CanDoTagInventoryStateAwareSingulation == true),
-            StateAwareSingulation = BuildStateAwareSingulation(draft, runtime.Capabilities?.CanDoTagInventoryStateAwareSingulation == true),
+            StateAwareSingulation = BuildStateAwareSingulation(
+                draft,
+                layout,
+                runtime.Capabilities?.CanDoTagInventoryStateAwareSingulation == true,
+                reader.NegotiatedProtocolVersion),
             Report = BuildReport(draft, inventory.Report),
             StartTrigger = gpiSupported
                 ? BuildStartTrigger(draft, inventory.StartTrigger)
@@ -765,7 +786,8 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
     private static void AddFilterEntries(
         List<SettingsEntry> entries,
         InventorySettings inventory,
-        bool stateAwareSupported)
+        bool stateAwareSupported,
+        LlrpProtocolVersion? negotiatedProtocolVersion)
     {
         IReadOnlyList<InventorySelectFilter> filters = inventory.Filters;
         bool stateAwareEnabled = filters.Any(static filter => filter.StateAwareAction is not null);
@@ -887,15 +909,29 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
             DefaultValue = 0,
             ReadOnlyReason = stateAwareSupported ? null : "Reader 不支持 state-aware singulation。",
         });
+        bool supportsAllSelectedFlag = negotiatedProtocolVersion is not LlrpProtocolVersion.Version101;
+        IReadOnlyList<SettingsOption> selectedFlagOptions = supportsAllSelectedFlag
+            ? StateAwareSelectedFlagOptions
+            : StateAwareSelectedFlagOptions101;
+        InventorySelectedFlag selectedFlag = inventory.StateAwareSingulation?.SelectedFlag
+            ?? (supportsAllSelectedFlag ? InventorySelectedFlag.All : InventorySelectedFlag.Set);
+        if (!supportsAllSelectedFlag && selectedFlag == InventorySelectedFlag.All)
+        {
+            // LLRP 1.0.1 has no S_All field. If an old cached/managed setting contains
+            // All, expose the nearest representable default instead of presenting an
+            // option that can never be sent to this protocol.
+            selectedFlag = InventorySelectedFlag.Set;
+        }
+
         entries.Add(new SettingsEntry
         {
             Key = SettingsKeys.StateAwareSelectedFlag,
             Title = "State-aware selected flag",
             EditorKind = EditorKind.Choice,
             ValueType = typeof(int),
-            Options = [new(0, "Set"), new(1, "Clear"), new(2, "All")],
-            CurrentValue = inventory.StateAwareSingulation?.SelectedFlag is InventorySelectedFlag flag ? (int)flag : 2,
-            DefaultValue = 2,
+            Options = selectedFlagOptions,
+            CurrentValue = (int)selectedFlag,
+            DefaultValue = supportsAllSelectedFlag ? (int)InventorySelectedFlag.All : (int)InventorySelectedFlag.Set,
             ReadOnlyReason = stateAwareSupported ? null : "Reader 不支持 state-aware singulation。",
         });
     }
@@ -1324,17 +1360,35 @@ public sealed class StandardSettingsCompiler : ISettingsCompiler, ISdkSettingsCo
         return filters.ToArray();
     }
 
-    private static InventoryStateAwareSingulation? BuildStateAwareSingulation(SettingsDraft draft, bool supported)
+    private static InventoryStateAwareSingulation? BuildStateAwareSingulation(
+        SettingsDraft draft,
+        EffectiveSettingsLayout layout,
+        bool supported,
+        LlrpProtocolVersion? negotiatedProtocolVersion)
     {
         if (!supported || !GetBool(draft, SettingsKeys.StateAwareFiltersEnabled))
         {
             return null;
         }
 
+        SettingsEntry? selectedFlagEntry = layout.Entries
+            .FirstOrDefault(static entry => entry.Key == SettingsKeys.StateAwareSelectedFlag);
+        bool supportsAllSelectedFlag = negotiatedProtocolVersion is not LlrpProtocolVersion.Version101
+            && (selectedFlagEntry is null
+                || selectedFlagEntry.Options.Any(static option => Equals(option.Value, (int)InventorySelectedFlag.All)));
+        int defaultSelectedFlag = supportsAllSelectedFlag
+            ? (int)InventorySelectedFlag.All
+            : (int)InventorySelectedFlag.Set;
+        int selectedFlagValue = GetInt(draft, SettingsKeys.StateAwareSelectedFlag, defaultSelectedFlag);
+        if (!supportsAllSelectedFlag && selectedFlagValue == (int)InventorySelectedFlag.All)
+        {
+            throw new FormatException("LLRP 1.0.1 的 state-aware selected flag 仅支持 Set 或 Clear。");
+        }
+
         return new InventoryStateAwareSingulation
         {
             Target = (InventoryTarget)GetInt(draft, SettingsKeys.StateAwareTarget, 0),
-            SelectedFlag = (InventorySelectedFlag)GetInt(draft, SettingsKeys.StateAwareSelectedFlag, 2),
+            SelectedFlag = (InventorySelectedFlag)selectedFlagValue,
         };
     }
 

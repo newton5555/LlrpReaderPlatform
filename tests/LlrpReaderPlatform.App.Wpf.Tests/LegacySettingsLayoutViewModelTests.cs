@@ -298,6 +298,8 @@ public sealed class LegacySettingsLayoutViewModelTests
         Assert.Equal(2, vm.AntennaSettings.Count);
         Assert.Equal("2", vm.ReportEveryRow!.ValueText);
         Assert.Equal("250", vm.TariRow!.ValueText);
+        Assert.Equal(["State A", "State B"], vm.StateAwareTargetRow!.ChoiceDisplays);
+        Assert.Equal(["Set", "Clear", "All"], vm.StateAwareSelectedFlagRow!.ChoiceDisplays);
         Assert.False(vm.AntennaSettings[0].HasChannel);
         Assert.Null(vm.AntennaSettings[0].Channel);
         Assert.True(vm.IsRfModeEditable);
@@ -326,6 +328,10 @@ public sealed class LegacySettingsLayoutViewModelTests
         vm.StateAwareFiltersRow!.BooleanValue = true;
         Assert.True(vm.ShowStateAwareFilterOptions);
         Assert.False(vm.ShowNonStateAwareFilterOptions);
+        vm.StateAwareTargetRow.SelectedChoiceIndex = 1;
+        vm.StateAwareSelectedFlagRow.SelectedChoiceIndex = 1;
+        Assert.Equal("State B", vm.StateAwareTargetRow.ValueText);
+        Assert.Equal("Clear", vm.StateAwareSelectedFlagRow.ValueText);
     }
 
     [Fact]
@@ -431,6 +437,33 @@ public sealed class LegacySettingsLayoutViewModelTests
         Assert.True(vm.TariRow.IsReadOnly);
         Assert.Equal("14300 (14.3 uS)", vm.TariRow.ValueText);
         Assert.Equal(14_300, vm.TariRow.SelectedChoiceValue);
+    }
+
+    [Fact]
+    public async Task Selecting_impinj_channel_list_shows_frequency_checkboxes()
+    {
+        Guid readerId = Guid.NewGuid();
+        var service = new StubSettingsService(readerId, BuildFixedFrequencyModel(readerId));
+        var vm = new ReaderSettingsViewModel(service);
+
+        await vm.LoadCommand.ExecuteAsync(readerId);
+
+        Assert.True(vm.IsFrequencyChannelsVisible);
+        Assert.NotNull(vm.FrequencyModeRow);
+        Assert.NotNull(vm.FrequencyChannelsRow);
+        Assert.Equal(2, vm.FrequencyModeRow!.SelectedChoiceValue);
+        Assert.Equal(2, vm.FrequencyChannelsRow!.CollectionItems.Count);
+        Assert.True(vm.FrequencyChannelsRow.CollectionItems[0].IsSelected);
+        Assert.False(vm.FrequencyChannelsRow.CollectionItems[1].IsSelected);
+
+        vm.FrequencyModeRow.SelectedChoiceIndex = 1;
+
+        Assert.False(vm.IsFrequencyChannelsVisible);
+        Assert.Equal("1 (902.75 MHz)", vm.FrequencyChannelsRow.CollectionItems[0].Display);
+        Assert.Equal("3 (903.75 MHz)", vm.FrequencyChannelsRow.CollectionItems[1].Display);
+
+        vm.FrequencyModeRow.SelectedChoiceIndex = 2;
+        Assert.True(vm.IsFrequencyChannelsVisible);
     }
 
     [Fact]
@@ -601,6 +634,11 @@ public sealed class LegacySettingsLayoutViewModelTests
             Integer(SettingsKeys.AntennaRxSensitivityIndex(2), 0),
             Integer(SettingsKeys.AntennaChannelIndex(2), 2),
             Boolean(SettingsKeys.StateAwareFiltersEnabled, false),
+            Choice(SettingsKeys.StateAwareTarget, 0, new SettingsOption(0, "State A"), new SettingsOption(1, "State B")),
+            Choice(SettingsKeys.StateAwareSelectedFlag, 2,
+                new SettingsOption(0, "Set"),
+                new SettingsOption(1, "Clear"),
+                new SettingsOption(2, "All")),
             ..FilterEntries(1),
             ..FilterEntries(2),
         ];
@@ -720,6 +758,43 @@ public sealed class LegacySettingsLayoutViewModelTests
         [
             rfMode,
             Choice(SettingsKeys.Tari, 0, new SettingsOption(0, "0")),
+        ];
+
+        return new SettingsEditorModel(
+            new EffectiveSettingsLayout { ReaderId = readerId, CapabilityRevision = 4, Entries = entries },
+            new SettingsSnapshot
+            {
+                ReaderId = readerId,
+                CapabilityRevision = 4,
+                Values = entries.ToDictionary(entry => entry.Key, entry => entry.CurrentValue),
+            });
+    }
+
+    private static SettingsEditorModel BuildFixedFrequencyModel(Guid readerId)
+    {
+        SettingsEntry[] entries =
+        [
+            Choice(
+                "impinj.fixed-frequency-mode",
+                2,
+                new SettingsOption(-1, "Disabled"),
+                new SettingsOption(1, "Auto select"),
+                new SettingsOption(2, "Channel list")),
+            new SettingsEntry
+            {
+                Key = "impinj.fixed-frequency-channels",
+                Title = "Impinj fixed frequency channels",
+                EditorKind = EditorKind.Collection,
+                ValueType = typeof(string),
+                CurrentValue = "1",
+                Options =
+                [
+                    new SettingsOption(1, "1 (902.75 MHz)"),
+                    new SettingsOption(3, "3 (903.75 MHz)"),
+                ],
+                SemanticId = SettingsSemantics.FixedFrequencyChannels,
+                GroupKey = SettingsGroups.Frequency,
+            },
         ];
 
         return new SettingsEditorModel(

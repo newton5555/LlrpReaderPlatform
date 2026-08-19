@@ -288,7 +288,7 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
     public bool IsStateAwareFiltersEnabled => StateAwareFiltersRow?.BooleanValue == true;
     public bool ShowStateAwareFilterOptions => IsStateAwareFiltersSupported && IsStateAwareFiltersEnabled;
     public bool ShowNonStateAwareFilterOptions => !ShowStateAwareFilterOptions;
-    public bool IsFrequencyChannelsVisible => FrequencyModeRow?.ValueText == "2";
+    public bool IsFrequencyChannelsVisible => IsChannelListFrequencyMode(FrequencyModeRow);
     public bool IsFrequencyChannelsEditable => FrequencyChannelsRow is { IsReadOnly: false };
     public bool IsGlobalAntennaSettingsEnabled =>
         FindRow(SettingsKeys.IndividualAntennaSettings)?.BooleanValue != true;
@@ -971,6 +971,28 @@ public partial class ReaderSettingsViewModel : ObservableObject, IPageOperationO
 
             OnPropertyChanged(nameof(IsTariVisible));
         }
+    }
+
+    private static bool IsChannelListFrequencyMode(SettingsEntryRowViewModel? row)
+    {
+        if (row is null)
+        {
+            return false;
+        }
+
+        if (row.SelectedChoiceValue is { } selectedValue
+            && int.TryParse(
+                Convert.ToString(selectedValue, CultureInfo.InvariantCulture),
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out int selectedMode))
+        {
+            return selectedMode == 2;
+        }
+
+        // 兼容没有 Options 的旧缓存布局：新布局优先使用原始 choice value，
+        // 不再把 Choice 的展示文本当作协议值。
+        return string.Equals(row.ValueText, "2", StringComparison.Ordinal);
     }
 
     /// <summary>

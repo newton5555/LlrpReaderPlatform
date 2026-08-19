@@ -51,6 +51,9 @@ public partial class InventoryRunsViewModel : ObservableObject, IPageOperationOw
     private string readerName = "No reader selected";
 
     [ObservableProperty]
+    private ReaderItemViewModel? selectedFilterReader;
+
+    [ObservableProperty]
     private InventoryRunRowViewModel? selectedRun;
 
     [ObservableProperty]
@@ -58,6 +61,24 @@ public partial class InventoryRunsViewModel : ObservableObject, IPageOperationOw
 
     [ObservableProperty]
     private bool isBusy;
+
+    private bool updatingReaderFilter;
+
+    public ObservableCollection<ReaderItemViewModel> AvailableReaders { get; } = [];
+
+    public bool CanSelectReader => !IsBusy;
+
+    partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(CanSelectReader));
+
+    partial void OnSelectedFilterReaderChanged(ReaderItemViewModel? value)
+    {
+        if (updatingReaderFilter)
+        {
+            return;
+        }
+
+        SelectReader(value?.ReaderId, value?.Name);
+    }
 
     public int RunCount => Runs.Count;
     public long LatestReadCount => Runs.FirstOrDefault()?.TotalReadCount ?? 0;
@@ -112,7 +133,73 @@ public partial class InventoryRunsViewModel : ObservableObject, IPageOperationOw
 
         ReaderId = id;
         ReaderName = id is null ? "No reader selected" : name ?? ReaderName;
+        if (!updatingReaderFilter)
+        {
+            ReaderItemViewModel? selected = id is { } readerId
+                ? AvailableReaders.FirstOrDefault(reader => reader.ReaderId == readerId)
+                : null;
+            updatingReaderFilter = true;
+            try
+            {
+                SelectedFilterReader = selected;
+            }
+            finally
+            {
+                updatingReaderFilter = false;
+            }
+        }
+
         _ = StartLoadAsync(id);
+    }
+
+    /// <summary>
+    /// 刷新页面内 Reader 筛选项。当前筛选仍存在时保持当前选择；只有首次加载
+    /// 或当前 Reader 已被移除时，才回退到左侧 Reader 或第一个 Reader。
+    /// </summary>
+    public void UpdateAvailableReaders(
+        IEnumerable<ReaderItemViewModel> readers,
+        Guid? preferredReaderId = null)
+    {
+        ArgumentNullException.ThrowIfNull(readers);
+
+        ReaderItemViewModel[] items = readers.ToArray();
+        Guid? currentId = ReaderId;
+        Guid? targetId = currentId is { } current
+            && items.Any(reader => reader.ReaderId == current)
+                ? current
+                : preferredReaderId is { } preferred
+                    && items.Any(reader => reader.ReaderId == preferred)
+                        ? preferred
+                        : items.FirstOrDefault()?.ReaderId;
+
+        updatingReaderFilter = true;
+        try
+        {
+            AvailableReaders.Clear();
+            foreach (ReaderItemViewModel reader in items)
+            {
+                AvailableReaders.Add(reader);
+            }
+
+            SelectedFilterReader = targetId is { } target
+                ? items.FirstOrDefault(reader => reader.ReaderId == target)
+                : null;
+        }
+        finally
+        {
+            updatingReaderFilter = false;
+        }
+
+        if (ReaderId != targetId)
+        {
+            ReaderItemViewModel? target = SelectedFilterReader;
+            SelectReader(targetId, target?.Name);
+        }
+        else if (targetId is { } selected)
+        {
+            ReaderName = items.FirstOrDefault(reader => reader.ReaderId == selected)?.Name
+                ?? ReaderName;
+        }
     }
 
     [RelayCommand]

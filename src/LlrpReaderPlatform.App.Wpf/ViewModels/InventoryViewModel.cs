@@ -22,6 +22,7 @@ namespace LlrpReaderPlatform.App.Wpf.ViewModels;
 public partial class InventoryViewModel : ObservableObject, IDisposable
 {
     private const string ZeroElapsedText = "0.00 s";
+    private static readonly TimeSpan StopAllWaitTimeout = TimeSpan.FromSeconds(10);
     private const int MaxPendingTags = 2_000;
     private const int MaxDisplayedTags = 1_000;
     private const int MaxTrackedTagObservations = 2_000;
@@ -56,6 +57,8 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
     private long reportedTagCount;
     private long droppedUiTagCount;
     private bool runUsedMultipleReaders;
+    private int stoppingReaderCount;
+    private int stoppedReaderCount;
 
     [ObservableProperty]
     private Guid? readerId;
@@ -82,11 +85,18 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool isInventoryStarting;
 
-    public bool IsEmptyStateVisible => UniqueTagCount == 0 && !IsInventoryRunning && !IsInventoryStarting;
+    [ObservableProperty]
+    private bool isInventoryStopping;
+
+    public bool IsEmptyStateVisible => UniqueTagCount == 0
+        && !IsInventoryRunning
+        && !IsInventoryStarting
+        && !IsInventoryStopping;
 
     partial void OnUniqueTagCountChanged(int value) => OnPropertyChanged(nameof(IsEmptyStateVisible));
     partial void OnIsInventoryRunningChanged(bool value) => OnPropertyChanged(nameof(IsEmptyStateVisible));
     partial void OnIsInventoryStartingChanged(bool value) => OnPropertyChanged(nameof(IsEmptyStateVisible));
+    partial void OnIsInventoryStoppingChanged(bool value) => OnPropertyChanged(nameof(IsEmptyStateVisible));
 
     [ObservableProperty]
     private bool isBusy;
@@ -525,17 +535,20 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
 
         try
         {
+            BeginInventoryStop(1);
             Status = $"正在停止 Reader {ResolveReaderName(id)} 的盘存...";
             logger.LogInformation("WPF operation {Operation} requested: reader {ReaderId}.", "StopInventory", id);
             await inventory.StopInventoryAsync(id, lifetimeToken);
         }
         catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)
         {
+            IsInventoryStopping = false;
             return;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "WPF operation {Operation} failed: reader {ReaderId}.", "StopInventory", id);
+            IsInventoryStopping = false;
             if (!disposed)
             {
                 Status = PlatformErrorDisplay.Failure(
@@ -591,15 +604,20 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         if (ids.Length == 0)
         {
             StopRunUi();
+            IsInventoryStopping = false;
             Status = "当前没有运行中的盘存。";
             return;
         }
 
-        (Guid ReaderId, Exception? Error)[] errors = await Task.WhenAll(ids.Select(async id =>
+        BeginInventoryStop(ids.Length);
+        Status = FormatStopProgress();
+
+        CancellationTokenSource stopCts = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
+        Task<(Guid ReaderId, Exception? Error)[]> stopTask = Task.WhenAll(ids.Select(async id =>
         {
             try
             {
-                await inventory.StopInventoryAsync(id, lifetimeToken);
+                await inventory.StopInventoryAsync(id, stopCts.Token);
                 return (id, (Exception?)null);
             }
             catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)
@@ -611,6 +629,33 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
                 return (id, ex);
             }
         }));
+
+        (Guid ReaderId, Exception? Error)[] errors;
+        try
+        {
+            errors = await stopTask.WaitAsync(StopAllWaitTimeout, lifetimeToken);
+            stopCts.Dispose();
+        }
+        catch (TimeoutException)
+        {
+            stopCts.Cancel();
+            Status = $"停止等待超过 {StopAllWaitTimeout.TotalSeconds:0} 秒，已请求剩余 Reader 取消并断开；等待生命周期收敛。";
+            _ = ObserveStopBatchAsync(stopTask, stopCts);
+            return;
+        }
+        catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)
+        {
+            stopCts.Cancel();
+            stopCts.Dispose();
+            IsInventoryStopping = false;
+            return;
+        }
+        catch
+        {
+            stopCts.Cancel();
+            stopCts.Dispose();
+            throw;
+        }
 
         if (disposed)
         {
@@ -626,6 +671,24 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
                     .Where(static item => item.Error is not null)
                     .Select(item => $"{ResolveReaderName(item.ReaderId)}（{item.Error!.Message}）"));
             Status = $"有 {errorCount} 个 Reader 停止失败：{failedReaders}；等待平台生命周期事件收敛。";
+        }
+    }
+
+    private async Task ObserveStopBatchAsync(
+        Task<(Guid ReaderId, Exception? Error)[]> stopTask,
+        CancellationTokenSource stopCts)
+    {
+        try
+        {
+            await stopTask.ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Inventory stop batch completed with an unobserved failure after timeout.");
+        }
+        finally
+        {
+            stopCts.Dispose();
         }
     }
 
@@ -779,6 +842,30 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
             else
             {
                 IsInventoryRunning = true;
+            }
+
+            bool wasStopping = IsInventoryStopping;
+            if (wasStopping && wasActive)
+            {
+                Interlocked.Increment(ref stoppedReaderCount);
+            }
+
+            if (wasStopping)
+            {
+                if (activeReaderIds.Count == 0)
+                {
+                    IsInventoryStopping = false;
+                    Status = runUsedMultipleReaders
+                        ? "已停止盘存并断开所有 Reader。"
+                        : "已停止盘存";
+                }
+                else
+                {
+                    IsInventoryRunning = true;
+                    Status = FormatStopProgress();
+                }
+
+                return;
             }
 
             string readerName = ResolveReaderName(args.ReaderId);
@@ -1074,8 +1161,30 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
         UpdateMetrics();
     }
 
+    private void BeginInventoryStop(int readerCount)
+    {
+        Volatile.Write(ref stoppingReaderCount, Math.Max(1, readerCount));
+        Volatile.Write(ref stoppedReaderCount, 0);
+        IsInventoryStopping = true;
+    }
+
+    private string FormatStopProgress()
+    {
+        int total = Math.Max(1, Volatile.Read(ref stoppingReaderCount));
+        int completed = Math.Clamp(Volatile.Read(ref stoppedReaderCount), 0, total);
+        return total > 1
+            ? $"正在停止所有 Reader 的盘存... ({completed}/{total})"
+            : "正在停止 Reader 的盘存...";
+    }
+
     private bool TryBeginLifecycleOperation()
     {
+        if (IsInventoryStopping)
+        {
+            Status = "盘存操作进行中，请稍候。";
+            return false;
+        }
+
         if (Interlocked.CompareExchange(ref lifecycleOperationInFlight, 1, 0) != 0)
         {
             Status = "盘存操作进行中，请稍候。";
@@ -1189,8 +1298,6 @@ public partial class InventoryViewModel : ObservableObject, IDisposable
                 projection.TagList.ColorHex);
             return;
         }
-
-        Status = "正在停止所有 Reader 的盘存...";
 
         if (Tags.Count >= MaxDisplayedTags)
         {

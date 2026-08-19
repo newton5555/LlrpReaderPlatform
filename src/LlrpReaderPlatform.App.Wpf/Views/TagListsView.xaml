@@ -5,9 +5,15 @@
              xmlns:fa="clr-namespace:FontAwesome.Sharp;assembly=FontAwesome.Sharp">
     <UserControl.Resources>
         <Style x:Key="ToiActionCircleButtonStyle" TargetType="Button"
-               BasedOn="{StaticResource FlatCircleButtonStyle}">
-            <Setter Property="Width" Value="32" />
-            <Setter Property="Height" Value="32" />
+               BasedOn="{StaticResource IconActionButtonStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                    <Setter Property="IsEnabled" Value="False" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="ToiSaveButtonStyle" TargetType="Button"
+               BasedOn="{StaticResource IconPrimaryButtonStyle}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsBusy}" Value="True">
                     <Setter Property="IsEnabled" Value="False" />
@@ -16,8 +22,8 @@
         </Style>
         <Style x:Key="ToiAddButtonStyle" TargetType="Button"
                BasedOn="{StaticResource SuccessCircleButtonStyle}">
-            <Setter Property="Width" Value="34" />
-            <Setter Property="Height" Value="34" />
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsBusy}" Value="True">
                     <Setter Property="IsEnabled" Value="False" />
@@ -47,19 +53,13 @@
                            Text="Maintain the EPC, TOI name and display color used by Inventory." />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Command="{Binding LoadCommand}" Style="{StaticResource FlatActionButtonStyle}"
-                        Height="32" Padding="12,0" Margin="0,0,8,0" ToolTip="Refresh TOI">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <fa:IconBlock Icon="ArrowsRotate" IconFont="Solid" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center" />
-                        <TextBlock Text="Refresh" VerticalAlignment="Center" />
-                    </StackPanel>
+                <Button Command="{Binding LoadCommand}" Style="{StaticResource ToiActionCircleButtonStyle}"
+                        Margin="0,0,8,0" ToolTip="Refresh TOI" AutomationProperties.Name="Refresh TOI">
+                    <fa:IconBlock Icon="ArrowsRotate" IconFont="Solid" FontSize="14" />
                 </Button>
-                <Button Command="{Binding SaveCommand}" Style="{StaticResource PrimaryActionButtonStyle}"
-                        Height="32" Padding="14,0" ToolTip="Save TOI changes">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <fa:IconBlock Icon="FloppyDisk" IconFont="Solid" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center" />
-                        <TextBlock Text="Save Changes" VerticalAlignment="Center" />
-                    </StackPanel>
+                <Button Command="{Binding SaveCommand}" Style="{StaticResource ToiSaveButtonStyle}"
+                        ToolTip="Save TOI changes" AutomationProperties.Name="Save TOI changes">
+                    <fa:IconBlock Icon="FloppyDisk" IconFont="Solid" FontSize="14" />
                 </Button>
             </StackPanel>
         </Grid>

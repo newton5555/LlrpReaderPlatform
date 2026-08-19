@@ -61,7 +61,8 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Duration(s)" VerticalAlignment="Center" Margin="0,0,4,0" />
                     <TextBox Text="{Binding DurationSecondsText, UpdateSourceTrigger=PropertyChanged}"
-                             Width="64" Padding="4,2" ToolTip="0 = continuous inventory" />
+                             Width="64" Padding="4,2" VerticalContentAlignment="Center"
+                             ToolTip="0 = continuous inventory" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -252,6 +253,19 @@
                 </StackPanel>
             </Border>
 
+        </Grid>
+
+        <Grid Grid.RowSpan="2" Panel.ZIndex="20"
+              Visibility="{Binding IsInventoryStopping, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="{DynamicResource MahApps.Brushes.ThemeBackground}" Opacity="0.86" />
+            <StackPanel Width="320" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <mah:ProgressRing Width="48" Height="48" HorizontalAlignment="Center"
+                                  Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                                  IsActive="True" IsLarge="True" />
+                <TextBlock Margin="0,14,0,0" HorizontalAlignment="Center"
+                           FontSize="14" FontWeight="SemiBold"
+                           Text="{Binding Status}" TextAlignment="Center" TextWrapping="Wrap" />
+            </StackPanel>
         </Grid>
     </Grid>
 </UserControl>

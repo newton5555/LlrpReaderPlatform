@@ -117,6 +117,61 @@ public sealed class StandardSettingsCompilerTests
     }
 
     [Fact]
+    public void Runtime_layout_hides_all_selected_flag_for_llrp101()
+    {
+        var compiler = new StandardSettingsCompiler();
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(new ReaderSettings(), new ManagedRoSpecSnapshot(
+                new InventorySettings(), InventoryRuntimeState.Disabled)),
+            Capabilities: null);
+
+        SettingsEntry v101 = Assert.Single(
+            compiler.BuildLayout(
+                Snapshot() with { NegotiatedProtocolVersion = LlrpProtocolVersion.Version101 },
+                runtime).Entries,
+            static entry => entry.Key == SettingsKeys.StateAwareSelectedFlag);
+        Assert.Equal(["Set", "Clear"], v101.Options.Select(static option => option.Display));
+        Assert.Equal(0, v101.CurrentValue);
+        Assert.Equal(0, v101.DefaultValue);
+
+        SettingsEntry v11 = Assert.Single(
+            compiler.BuildLayout(
+                Snapshot() with { NegotiatedProtocolVersion = LlrpProtocolVersion.Version11 },
+                runtime).Entries,
+            static entry => entry.Key == SettingsKeys.StateAwareSelectedFlag);
+        Assert.Equal(["Set", "Clear", "All"], v11.Options.Select(static option => option.Display));
+        Assert.Equal(2, v11.CurrentValue);
+        Assert.Equal(2, v11.DefaultValue);
+    }
+
+    [Fact]
+    public void CompileSdk_rejects_stale_all_selected_flag_before_sdk_compile_for_llrp101()
+    {
+        var compiler = new StandardSettingsCompiler();
+        ReaderRuntimeSnapshot snapshot = Snapshot(new ReaderAntennaInfo { AntennaId = 1 }) with
+        {
+            NegotiatedProtocolVersion = LlrpProtocolVersion.Version101,
+        };
+        var runtime = new ReaderSettingsRuntimeSnapshot(
+            new ReaderSettingsSnapshot(new ReaderSettings(), new ManagedRoSpecSnapshot(
+                new InventorySettings { AntennaIds = [1] }, InventoryRuntimeState.Disabled)),
+            CreateCapabilities(canDoStateAwareSingulation: true));
+        EffectiveSettingsLayout layout = compiler.BuildLayout(snapshot, runtime);
+        var draft = new SettingsDraft { ReaderId = ReaderId, CapabilityRevision = 7 };
+        foreach (SettingsEntry entry in layout.Entries.Where(static entry => !entry.IsReadOnly))
+        {
+            draft.Values[entry.Key] = entry.CurrentValue;
+        }
+
+        draft.Values[SettingsKeys.StateAwareFiltersEnabled] = true;
+        draft.Values[SettingsKeys.StateAwareSelectedFlag] = (int)InventorySelectedFlag.All;
+
+        FormatException error = Assert.Throws<FormatException>(
+            () => compiler.CompileSdk(draft, layout, runtime, snapshot));
+        Assert.Contains("仅支持 Set 或 Clear", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Runtime_layout_keeps_rf_mode_editable_when_reader_does_not_report_rf_modes()
     {
         var compiler = new StandardSettingsCompiler();
@@ -830,7 +885,8 @@ public sealed class StandardSettingsCompilerTests
         IEnumerable<RxSensitivityEntry>? rxSensitivities = null,
         IEnumerable<FrequencyHopTableEntry>? hopTables = null,
         IEnumerable<C1G2RfModeEntry>? rfModes = null,
-        short? maxRxSensitivityDbm = null)
+        short? maxRxSensitivityDbm = null,
+        bool canDoStateAwareSingulation = false)
     {
         return (ReaderCapabilities)Activator.CreateInstance(
             typeof(ReaderCapabilities),
@@ -853,7 +909,7 @@ public sealed class StandardSettingsCompilerTests
                 true,
                 false,
                 false,
-                false,
+                canDoStateAwareSingulation,
                 false,
                 false,
                 maxRxSensitivityDbm,

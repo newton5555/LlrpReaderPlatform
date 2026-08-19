@@ -349,9 +349,14 @@ public sealed class ImpinjSettingsContributor : ISettingsExtensionContributor
 
     private static IReadOnlyList<SettingsOption> BuildFrequencyOptions(ReaderSettingsRuntimeSnapshot runtime)
     {
-        IReadOnlyList<uint> frequencies = runtime.Capabilities?.HopTables.FirstOrDefault()?.Frequencies
-            ?? runtime.Capabilities?.TxFrequencies
-            ?? [];
+        // Impinj Channel_List uses the fixed-frequency table's channel indexes.
+        // TxFrequencies is the SDK's normalized FixedFrequencyTable; hop tables
+        // describe hopping regions and are only a fallback for partial responses.
+        IReadOnlyList<uint> frequencies = runtime.Capabilities?.TxFrequencies is { Count: > 0 } fixedFrequencies
+            ? fixedFrequencies
+            : runtime.Capabilities?.HopTables
+                .FirstOrDefault(static table => table.Frequencies.Count > 0)?.Frequencies
+                ?? [];
         return frequencies
             .Select((frequency, index) => new SettingsOption(
                 index + 1,
