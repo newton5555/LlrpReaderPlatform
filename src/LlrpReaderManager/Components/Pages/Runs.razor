@@ -5,7 +5,7 @@
 <div class="section-header">
     <div>
         <h1 class="section-title">Inventory Runs</h1>
-        <p class="section-subtitle">Historical inventory session summaries and run logs persisted in SQLite.</p>
+        <p class="section-subtitle">Historical inventory session summaries, tag snapshots, and run logs persisted in SQLite.</p>
     </div>
     <div class="toolbar">
         <label class="form-label" for="runs-reader">Reader</label>
@@ -32,20 +32,56 @@
     <div class="notice ok" style="margin-bottom: var(--space-4);">@statusMessage</div>
 }
 
+<!-- Run Summary Metrics Grid -->
+<div class="card-grid" style="margin-bottom: var(--space-4);">
+    <div class="card card-pad">
+        <div class="stat-label">Total Runs</div>
+        <div class="stat-value">@runs.Count</div>
+        <div class="stat-note">Completed inventory sessions</div>
+    </div>
+    <div class="card card-pad">
+        <div class="stat-label">Cumulative Reads</div>
+        <div class="stat-value">@TotalReadsCount</div>
+        <div class="stat-note">Sum of all tag reads</div>
+    </div>
+    <div class="card card-pad">
+        <div class="stat-label">Peak Unique Tags</div>
+        <div class="stat-value">@MaxUniqueTags</div>
+        <div class="stat-note">Max tags in a single run</div>
+    </div>
+    <div class="card card-pad">
+        <div class="stat-label">Latest Session</div>
+        <div class="stat-value" style="font-size: 18px; line-height: 34px;">
+            @(runs.FirstOrDefault()?.StartedAtUtc.ToLocalTime().ToString("MM-dd HH:mm") ?? "—")
+        </div>
+        <div class="stat-note">Most recent recorded run</div>
+    </div>
+</div>
+
 <section class="card">
-    <div class="card-header">
-        <span class="card-title">
+    <div class="card-header" style="flex-wrap: wrap; gap: var(--space-3);">
+        <div style="display: flex; align-items: center; gap: 8px;">
             <AppIcon Name="history" Size="14" />
-            <span>Run History</span>
-        </span>
-        <span class="status-badge neutral">@runs.Count record(s)</span>
+            <span class="card-title" style="margin-bottom: 0;">Run History & Snapshots</span>
+            <span class="status-badge neutral">@runs.Count record(s)</span>
+        </div>
+        @if (runs.Count > 0)
+        {
+            <div style="width: min(220px, 40vw); margin-left: auto;">
+                <input type="text"
+                       placeholder="Filter by stop reason..."
+                       @bind="searchFilter"
+                       @bind:event="oninput"
+                       style="height: 28px; font-size: 11.5px;" />
+            </div>
+        }
     </div>
     @if (runs.Count == 0)
     {
         <div class="empty-state">
             <AppIcon Name="history" Size="36" />
             <h2>No Completed Runs</h2>
-            <p>Start and stop inventory on a Reader to generate historical run records.</p>
+            <p>Start and stop inventory on a Reader to generate historical run records and snapshot files.</p>
         </div>
     }
     else
@@ -54,8 +90,9 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Started</th>
-                        <th>Ended</th>
+                        <th>Started At</th>
+                        <th>Ended At</th>
+                        <th>Duration</th>
                         <th>Stop Reason</th>
                         <th>Total Reads</th>
                         <th>Unique Tags</th>
@@ -63,21 +100,27 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (InventoryRunRecord run in runs)
+                    @foreach (InventoryRunRecord run in FilteredRuns)
                     {
+                        TimeSpan? duration = run.EndedAtUtc.HasValue ? run.EndedAtUtc.Value - run.StartedAtUtc : null;
                         <tr>
                             <td class="mono">@run.StartedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</td>
                             <td class="mono">@(run.EndedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "In Progress")</td>
-                            <td><span class="status-badge neutral">@run.StopReason</span></td>
-                            <td class="mono">@run.TotalReadCount</td>
-                            <td class="mono" style="font-weight: 600;">@run.UniqueTagCount</td>
+                            <td class="mono">@(duration.HasValue ? FormatDuration(duration.Value) : "—")</td>
+                            <td>
+                                <span class="status-badge @(run.StopReason == "Manual" ? "ok" : "neutral")">
+                                    @run.StopReason
+                                </span>
+                            </td>
+                            <td class="mono">@run.TotalReadCount.ToString("N0")</td>
+                            <td class="mono" style="font-weight: 600;">@run.UniqueTagCount.ToString("N0")</td>
                             <td>
                                 @if (!string.IsNullOrWhiteSpace(run.SnapshotFilePath))
                                 {
                                     <button class="btn btn-sm"
-                                            style="padding: 2px 8px; font-size: 11px; gap: 4px;"
+                                            style="padding: 2px 8px; font-size: 11px; gap: 5px;"
                                             @onclick="() => OpenSnapshotFileAsync(run.SnapshotFilePath)"
-                                            title="Click to open @run.SnapshotFilePath">
+                                            title="Click to open @run.SnapshotFilePath in local file viewer">
                                         <AppIcon Name="folder-open" Size="12" />
                                         <span class="mono" style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                             @System.IO.Path.GetFileName(run.SnapshotFilePath)
@@ -102,7 +145,17 @@
     private List<InventoryRunRecord> runs = [];
     private string? error;
     private string? statusMessage;
+    private string searchFilter = string.Empty;
     private bool pageBusy;
+
+    private long TotalReadsCount => runs.Sum(r => r.TotalReadCount);
+    private int MaxUniqueTags => runs.Count > 0 ? runs.Max(r => r.UniqueTagCount) : 0;
+
+    private IReadOnlyList<InventoryRunRecord> FilteredRuns => runs
+        .Where(r => string.IsNullOrWhiteSpace(searchFilter) ||
+                    r.StopReason.Contains(searchFilter, StringComparison.OrdinalIgnoreCase) ||
+                    (r.SnapshotFilePath is not null && r.SnapshotFilePath.Contains(searchFilter, StringComparison.OrdinalIgnoreCase)))
+        .ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -144,46 +197,34 @@
         }
     }
 
-    private async Task OpenSnapshotFileAsync(string? filePath)
+    private void OpenSnapshotFileAsync(string filePath)
     {
-        if (string.IsNullOrWhiteSpace(filePath))
-        {
-            return;
-        }
-
-        error = null;
-        statusMessage = null;
         try
         {
-            if (File.Exists(filePath))
+            if (!System.IO.File.Exists(filePath))
             {
-                if (OperatingSystem.IsWindows())
-                {
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = filePath,
-                        UseShellExecute = true
-                    });
-                    statusMessage = $"Opened snapshot file: {Path.GetFileName(filePath)}";
-                }
-                else
-                {
-                    await Launcher.Default.OpenAsync(new OpenFileRequest
-                    {
-                        File = new ReadOnlyFile(filePath)
-                    });
-                }
+                error = $"File not found: {filePath}";
+                return;
             }
-            else
+
+            var processStartInfo = new System.Diagnostics.ProcessStartInfo
             {
-                error = $"Snapshot file not found on disk: {filePath}";
-            }
+                FileName = filePath,
+                UseShellExecute = true,
+            };
+            System.Diagnostics.Process.Start(processStartInfo);
+            statusMessage = $"Opened snapshot: {System.IO.Path.GetFileName(filePath)}";
         }
         catch (Exception ex)
         {
             error = $"Failed to open file: {ex.Message}";
         }
     }
+
+    private static string FormatDuration(TimeSpan duration) =>
+        duration.TotalMinutes >= 1
+            ? $"{(int)duration.TotalMinutes}m {duration.Seconds}s"
+            : $"{duration.TotalSeconds:0.0}s";
 
     private static Guid? ParseReaderId(string? value) => Guid.TryParse(value, out Guid id) ? id : null;
 }

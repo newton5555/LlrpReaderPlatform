@@ -646,6 +646,7 @@ input[type=checkbox] {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: var(--surface);
+    box-shadow: var(--shadow-xs);
 }
 
 table {
@@ -656,11 +657,11 @@ table {
 }
 
 th {
-    padding: 8px 11px;
+    padding: 9px 12px;
     border-bottom: 1px solid var(--border);
     background: var(--surface-sunken);
     color: var(--muted-light);
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-align: left;
@@ -669,13 +670,17 @@ th {
 }
 
 td {
-    padding: 8px 11px;
+    padding: 8px 12px;
     border-bottom: 1px solid var(--border);
     vertical-align: middle;
 }
 
+tbody tr:nth-child(even) {
+    background: oklch(99.4% 0.002 240);
+}
+
 tbody tr:hover {
-    background: var(--accent-bg-subtle);
+    background: var(--accent-bg-subtle) !important;
 }
 
 tbody tr:last-child td {

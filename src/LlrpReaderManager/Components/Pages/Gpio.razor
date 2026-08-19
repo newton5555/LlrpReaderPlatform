@@ -5,7 +5,7 @@
 <div class="section-header">
     <div>
         <h1 class="section-title">GPI / GPO Control</h1>
-        <p class="section-subtitle">Read digital input status and control standard LLRP output ports through platform services.</p>
+        <p class="section-subtitle">Read live digital input status and trigger standard LLRP output ports through platform services.</p>
     </div>
     <div class="toolbar">
         <label class="form-label" for="gpio-reader">Reader</label>
@@ -38,32 +38,63 @@
 }
 else
 {
+    <!-- Port Telemetry Stats -->
+    <div class="card-grid" style="margin-bottom: var(--space-4);">
+        <div class="card card-pad">
+            <div class="stat-label">GPI Digital Inputs</div>
+            <div class="stat-value">@(snapshot?.Gpis.Count ?? 0)</div>
+            <div class="stat-note">@(snapshot?.Gpis.Count(p => p.State) ?? 0) currently Active (High)</div>
+        </div>
+        <div class="card card-pad">
+            <div class="stat-label">GPO Digital Outputs</div>
+            <div class="stat-value">@(snapshot?.Gpos.Count ?? 0)</div>
+            <div class="stat-note">@(snapshot?.Gpos.Count(p => p.State) ?? 0) currently Active (High)</div>
+        </div>
+        <div class="card card-pad">
+            <div class="stat-label">Reader Lease State</div>
+            <div class="stat-value" style="font-size: 20px; line-height: 34px;">@SelectedReader.State</div>
+            <div class="stat-note">Short-operation lease available</div>
+        </div>
+    </div>
+
     <div class="split">
+        <!-- Left: GPI Inputs Table -->
         <section class="card">
             <div class="card-header">
                 <span class="card-title">
                     <AppIcon Name="bolt" Size="14" />
-                    <span>GPI Inputs</span>
+                    <span>GPI Digital Inputs</span>
                 </span>
                 <span class="status-badge neutral">Reader Reported</span>
             </div>
             @if (snapshot?.Gpis.Count is not > 0)
             {
-                <div class="card-pad muted">No GPI status has been loaded, or this Reader has no standard GPI ports.</div>
+                <div class="card-pad muted" style="font-size: 12.5px;">No GPI status has been loaded, or this Reader has no standard GPI ports.</div>
             }
             else
             {
                 <div class="table-wrap">
                     <table class="data-table">
-                        <thead><tr><th>Port</th><th>Configured</th><th>State</th><th>Timestamp</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Port</th>
+                                <th>Configured</th>
+                                <th>Logic State</th>
+                                <th>Last Timestamp</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             @foreach (GpiPortStatus port in snapshot!.Gpis)
                             {
                                 <tr>
-                                    <td class="mono">@port.PortNumber</td>
-                                    <td>@(port.Configured ? "Yes" : "No")</td>
-                                    <td><span class="status-badge @(port.State ? "ok" : "neutral")">@(port.State ? "ON" : "OFF")</span></td>
-                                    <td>@(port.Timestamp?.ToLocalTime().ToString("HH:mm:ss.fff") ?? "—")</td>
+                                    <td class="mono" style="font-weight: 600;">Port @port.PortNumber</td>
+                                    <td>@(port.Configured ? "Configured" : "Unconfigured")</td>
+                                    <td>
+                                        <span class="status-badge @(port.State ? "ok" : "neutral")">
+                                            @(port.State ? "HIGH (ON)" : "LOW (OFF)")
+                                        </span>
+                                    </td>
+                                    <td class="mono">@(port.Timestamp?.ToLocalTime().ToString("HH:mm:ss.fff") ?? "—")</td>
                                 </tr>
                             }
                         </tbody>
@@ -72,27 +103,28 @@ else
             }
         </section>
 
+        <!-- Right: GPO Outputs Controls -->
         <section class="card">
             <div class="card-header">
                 <span class="card-title">
                     <AppIcon Name="zap" Size="14" />
-                    <span>GPO Outputs</span>
+                    <span>GPO Digital Outputs</span>
                 </span>
-                <span class="status-badge neutral">Short Operation</span>
+                <span class="status-badge neutral">Command Target</span>
             </div>
             @if (snapshot?.Gpos.Count is not > 0)
             {
-                <div class="card-pad muted">No GPO status has been loaded, or this Reader has no standard GPO ports.</div>
+                <div class="card-pad muted" style="font-size: 12.5px;">No GPO status has been loaded, or this Reader has no standard GPO ports.</div>
             }
             else
             {
-                <div class="gpo-grid">
+                <div class="gpo-grid" style="padding: var(--space-4);">
                     @foreach (GpoPortStatus port in snapshot!.Gpos)
                     {
                         <div class="gpo-card @(port.State ? "active" : string.Empty)">
                             <div class="gpo-card-head">
                                 <strong style="font-size: 13px;">GPO Port @port.PortNumber</strong>
-                                <span class="status-badge @(port.State ? "ok" : "neutral")">@(port.State ? "ON" : "OFF")</span>
+                                <span class="status-badge @(port.State ? "ok" : "neutral")">@(port.State ? "HIGH (ON)" : "LOW (OFF)")</span>
                             </div>
                             <div class="form-hint" style="font-size: 11px;">
                                 @(port.State ? "Digital output active (High)" : "Digital output idle (Low)")
@@ -142,22 +174,22 @@ else
     private void SelectReader(ChangeEventArgs args)
     {
         selectedReaderText = args.Value?.ToString();
-        snapshot = null;
         State.Select(ParseReaderId(selectedReaderText));
+        _ = LoadAsync();
     }
 
     private async Task LoadAsync()
     {
-        if (SelectedReader is not { } reader)
+        if (SelectedReader is not { } reader || pageBusy)
         {
             return;
         }
 
         pageBusy = true;
+        message = null;
         try
         {
             snapshot = await State.GetGpioStatusAsync(reader.ReaderId);
-            SetMessage($"Loaded {snapshot.Gpis.Count} GPI and {snapshot.Gpos.Count} GPO ports.", false);
         }
         catch (Exception exception)
         {
@@ -171,17 +203,19 @@ else
 
     private async Task SetGpoAsync(GpoPortStatus port)
     {
-        if (SelectedReader is not { } reader)
+        if (SelectedReader is not { } reader || pageBusy)
         {
             return;
         }
 
         pageBusy = true;
+        message = null;
         try
         {
-            await State.SetGpoAsync(reader.ReaderId, port.PortNumber, !port.State);
-            snapshot = await State.GetGpioStatusAsync(reader.ReaderId);
-            SetMessage($"GPO {port.PortNumber} confirmed as {(port.State ? "OFF" : "ON")}.", false);
+            bool targetState = !port.State;
+            await State.SetGpoAsync(reader.ReaderId, port.PortNumber, targetState);
+            SetMessage($"GPO {port.PortNumber} set to {(targetState ? "HIGH" : "LOW")}.", false);
+            await LoadAsync();
         }
         catch (Exception exception)
         {
@@ -193,24 +227,6 @@ else
         }
     }
 
-    private void OnGpiChanged(object? sender, GpiObservedEventArgs args)
-    {
-        if (SelectedReader?.ReaderId != args.ReaderId || snapshot is null)
-        {
-            return;
-        }
-
-        IReadOnlyList<GpiPortStatus> gpis = snapshot.Gpis
-            .Where(port => port.PortNumber != args.Status.PortNumber)
-            .Append(args.Status)
-            .OrderBy(port => port.PortNumber)
-            .ToArray();
-        snapshot = snapshot with { Gpis = gpis };
-        _ = InvokeAsync(StateHasChanged);
-    }
-
-    private void OnChanged(object? sender, EventArgs args) => InvokeAsync(StateHasChanged);
-
     private void SetMessage(string value, bool error)
     {
         message = value;
@@ -218,6 +234,16 @@ else
     }
 
     private static Guid? ParseReaderId(string? value) => Guid.TryParse(value, out Guid id) ? id : null;
+
+    private void OnChanged(object? sender, EventArgs args) => InvokeAsync(StateHasChanged);
+
+    private void OnGpiChanged(object? sender, GpiObservedEventArgs @event)
+    {
+        if (SelectedReader is not null && @event.ReaderId == SelectedReader.ReaderId)
+        {
+            _ = LoadAsync();
+        }
+    }
 
     public void Dispose()
     {

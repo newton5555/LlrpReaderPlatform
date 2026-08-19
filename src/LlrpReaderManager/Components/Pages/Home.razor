@@ -6,7 +6,7 @@
 <div class="section-header">
     <div>
         <h1 class="section-title">Operations Dashboard</h1>
-        <p class="section-subtitle">Real-time overview of connected RFID readers, active inventory sessions, and system metrics.</p>
+        <p class="section-subtitle">Real-time telemetry, connected RFID readers, active inventory sessions, and system overview.</p>
     </div>
     <div class="toolbar">
         <a class="btn btn-primary" href="/inventory">
@@ -37,46 +37,64 @@
     </div>
 }
 
-<div class="card-grid">
+<div class="card-grid" style="margin-bottom: var(--space-4);">
     <div class="card card-pad">
-        <div class="stat-label">Total Readers</div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div class="stat-label">Total Readers</div>
+            <span class="status-badge @(ConnectedCount > 0 ? "ok" : "neutral")">@ConnectedCount Active</span>
+        </div>
         <div class="stat-value">@State.Readers.Count</div>
-        <div class="stat-note">@ConnectedCount connected or active</div>
+        <div class="stat-note">Configured physical / virtual endpoints</div>
     </div>
+
     <div class="card card-pad">
-        <div class="stat-label">Inventory Leases</div>
-        <div class="stat-value">@InventoryCount</div>
-        <div class="stat-note">Active long-running sessions</div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div class="stat-label">Inventory Leases</div>
+            <span class="status-badge @(InventoryCount > 0 ? "ok" : "neutral")">@(InventoryCount > 0 ? "Streaming" : "Idle")</span>
+        </div>
+        <div class="stat-value" style="color: @(InventoryCount > 0 ? "var(--accent)" : "inherit");">@InventoryCount</div>
+        <div class="stat-note">Active long-running inventory sessions</div>
     </div>
+
     <div class="card card-pad">
-        <div class="stat-label">Aggregated Tags</div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div class="stat-label">Observed Tags</div>
+            <span class="status-badge info">Distinct EPCs</span>
+        </div>
         <div class="stat-value">@TagCount</div>
-        <div class="stat-note">Unique observed in this session</div>
+        <div class="stat-note">Aggregated tags across all readers</div>
     </div>
+
     <div class="card card-pad">
-        <div class="stat-label">Virtual Device</div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div class="stat-label">Virtual Test Target</div>
+            <span class="status-badge @(VirtualDevices.IsRunning ? "ok" : "neutral")">
+                @(VirtualDevices.IsRunning ? "Running" : "Offline")
+            </span>
+        </div>
         <div class="stat-value" style="font-size: 20px; line-height: 34px;">
-            @(VirtualDevices.IsRunning ? "Active" : "Idle")
+            @(VirtualDevices.IsRunning ? "Active Loopback" : "Idle")
         </div>
         <div class="stat-note">
-            @(VirtualDevices.IsRunning ? $"127.0.0.1:{VirtualDevices.CurrentInstance?.Port}" : "Test loopback target")
+            @(VirtualDevices.IsRunning ? $"127.0.0.1:{VirtualDevices.CurrentInstance?.Port}" : "Local hardware emulation")
         </div>
     </div>
 </div>
 
-<div class="split" style="margin-top: var(--space-4);">
+<div class="split">
+    <!-- Left: Reader Status & Operations -->
     <section class="card">
         <div class="card-header">
             <span class="card-title">
                 <AppIcon Name="readers" Size="14" />
-                <span>Reader Status</span>
+                <span>Connected Readers & Status</span>
             </span>
-            <a class="btn btn-sm" href="/readers">View all</a>
+            <a class="btn btn-sm btn-ghost" href="/readers">View All Readers</a>
         </div>
         @if (State.Readers.Count == 0)
         {
             <div class="empty-state">
-                <AppIcon Name="readers" Size="32" />
+                <AppIcon Name="readers" Size="36" />
                 <h3>No Registered Readers</h3>
                 <p>Add a physical endpoint or start the local virtual device test target.</p>
                 <a class="btn btn-primary" href="/readers" style="margin-top: var(--space-2);">Open Readers</a>
@@ -87,50 +105,87 @@
             <div class="stack" style="padding: var(--space-3) var(--space-4);">
                 @foreach (ReaderRuntimeSnapshot reader in State.Readers)
                 {
-                    <div class="reader-head card" style="box-shadow: none;">
-                        <div class="reader-heading">
-                            <div class="reader-icon @(IsVirtual(reader.ReaderId) ? "virtual" : string.Empty)">
-                                <AppIcon Name="@(IsVirtual(reader.ReaderId) ? "cube" : "satellite-dish")" Size="16" />
+                    <div class="reader-card" style="margin-bottom: 0;">
+                        <div class="reader-head">
+                            <div class="reader-heading">
+                                <div class="reader-icon @(IsVirtual(reader.ReaderId) ? "virtual" : string.Empty)">
+                                    <AppIcon Name="@(IsVirtual(reader.ReaderId) ? "cube" : "satellite-dish")" Size="16" />
+                                </div>
+                                <div>
+                                    <div class="reader-name">@reader.Profile.Name</div>
+                                    <div class="reader-endpoint mono">@reader.Profile.Host:@reader.Profile.Port</div>
+                                </div>
                             </div>
-                            <div>
-                                <div class="reader-name">@reader.Profile.Name</div>
-                                <div class="reader-endpoint">@reader.Profile.Host:@reader.Profile.Port</div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="status-badge @StatusClass(reader.State)">@reader.State</span>
+                                <a class="btn btn-sm btn-ghost" href="/inventory" title="Open Inventory for this reader">
+                                    <AppIcon Name="search" Size="12" />
+                                    <span>Inventory</span>
+                                </a>
+                                <a class="btn btn-sm btn-ghost" href="/settings" title="Settings">
+                                    <AppIcon Name="gear" Size="12" />
+                                </a>
                             </div>
                         </div>
-                        <span class="status-badge @StatusClass(reader.State)">@reader.State</span>
                     </div>
                 }
             </div>
         }
     </section>
 
-    <section class="card virtual-widget-card">
-        <div class="card-header">
-            <span class="card-title">
-                <AppIcon Name="cube" Size="14" />
-                <span>Virtual Test Device</span>
-            </span>
-            <span class="status-badge @(VirtualDevices.IsRunning ? "ok" : "neutral")">
-                @(VirtualDevices.IsRunning ? "Running" : "Idle")
-            </span>
-        </div>
-        <div class="card-pad stack">
-            <p class="form-hint">
-                Quickly start a local protocol virtual device on loopback TCP (127.0.0.1) for testing Inventory and Tag Operations without physical hardware.
-            </p>
-            @if (VirtualDevices.IsRunning && VirtualDevices.CurrentInstance is { } instance)
-            {
-                <div class="notice ok" style="font-size: 12px;">
-                    <strong>@instance.Name</strong>
-                    <div class="mono" style="margin-top: 2px;">127.0.0.1:@instance.Port</div>
-                </div>
-            }
-            <a class="btn btn-primary" href="/readers" style="margin-top: var(--space-2);">
-                <AppIcon Name="cube" Size="13" />
-                <span>Manage Virtual Device</span>
-            </a>
-        </div>
-    </section>
+    <!-- Right: Virtual Device & Quick Links -->
+    <div class="stack">
+        <section class="card virtual-widget-card">
+            <div class="card-header">
+                <span class="card-title">
+                    <AppIcon Name="cube" Size="14" />
+                    <span>Virtual Test Device</span>
+                </span>
+                <span class="status-badge @(VirtualDevices.IsRunning ? "ok" : "neutral")">
+                    @(VirtualDevices.IsRunning ? "Running" : "Idle")
+                </span>
+            </div>
+            <div class="card-pad stack">
+                <p class="form-hint" style="margin-top: 0;">
+                    Start a local LLRP protocol virtual device on loopback TCP (127.0.0.1) for testing Inventory, RF Settings, and Tag Memory operations without physical hardware.
+                </p>
+                @if (VirtualDevices.IsRunning && VirtualDevices.CurrentInstance is { } instance)
+                {
+                    <div class="notice ok" style="font-size: 12px; padding: var(--space-2) var(--space-3);">
+                        <strong>@instance.Name</strong>
+                        <div class="mono" style="margin-top: 2px;">127.0.0.1:@instance.Port</div>
+                    </div>
+                }
+                <a class="btn btn-primary" href="/readers" style="margin-top: var(--space-1); width: 100%;">
+                    <AppIcon Name="cube" Size="13" />
+                    <span>Manage Virtual Device</span>
+                </a>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <span class="card-title">
+                    <AppIcon Name="sliders" Size="14" />
+                    <span>Quick Navigation</span>
+                </span>
+            </div>
+            <div class="card-pad stack" style="gap: var(--space-2);">
+                <a class="btn btn-ghost" href="/tag-lists" style="justify-content: flex-start;">
+                    <AppIcon Name="tags" Size="14" />
+                    <span>Tags of Interest (TOI) Classification</span>
+                </a>
+                <a class="btn btn-ghost" href="/runs" style="justify-content: flex-start;">
+                    <AppIcon Name="history" Size="14" />
+                    <span>Historical Inventory Runs & Logs</span>
+                </a>
+                <a class="btn btn-ghost" href="/gpio" style="justify-content: flex-start;">
+                    <AppIcon Name="bolt" Size="14" />
+                    <span>Digital GPI / GPO Port Controls</span>
+                </a>
+            </div>
+        </section>
+    </div>
 </div>
 
 @code {

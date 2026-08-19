@@ -4,7 +4,7 @@
 <div class="section-header">
     <div>
         <h1 class="section-title">Tags of Interest (TOI)</h1>
-        <p class="section-subtitle">Define tag classifications, custom display names, and highlight colors for Inventory.</p>
+        <p class="section-subtitle">Define tag classifications, custom display names, and highlight colors for real-time Inventory.</p>
     </div>
 </div>
 
@@ -12,6 +12,20 @@
 {
     <div class="notice error" style="margin-bottom: var(--space-4);">@error</div>
 }
+
+<!-- TOI Metrics Bar -->
+<div class="card-grid" style="margin-bottom: var(--space-4);">
+    <div class="card card-pad">
+        <div class="stat-label">Active Classification Lists</div>
+        <div class="stat-value">@lists.Count(l => l.IsEnabled)</div>
+        <div class="stat-note">@lists.Count configured list(s)</div>
+    </div>
+    <div class="card card-pad">
+        <div class="stat-label">Explicit Tag Entries</div>
+        <div class="stat-value">@TotalEntriesCount</div>
+        <div class="stat-note">Exact / prefix matched EPC rules</div>
+    </div>
+</div>
 
 <div class="split">
     <section class="stack">
@@ -122,7 +136,7 @@
         <div class="card-pad stack">
             <div class="form-group">
                 <label class="form-label">List Name</label>
-                <input type="text" @bind="newName" placeholder="VIP Inventory Tags" />
+                <input type="text" @bind="newName" placeholder="e.g. High Priority Items" />
             </div>
 
             <div class="form-group">
@@ -160,9 +174,8 @@
         "#6366F1", // Indigo
         "#8B5CF6", // Purple
         "#EC4899", // Pink
-        "#F43F5E", // Rose
         "#F59E0B", // Amber
-        "#84CC16", // Lime
+        "#EF4444", // Red
     ];
 
     private List<TagListDefinition> lists = [];
@@ -174,7 +187,12 @@
     private string? error;
     private bool pageBusy;
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    private int TotalEntriesCount => lists.Sum(l => l.Entries.Count);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
@@ -196,82 +214,121 @@
 
     private async Task CreateAsync()
     {
-        if (string.IsNullOrWhiteSpace(newName))
+        if (string.IsNullOrWhiteSpace(newName) || pageBusy)
         {
-            error = "Tag list name is required.";
             return;
         }
 
-        await TagListsStore.SaveAsync(new TagListDefinition
-        {
-            Id = Guid.NewGuid(),
-            Name = newName.Trim(),
-            ColorHex = string.IsNullOrWhiteSpace(newColor) ? "#14B8A6" : newColor.Trim(),
-            IsEnabled = true
-        });
-        newName = string.Empty;
-        await LoadAsync();
-    }
-
-    private async Task ToggleAsync(TagListDefinition list)
-    {
-        await TagListsStore.SaveAsync(list with { IsEnabled = !list.IsEnabled });
-        await LoadAsync();
-    }
-
-    private async Task DeleteAsync(Guid id)
-    {
-        await TagListsStore.DeleteAsync(id);
-        if (selectedListId == id)
-        {
-            selectedListId = null;
-        }
-        await LoadAsync();
-    }
-
-    private void BeginEntry(Guid listId) => selectedListId = listId;
-
-    private async Task AddEntryAsync(TagListDefinition list)
-    {
-        if (string.IsNullOrWhiteSpace(entryEpc))
-        {
-            error = "EPC is required.";
-            return;
-        }
-
+        pageBusy = true;
+        error = null;
         try
         {
-            string epc = entryEpc.Trim().Replace(" ", string.Empty, StringComparison.Ordinal).ToUpperInvariant();
-            if (!epc.All(Uri.IsHexDigit) || epc.Length == 0)
+            var def = new TagListDefinition
             {
-                error = "EPC must be hexadecimal.";
-                return;
-            }
-
-            if (list.Entries.Any(entry => entry.EpcHex.Equals(epc, StringComparison.OrdinalIgnoreCase)))
-            {
-                error = "The EPC is already in this list.";
-                return;
-            }
-
-            await TagListsStore.SaveAsync(list with
-            {
-                Entries = list.Entries.Append(new TagListEntry
-                {
-                    Id = Guid.NewGuid(),
-                    TagListId = list.Id,
-                    EpcHex = epc,
-                    DisplayName = string.IsNullOrWhiteSpace(entryName) ? epc : entryName.Trim()
-                }).ToArray(),
-            });
-            entryName = string.Empty;
-            entryEpc = string.Empty;
-            selectedListId = null;
+                Id = Guid.NewGuid(),
+                Name = newName.Trim(),
+                ColorHex = string.IsNullOrWhiteSpace(newColor) ? "#14B8A6" : newColor.Trim(),
+                IsEnabled = true,
+                Entries = [],
+            };
+            await TagListsStore.SaveAsync(def);
+            newName = string.Empty;
             await LoadAsync();
         }
         catch (Exception exception)
         {
             error = exception.Message;
+        }
+        finally
+        {
+            pageBusy = false;
+        }
+    }
+
+    private async Task ToggleAsync(TagListDefinition list)
+    {
+        if (pageBusy) return;
+        pageBusy = true;
+        error = null;
+        try
+        {
+            var updated = list with { IsEnabled = !list.IsEnabled };
+            await TagListsStore.SaveAsync(updated);
+            await LoadAsync();
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+        }
+        finally
+        {
+            pageBusy = false;
+        }
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        if (pageBusy) return;
+        pageBusy = true;
+        error = null;
+        try
+        {
+            await TagListsStore.DeleteAsync(id);
+            await LoadAsync();
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+        }
+        finally
+        {
+            pageBusy = false;
+        }
+    }
+
+    private void BeginEntry(Guid listId)
+    {
+        selectedListId = listId;
+        entryName = string.Empty;
+        entryEpc = string.Empty;
+    }
+
+    private async Task AddEntryAsync(TagListDefinition list)
+    {
+        if (string.IsNullOrWhiteSpace(entryEpc) || pageBusy)
+        {
+            return;
+        }
+
+        pageBusy = true;
+        error = null;
+        try
+        {
+            var cleanEpc = entryEpc.Trim().Replace(" ", string.Empty).ToUpperInvariant();
+            var entry = new TagListEntry
+            {
+                Id = Guid.NewGuid(),
+                TagListId = list.Id,
+                DisplayName = string.IsNullOrWhiteSpace(entryName) ? cleanEpc : entryName.Trim(),
+                EpcHex = cleanEpc,
+                ColorHex = list.ColorHex,
+            };
+            var entries = list.Entries.ToList();
+            entries.Add(entry);
+            var updated = list with { Entries = entries };
+            await TagListsStore.SaveAsync(updated);
+            selectedListId = null;
+            entryName = string.Empty;
+            entryEpc = string.Empty;
+            await LoadAsync();
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+        }
+        finally
+        {
+            pageBusy = false;
         }
     }
 }
