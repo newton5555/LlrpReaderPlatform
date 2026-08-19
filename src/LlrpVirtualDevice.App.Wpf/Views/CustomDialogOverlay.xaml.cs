@@ -44,6 +44,18 @@ public partial class CustomDialogOverlay : UserControl
         }
     }
 
+    private void InputTextBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (sender is TextBox textBox && textBox.IsVisible)
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                textBox.Focus();
+                textBox.SelectAll();
+            }, System.Windows.Threading.DispatcherPriority.Input);
+        }
+    }
+
     private void ToastDismiss_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: string toastId })

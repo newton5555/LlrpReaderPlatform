@@ -9,6 +9,41 @@
              d:DesignHeight="600" d:DesignWidth="800">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
         <StackPanel>
+            <!-- 运行状态提示条 -->
+            <Border Background="#FEF3C7" BorderBrush="#F59E0B" BorderThickness="1" CornerRadius="4" Padding="14,10" Margin="0,0,0,16">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsRunning}" Value="False">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <fa:IconBlock Icon="TriangleExclamation" FontSize="16" Foreground="#D97706" Margin="0,0,10,0" VerticalAlignment="Center" />
+                    <TextBlock Text="读写器服务当前已停止。请先点击顶部 “启动” 运行服务，以向已连接的上位机客户端注入模拟事件。" FontSize="12" FontWeight="SemiBold" Foreground="#92400E" VerticalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <Border Background="#EFF6FF" BorderBrush="#93C5FD" BorderThickness="1" CornerRadius="4" Padding="14,10" Margin="0,0,0,16">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <fa:IconBlock Icon="CircleCheck" FontSize="16" Foreground="#2563EB" Margin="0,0,10,0" VerticalAlignment="Center" />
+                    <TextBlock Text="读写器服务正在运行中，点击下方事件按钮可向已建立 TCP 连接的客户端推送异步 LLRP 状态通知与告警。" FontSize="12" FontWeight="SemiBold" Foreground="#1E40AF" VerticalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
             <Border Style="{StaticResource StandardCardStyle}">
                 <StackPanel>
                     <TextBlock Text="事件与故障模拟注入 (Event &amp; Fault Injection)" FontSize="15" FontWeight="Bold" Margin="0,0,0,8" Foreground="{DynamicResource MahApps.Brushes.Text}" />
@@ -21,13 +56,13 @@
                 <StackPanel>
                     <TextBlock Text="天线连接状态事件 (Antenna Event)" FontSize="13" FontWeight="Bold" Margin="0,0,0,12" Foreground="{DynamicResource MahApps.Brushes.Text}" />
                     <WrapPanel>
-                        <Button Command="{Binding InjectAntennaEventCommand}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
+                        <Button Command="{Binding InjectAntennaEventCommand}" IsEnabled="{Binding IsRunning}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
                             <StackPanel Orientation="Horizontal">
                                 <fa:IconBlock Icon="TowerBroadcast" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#16A34A" />
                                 <TextBlock Text="注入: 天线 1 已连接 (Antenna Connected)" />
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding InjectAntennaEventCommand}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
+                        <Button Command="{Binding InjectAntennaEventCommand}" IsEnabled="{Binding IsRunning}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
                             <StackPanel Orientation="Horizontal">
                                 <fa:IconBlock Icon="TriangleExclamation" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#DC2626" />
                                 <TextBlock Text="注入: 天线 1 意外断开 (Antenna Disconnected)" />
@@ -42,13 +77,13 @@
                 <StackPanel>
                     <TextBlock Text="GPI 外部输入事件 (General Purpose Input Event)" FontSize="13" FontWeight="Bold" Margin="0,0,0,12" Foreground="{DynamicResource MahApps.Brushes.Text}" />
                     <WrapPanel>
-                        <Button Command="{Binding InjectGpiEventCommand}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
+                        <Button Command="{Binding InjectGpiEventCommand}" IsEnabled="{Binding IsRunning}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
                             <StackPanel Orientation="Horizontal">
                                 <fa:IconBlock Icon="Bolt" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#D29922" />
                                 <TextBlock Text="注入: GPI 1 电平变高 (Port 1 High)" />
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding InjectGpiEventCommand}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
+                        <Button Command="{Binding InjectGpiEventCommand}" IsEnabled="{Binding IsRunning}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
                             <StackPanel Orientation="Horizontal">
                                 <fa:IconBlock Icon="Bolt" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#8B949E" />
                                 <TextBlock Text="注入: GPI 1 电平变低 (Port 1 Low)" />
@@ -63,13 +98,13 @@
                 <StackPanel>
                     <TextBlock Text="读写器异常告警事件 (Reader Event Notification)" FontSize="13" FontWeight="Bold" Margin="0,0,0,12" Foreground="{DynamicResource MahApps.Brushes.Text}" />
                     <WrapPanel>
-                        <Button Command="{Binding InjectGpiEventCommand}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
+                        <Button Command="{Binding InjectGpiEventCommand}" IsEnabled="{Binding IsRunning}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
                             <StackPanel Orientation="Horizontal">
                                 <fa:IconBlock Icon="CircleExclamation" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#DC2626" />
                                 <TextBlock Text="注入: 报告缓冲区溢出 (Buffer Full Warning)" />
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding InjectGpiEventCommand}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
+                        <Button Command="{Binding InjectGpiEventCommand}" IsEnabled="{Binding IsRunning}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,12,8">
                             <StackPanel Orientation="Horizontal">
                                 <fa:IconBlock Icon="HeartPulse" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#1F6FEB" />
                                 <TextBlock Text="注入: 发送 KeepAlive 心跳请求" />

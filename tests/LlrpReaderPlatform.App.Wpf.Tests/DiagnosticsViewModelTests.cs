@@ -321,7 +321,8 @@ public sealed class DiagnosticsViewModelTests
             await Task.Delay(25);
         }
 
-        var status = Assert.Single(vm.Gpis);
+        Assert.Equal(4, vm.Gpis.Count);
+        var status = vm.Gpis[0];
         Assert.Equal((ushort)1, status.PortNumber);
         Assert.True(status.State);
         Assert.Equal(timestamp, status.Timestamp);

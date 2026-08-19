@@ -38,9 +38,14 @@
                            FontSize="13" Foreground="{DynamicResource MahApps.Brushes.Gray3}" Margin="0,4,0,0" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Content="REFRESH RUNS"
-                        Command="{Binding LoadCommand}"
-                        Style="{StaticResource InventoryRunsActionStyle}" />
+                <Button Command="{Binding LoadCommand}"
+                        Style="{StaticResource InventoryRunsActionStyle}"
+                        Height="32" Padding="14,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <fa:IconBlock Icon="ArrowsRotate" IconFont="Solid" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center" />
+                        <TextBlock Text="REFRESH RUNS" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
             </StackPanel>
         </Grid>
 

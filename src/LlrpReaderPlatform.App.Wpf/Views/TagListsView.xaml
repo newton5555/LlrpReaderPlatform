@@ -47,13 +47,19 @@
                            Text="Maintain the EPC, TOI name and display color used by Inventory." />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Command="{Binding LoadCommand}" Style="{StaticResource ToiActionCircleButtonStyle}"
-                        ToolTip="Refresh TOI">
-                    <fa:IconBlock Icon="ArrowsRotate" IconFont="Solid" FontSize="14" />
+                <Button Command="{Binding LoadCommand}" Style="{StaticResource FlatActionButtonStyle}"
+                        Height="32" Padding="12,0" Margin="0,0,8,0" ToolTip="Refresh TOI">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <fa:IconBlock Icon="ArrowsRotate" IconFont="Solid" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Refresh" VerticalAlignment="Center" />
+                    </StackPanel>
                 </Button>
-                <Button Command="{Binding SaveCommand}" Style="{StaticResource ToiActionCircleButtonStyle}"
-                        Margin="8,0,0,0" ToolTip="Save TOI changes">
-                    <fa:IconBlock Icon="FloppyDisk" IconFont="Solid" FontSize="14" />
+                <Button Command="{Binding SaveCommand}" Style="{StaticResource PrimaryActionButtonStyle}"
+                        Height="32" Padding="14,0" ToolTip="Save TOI changes">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <fa:IconBlock Icon="FloppyDisk" IconFont="Solid" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Save Changes" VerticalAlignment="Center" />
+                    </StackPanel>
                 </Button>
             </StackPanel>
         </Grid>

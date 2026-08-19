@@ -29,6 +29,8 @@
                 <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray7}" />
                 <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
                 <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Gray2}" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
@@ -36,7 +38,8 @@
                                     Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="14">
+                                    CornerRadius="14"
+                                    SnapsToDevicePixels="True">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                             <ControlTemplate.Triggers>
@@ -49,7 +52,11 @@
                                     <Setter TargetName="Root" Property="Opacity" Value="0.8" />
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
-                                    <Setter TargetName="Root" Property="Opacity" Value="0.4" />
+                                    <Setter TargetName="Root" Property="Background" Value="{DynamicResource MahApps.Brushes.Gray10}" />
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray8}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Gray5}" />
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.45" />
+                                    <Setter Property="Cursor" Value="Arrow" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -67,7 +74,8 @@
                                     Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="12">
+                                    CornerRadius="12"
+                                    SnapsToDevicePixels="True">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                             <ControlTemplate.Triggers>
@@ -80,7 +88,11 @@
                                     <Setter TargetName="Root" Property="Opacity" Value="0.8" />
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
-                                    <Setter TargetName="Root" Property="Opacity" Value="0.4" />
+                                    <Setter TargetName="Root" Property="Background" Value="{DynamicResource MahApps.Brushes.Gray10}" />
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray8}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Gray5}" />
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.45" />
+                                    <Setter Property="Cursor" Value="Arrow" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -90,6 +102,7 @@
 
             <Style x:Key="DangerCircleButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatCircleButtonStyle}">
                 <Setter Property="Foreground" Value="#DC2626" />
+                <Setter Property="BorderBrush" Value="#FECACA" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
@@ -97,7 +110,8 @@
                                     Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="14">
+                                    CornerRadius="14"
+                                    SnapsToDevicePixels="True">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                             <ControlTemplate.Triggers>
@@ -110,7 +124,11 @@
                                     <Setter TargetName="Root" Property="Opacity" Value="0.8" />
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
-                                    <Setter TargetName="Root" Property="Opacity" Value="0.4" />
+                                    <Setter TargetName="Root" Property="Background" Value="{DynamicResource MahApps.Brushes.Gray10}" />
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray8}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Gray5}" />
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.45" />
+                                    <Setter Property="Cursor" Value="Arrow" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -120,6 +138,7 @@
 
             <Style x:Key="SuccessCircleButtonStyle" TargetType="Button" BasedOn="{StaticResource FlatCircleButtonStyle}">
                 <Setter Property="Foreground" Value="#16A34A" />
+                <Setter Property="BorderBrush" Value="#BBF7D0" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
@@ -127,7 +146,8 @@
                                     Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="14">
+                                    CornerRadius="14"
+                                    SnapsToDevicePixels="True">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                             <ControlTemplate.Triggers>
@@ -140,7 +160,11 @@
                                     <Setter TargetName="Root" Property="Opacity" Value="0.8" />
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
-                                    <Setter TargetName="Root" Property="Opacity" Value="0.4" />
+                                    <Setter TargetName="Root" Property="Background" Value="{DynamicResource MahApps.Brushes.Gray10}" />
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray8}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Gray5}" />
+                                    <Setter TargetName="Root" Property="Opacity" Value="0.45" />
+                                    <Setter Property="Cursor" Value="Arrow" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -148,28 +172,193 @@
                 </Setter>
             </Style>
 
-            <!-- 扁平操作按钮 (对齐客户端) -->
-            <Style x:Key="FlatActionButtonStyle"
-                   TargetType="Button"
-                   BasedOn="{StaticResource MahApps.Styles.Button.Flat}">
-                <Setter Property="Padding" Value="14,8" />
+            <!-- 扁平操作按钮 -->
+            <Style x:Key="FlatActionButtonStyle" TargetType="Button">
+                <Setter Property="Padding" Value="14,7" />
                 <Setter Property="FontSize" Value="13" />
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray7}" />
-                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.ThemeBackground}" />
-                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Text}" />
+                <Setter Property="BorderBrush" Value="#CBD5E1" />
+                <Setter Property="Background" Value="#FFFFFF" />
+                <Setter Property="Foreground" Value="#1E293B" />
                 <Setter Property="HorizontalContentAlignment" Value="Center" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
-                <Setter Property="mah:ControlsHelper.CornerRadius" Value="4" />
+                <Setter Property="mah:ControlsHelper.CornerRadius" Value="5" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Border"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="{TemplateBinding mah:ControlsHelper.CornerRadius}"
+                                    Padding="{TemplateBinding Padding}"
+                                    SnapsToDevicePixels="True">
+                                <ContentPresenter x:Name="ContentPresenter"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  RecognizesAccessKey="True" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Border" Property="Background" Value="#EFF6FF" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#3B82F6" />
+                                    <Setter Property="Foreground" Value="#1D4ED8" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Border" Property="Background" Value="#DBEAFE" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#2563EB" />
+                                    <Setter Property="Foreground" Value="#1E40AF" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Border" Property="Background" Value="#F1F5F9" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#E2E8F0" />
+                                    <Setter Property="Foreground" Value="#94A3B8" />
+                                    <Setter TargetName="Border" Property="Opacity" Value="0.55" />
+                                    <Setter Property="Cursor" Value="Arrow" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <Style x:Key="PrimaryActionButtonStyle"
                    TargetType="Button"
                    BasedOn="{StaticResource FlatActionButtonStyle}">
-                <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                <Setter Property="Background" Value="#2563EB" />
+                <Setter Property="BorderBrush" Value="#2563EB" />
+                <Setter Property="Foreground" Value="#FFFFFF" />
+                <Setter Property="mah:ControlsHelper.CornerRadius" Value="5" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Border"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="{TemplateBinding mah:ControlsHelper.CornerRadius}"
+                                    Padding="{TemplateBinding Padding}"
+                                    SnapsToDevicePixels="True">
+                                <ContentPresenter x:Name="ContentPresenter"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  RecognizesAccessKey="True" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Border" Property="Background" Value="#1D4ED8" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#1D4ED8" />
+                                    <Setter Property="Foreground" Value="#FFFFFF" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Border" Property="Background" Value="#1E40AF" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#1E40AF" />
+                                    <Setter Property="Foreground" Value="#FFFFFF" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Border" Property="Background" Value="#E2E8F0" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#CBD5E1" />
+                                    <Setter Property="Foreground" Value="#94A3B8" />
+                                    <Setter TargetName="Border" Property="Opacity" Value="0.6" />
+                                    <Setter Property="Cursor" Value="Arrow" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="DangerActionButtonStyle"
+                   TargetType="Button"
+                   BasedOn="{StaticResource FlatActionButtonStyle}">
+                <Setter Property="Background" Value="#FEF2F2" />
+                <Setter Property="BorderBrush" Value="#FECACA" />
+                <Setter Property="Foreground" Value="#DC2626" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Border"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="{TemplateBinding mah:ControlsHelper.CornerRadius}"
+                                    Padding="{TemplateBinding Padding}"
+                                    SnapsToDevicePixels="True">
+                                <ContentPresenter x:Name="ContentPresenter"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  RecognizesAccessKey="True" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Border" Property="Background" Value="#DC2626" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#DC2626" />
+                                    <Setter Property="Foreground" Value="#FFFFFF" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Border" Property="Background" Value="#B91C1C" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#B91C1C" />
+                                    <Setter Property="Foreground" Value="#FFFFFF" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Border" Property="Background" Value="#F3F4F6" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#E5E7EB" />
+                                    <Setter Property="Foreground" Value="#9CA3AF" />
+                                    <Setter TargetName="Border" Property="Opacity" Value="0.65" />
+                                    <Setter Property="Cursor" Value="Arrow" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="SuccessActionButtonStyle"
+                   TargetType="Button"
+                   BasedOn="{StaticResource FlatActionButtonStyle}">
+                <Setter Property="Background" Value="#F0FDF4" />
+                <Setter Property="BorderBrush" Value="#BBF7D0" />
+                <Setter Property="Foreground" Value="#16A34A" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Border"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="{TemplateBinding mah:ControlsHelper.CornerRadius}"
+                                    Padding="{TemplateBinding Padding}"
+                                    SnapsToDevicePixels="True">
+                                <ContentPresenter x:Name="ContentPresenter"
+                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  RecognizesAccessKey="True" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Border" Property="Background" Value="#16A34A" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#16A34A" />
+                                    <Setter Property="Foreground" Value="#FFFFFF" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Border" Property="Background" Value="#15803D" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#15803D" />
+                                    <Setter Property="Foreground" Value="#FFFFFF" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Border" Property="Background" Value="#F3F4F6" />
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#E5E7EB" />
+                                    <Setter Property="Foreground" Value="#9CA3AF" />
+                                    <Setter TargetName="Border" Property="Opacity" Value="0.65" />
+                                    <Setter Property="Cursor" Value="Arrow" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <Style x:Key="NavigationButtonStyle"
