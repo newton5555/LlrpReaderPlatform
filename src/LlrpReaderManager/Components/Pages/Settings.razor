@@ -19,7 +19,7 @@
     </div>
 </div>
 
-<div class="toolbar" style="margin-bottom: var(--space-4);">
+<div class="toolbar" style="margin-bottom: var(--space-4); flex-wrap: wrap; gap: var(--space-2);">
     <button class="btn btn-sm" @onclick="() => LoadAsync(false)" disabled="@(pageBusy || SelectedReader is null)">
         <AppIcon Name="rotate" Size="13" />
         <span>Refresh from Reader</span>
@@ -50,35 +50,142 @@
 }
 else
 {
-    <div class="notice info" style="margin-bottom: var(--space-4);">Capability revision @SettingsModel.Layout.CapabilityRevision · @SettingsModel.Layout.Entries.Count settings · optional vendor controls are not required when omitted.</div>
+    <!-- Category Navigation Tabs & Search -->
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-3);">
+        <nav class="settings-nav-tabs" style="margin-bottom: 0;">
+            <button type="button"
+                    class="settings-nav-tab @(activeCategory == "rf" ? "active" : string.Empty)"
+                    @onclick='() => activeCategory = "rf"'>
+                <AppIcon Name="bolt" Size="13" />
+                <span>Antennas & RF</span>
+            </button>
+            <button type="button"
+                    class="settings-nav-tab @(activeCategory == "protocol" ? "active" : string.Empty)"
+                    @onclick='() => activeCategory = "protocol"'>
+                <AppIcon Name="search" Size="13" />
+                <span>Inventory & Protocol</span>
+            </button>
+            <button type="button"
+                    class="settings-nav-tab @(activeCategory == "filters" ? "active" : string.Empty)"
+                    @onclick='() => activeCategory = "filters"'>
+                <AppIcon Name="filter" Size="13" />
+                <span>Filters & Singulation</span>
+            </button>
+            <button type="button"
+                    class="settings-nav-tab @(activeCategory == "triggers" ? "active" : string.Empty)"
+                    @onclick='() => activeCategory = "triggers"'>
+                <AppIcon Name="zap" Size="13" />
+                <span>Triggers & Timers</span>
+            </button>
+            <button type="button"
+                    class="settings-nav-tab @(activeCategory == "reports" ? "active" : string.Empty)"
+                    @onclick='() => activeCategory = "reports"'>
+                <AppIcon Name="tags" Size="13" />
+                <span>Reports & Advanced</span>
+            </button>
+            <button type="button"
+                    class="settings-nav-tab @(activeCategory == "all" ? "active" : string.Empty)"
+                    @onclick='() => activeCategory = "all"'>
+                <AppIcon Name="grid" Size="13" />
+                <span>All Categories</span>
+            </button>
+        </nav>
+
+        <div style="width: min(220px, 100%);">
+            <input type="text"
+                   placeholder="Filter settings..."
+                   @bind="searchTerm"
+                   @bind:event="oninput"
+                   style="height: 32px; font-size: 12px;" />
+        </div>
+    </div>
+
     <section class="settings-card-grid">
-        @foreach (SettingsGroup group in BuildSettingsGroups())
+        @foreach (SettingsGroup group in GetFilteredGroups())
         {
-            <article class="card settings-card">
+            var visibleEntries = group.Entries.Where(IsEntryVisible).ToList();
+            if (visibleEntries.Count == 0)
+            {
+                continue;
+            }
+
+            <article class="card settings-card" style="min-width: 0;">
                 <div class="card-header">
                     <div>
-                        <h2 class="card-title">@group.Title</h2>
-                        <div class="form-hint settings-card-description">@group.Description</div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <AppIcon Name="@GetGroupIcon(group.Key)" Size="14" />
+                            <h2 class="card-title" style="margin-bottom: 0;">@group.Title</h2>
+                        </div>
+                        <div class="form-hint settings-card-description" style="margin-top: 2px;">@group.Description</div>
                     </div>
-                    <span class="status-badge neutral">@group.Entries.Count</span>
+                    <span class="status-badge neutral">@visibleEntries.Count</span>
                 </div>
                 <div class="settings-card-body">
-                    @foreach (SettingsEntry entry in group.Entries)
+                    @foreach (SettingsEntry entry in visibleEntries)
                     {
-                        <div class="setting-row">
+                        bool isDependent = IsEntryDependent(entry);
+                        <div class="setting-row @(isDependent ? "dependent" : string.Empty)">
                             <div>
-                                <div class="setting-title">@entry.Title</div>
-                                <div class="setting-meta">@entry.Key · @entry.Source@(entry.IsOptional ? " · optional" : string.Empty)</div>
+                                <div class="setting-title">
+                                    @if (isDependent)
+                                    {
+                                        <span class="muted" style="font-size: 11px; margin-right: 4px;">↳</span>
+                                    }
+                                    @GetCustomTitle(entry)
+                                </div>
+                                <div class="setting-meta">@entry.Key@(entry.IsOptional ? " · optional" : string.Empty)</div>
                             </div>
                             <div>
                                 @if (entry.IsReadOnly)
                                 {
                                     <div class="mono muted">@DisplayValue(entry)</div>
-                                    <div class="form-hint">@entry.ReadOnlyReason</div>
+                                    @if (!string.IsNullOrWhiteSpace(entry.ReadOnlyReason))
+                                    {
+                                        <div class="form-hint">@entry.ReadOnlyReason</div>
+                                    }
+                                }
+                                else if (entry.Key == SettingsKeys.AntennaIds)
+                                {
+                                    <div class="pill-selector">
+                                        @foreach (ushort antId in AvailableAntennas)
+                                        {
+                                            bool isSelected = IsAntennaSelected(entry, antId);
+                                            <button type="button"
+                                                    class="pill-option @(isSelected ? "selected" : string.Empty)"
+                                                    @onclick="() => ToggleAntenna(entry, antId)">
+                                                <span>@(isSelected ? "✓" : "+") Ant @antId</span>
+                                            </button>
+                                        }
+                                        <button type="button"
+                                                class="btn btn-sm btn-ghost"
+                                                style="padding: 2px 8px; font-size: 11px; margin-left: 4px;"
+                                                @onclick="() => ToggleAllAntennas(entry)">
+                                            @(IsAllAntennasSelected(entry) ? "Clear" : "Select All")
+                                        </button>
+                                    </div>
+                                    <div class="form-hint" style="margin-top: 4px;">Click antenna pills to toggle participating inventory antennas.</div>
+                                }
+                                else if (entry.Key.Contains("channels", StringComparison.OrdinalIgnoreCase) && entry.Options.Count > 0)
+                                {
+                                    <div class="pill-selector">
+                                        @foreach (SettingsOption option in entry.Options)
+                                        {
+                                            string optVal = OptionValue(option);
+                                            bool isSelected = IsChannelSelected(entry, optVal);
+                                            <button type="button"
+                                                    class="pill-option @(isSelected ? "selected" : string.Empty)"
+                                                    @onclick="() => ToggleChannel(entry, optVal)">
+                                                <span>@(isSelected ? "✓" : "+") @(option.Display ?? optVal)</span>
+                                            </button>
+                                        }
+                                    </div>
                                 }
                                 else if (entry.EditorKind == EditorKind.Boolean)
                                 {
-                                    <label class="check-line"><input type="checkbox" checked="@ReadBoolean(entry)" @onchange="args => ChangeValue(entry, args)" /> Enabled</label>
+                                    <label class="check-line">
+                                        <input type="checkbox" checked="@ReadBoolean(entry)" @onchange="args => ChangeValue(entry, args)" />
+                                        <span>@(entry.Key == SettingsKeys.IndividualAntennaSettings ? "Configure RF Per Antenna (展开每个天线独立功率)" : "Enabled")</span>
+                                    </label>
                                 }
                                 else if (entry.EditorKind == EditorKind.Choice)
                                 {
@@ -91,12 +198,15 @@ else
                                 }
                                 else if (entry.EditorKind == EditorKind.Collection)
                                 {
-                                    <input type="text" value="@DisplayValue(entry)" @onchange="args => ChangeValue(entry, args)" />
+                                    <input type="text" value="@DisplayValue(entry)" @onchange="args => ChangeValue(entry, args)" class="mono" />
                                     <div class="form-hint">Comma separated values</div>
                                 }
                                 else
                                 {
-                                    <input type="@(entry.EditorKind is EditorKind.Integer or EditorKind.Decimal ? "number" : "text")" value="@DisplayValue(entry)" @onchange="args => ChangeValue(entry, args)" />
+                                    <input type="@(entry.EditorKind is EditorKind.Integer or EditorKind.Decimal ? "number" : "text")"
+                                           value="@DisplayValue(entry)"
+                                           @onchange="args => ChangeValue(entry, args)"
+                                           class="@(entry.EditorKind is EditorKind.Integer or EditorKind.Decimal ? "mono" : string.Empty)" />
                                 }
                             </div>
                         </div>
@@ -110,14 +220,22 @@ else
 @code {
     private SettingsEditorModel? SettingsModel;
     private string? selectedReaderText;
+    private Guid? lastLoadedReaderId;
     private Dictionary<string, object?> values = new(StringComparer.Ordinal);
     private string? message;
     private bool messageIsError;
     private bool pageBusy;
 
-    private string SelectedReaderText => selectedReaderText ?? State.SelectedReaderId?.ToString() ?? string.Empty;
+    private string activeCategory = "rf";
+    private string searchTerm = string.Empty;
 
+    private string SelectedReaderText => selectedReaderText ?? State.SelectedReaderId?.ToString() ?? string.Empty;
     private ReaderRuntimeSnapshot? SelectedReader => State.Find(ParseReaderId(SelectedReaderText));
+
+    private IReadOnlyList<ushort> AvailableAntennas =>
+        SelectedReader?.Antennas.Count > 0
+            ? SelectedReader.Antennas.Select(a => a.AntennaId).OrderBy(a => a).ToList()
+            : [1, 2, 3, 4];
 
     protected override async Task OnInitializedAsync()
     {
@@ -132,16 +250,26 @@ else
         await LoadAsync(false);
     }
 
-    private void SelectReader(ChangeEventArgs args)
+    private async Task SelectReader(ChangeEventArgs args)
     {
         selectedReaderText = args.Value?.ToString();
-        State.Select(ParseReaderId(selectedReaderText));
-        _ = LoadAsync(false);
+        Guid? readerId = ParseReaderId(selectedReaderText);
+        State.Select(readerId);
+        await LoadAsync(false);
     }
 
     private async Task LoadAsync(bool defaults)
     {
-        if (SelectedReader is not { } reader || pageBusy)
+        if (SelectedReader is not { } reader)
+        {
+            SettingsModel = null;
+            values.Clear();
+            lastLoadedReaderId = null;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (pageBusy)
         {
             return;
         }
@@ -150,6 +278,8 @@ else
         message = null;
         try
         {
+            lastLoadedReaderId = reader.ReaderId;
+            selectedReaderText = reader.ReaderId.ToString();
             SettingsModel = defaults
                 ? await State.Settings.GetDefaultsAsync(reader.ReaderId)
                 : await State.Settings.QueryAsync(reader.ReaderId);
@@ -165,6 +295,7 @@ else
         finally
         {
             pageBusy = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -224,7 +355,9 @@ else
         values[entry.Key] = value;
     }
 
-    private bool ReadBoolean(SettingsEntry entry) => values.TryGetValue(entry.Key, out object? value)
+    private bool ReadBoolean(SettingsEntry entry) => ReadBooleanByKey(entry.Key);
+
+    private bool ReadBooleanByKey(string key) => values.TryGetValue(key, out object? value)
         && value is bool boolean && boolean;
 
     private string DisplayValue(SettingsEntry entry) => values.TryGetValue(entry.Key, out object? value)
@@ -259,12 +392,273 @@ else
         return text;
     }
 
+    private bool HasAntennaIdsEntry() => SettingsModel?.Layout.Entries.Any(e => e.Key == SettingsKeys.AntennaIds) ?? false;
+
+    private bool IsIndividualAntennaEnabled() => ReadBooleanByKey(SettingsKeys.IndividualAntennaSettings);
+
+    private bool IsFixedFrequencyEnabled()
+    {
+        if (values.TryGetValue(SettingsSemantics.FixedFrequency, out object? val))
+        {
+            if (val is bool b) return b;
+            string str = Convert.ToString(val, CultureInfo.InvariantCulture) ?? string.Empty;
+            return bool.TryParse(str, out bool parsed) && parsed;
+        }
+
+        foreach (var pair in values)
+        {
+            if (pair.Key.Contains("fixed-frequency", StringComparison.OrdinalIgnoreCase) && pair.Key != SettingsSemantics.FixedFrequencyChannels)
+            {
+                if (pair.Value is bool b) return b;
+                string s = Convert.ToString(pair.Value, CultureInfo.InvariantCulture) ?? string.Empty;
+                if (bool.TryParse(s, out bool p)) return p;
+                if (s.Equals("Fixed", StringComparison.OrdinalIgnoreCase) || s.Equals("1", StringComparison.OrdinalIgnoreCase)) return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsLowDutyEnabled()
+    {
+        if (values.TryGetValue(SettingsSemantics.LowDutyCycle, out object? val))
+        {
+            if (val is bool b) return b;
+            string str = Convert.ToString(val, CultureInfo.InvariantCulture) ?? string.Empty;
+            return bool.TryParse(str, out bool parsed) && parsed;
+        }
+        return false;
+    }
+
+    private bool IsEntryVisible(SettingsEntry entry)
+    {
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return entry.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                || entry.Key.Contains(searchTerm, StringComparison.OrdinalIgnoreCase);
+        }
+
+        // Standard antenna redundancy
+        if (entry.Key == SettingsKeys.Antenna && HasAntennaIdsEntry())
+        {
+            return false;
+        }
+
+        // Per-antenna RF settings: ONLY visible when IndividualAntennaSettings is checked
+        if (entry.Key.StartsWith("antenna-", StringComparison.Ordinal)
+            && entry.Key != SettingsKeys.AntennaIds
+            && entry.Key != SettingsKeys.IndividualAntennaSettings)
+        {
+            return IsIndividualAntennaEnabled();
+        }
+
+        // Frequency channels list: ONLY visible when FixedFrequency is enabled
+        if (entry.Key.Contains("channels", StringComparison.OrdinalIgnoreCase) || entry.Key == SettingsSemantics.FixedFrequencyChannels)
+        {
+            return IsFixedFrequencyEnabled();
+        }
+
+        // Filter 1 & Filter 2 sub-fields
+        if (entry.Key.StartsWith("filter-1-", StringComparison.Ordinal) && entry.Key != SettingsKeys.FilterEnabled(1))
+        {
+            return ReadBooleanByKey(SettingsKeys.FilterEnabled(1));
+        }
+
+        if (entry.Key.StartsWith("filter-2-", StringComparison.Ordinal) && entry.Key != SettingsKeys.FilterEnabled(2))
+        {
+            return ReadBooleanByKey(SettingsKeys.FilterEnabled(2));
+        }
+
+        // State-Aware sub-fields
+        if (entry.Key is SettingsKeys.StateAwareTarget or SettingsKeys.StateAwareSelectedFlag)
+        {
+            return ReadBooleanByKey(SettingsKeys.StateAwareFiltersEnabled);
+        }
+
+        // Low Duty sub-fields
+        if (entry.Key is SettingsSemantics.EmptyFieldTimeout or SettingsSemantics.FieldPingInterval
+            || entry.Key.Contains("empty-field-timeout", StringComparison.OrdinalIgnoreCase)
+            || entry.Key.Contains("field-ping-interval", StringComparison.OrdinalIgnoreCase))
+        {
+            return IsLowDutyEnabled();
+        }
+
+        // Start / Stop GPI sub-fields
+        if (entry.Key is SettingsKeys.StartGpiPort or SettingsKeys.StartGpiLevel)
+        {
+            return ReadBooleanByKey(SettingsKeys.StartGpiEnabled);
+        }
+
+        if (entry.Key is SettingsKeys.StopGpiPort or SettingsKeys.StopGpiLevel or SettingsKeys.StopGpiTimeoutMs)
+        {
+            return ReadBooleanByKey(SettingsKeys.StopGpiEnabled);
+        }
+
+        return true;
+    }
+
+    private static bool IsEntryDependent(SettingsEntry entry)
+    {
+        string key = entry.Key;
+        if (key.StartsWith("antenna-", StringComparison.Ordinal)
+            && key != SettingsKeys.AntennaIds
+            && key != SettingsKeys.IndividualAntennaSettings)
+        {
+            return true;
+        }
+
+        if (key.Contains("channels", StringComparison.OrdinalIgnoreCase) || key == SettingsSemantics.FixedFrequencyChannels)
+        {
+            return true;
+        }
+
+        if (key.StartsWith("filter-1-", StringComparison.Ordinal) && key != SettingsKeys.FilterEnabled(1))
+        {
+            return true;
+        }
+
+        if (key.StartsWith("filter-2-", StringComparison.Ordinal) && key != SettingsKeys.FilterEnabled(2))
+        {
+            return true;
+        }
+
+        if (key is SettingsKeys.StateAwareTarget or SettingsKeys.StateAwareSelectedFlag)
+        {
+            return true;
+        }
+
+        if (key is SettingsSemantics.EmptyFieldTimeout or SettingsSemantics.FieldPingInterval
+            || key.Contains("empty-field-timeout", StringComparison.OrdinalIgnoreCase)
+            || key.Contains("field-ping-interval", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (key is SettingsKeys.StartGpiPort or SettingsKeys.StartGpiLevel or SettingsKeys.StopGpiPort or SettingsKeys.StopGpiLevel or SettingsKeys.StopGpiTimeoutMs)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool IsAntennaSelected(SettingsEntry entry, ushort antennaId)
+    {
+        string current = DisplayValue(entry);
+        var parts = current.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries);
+        return parts.Contains(antennaId.ToString(CultureInfo.InvariantCulture));
+    }
+
+    private void ToggleAntenna(SettingsEntry entry, ushort antennaId)
+    {
+        string current = DisplayValue(entry);
+        var parts = current.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries).ToList();
+        string idStr = antennaId.ToString(CultureInfo.InvariantCulture);
+        if (parts.Contains(idStr))
+        {
+            parts.Remove(idStr);
+        }
+        else
+        {
+            parts.Add(idStr);
+        }
+        values[entry.Key] = string.Join(", ", parts.OrderBy(p => ushort.TryParse(p, out ushort u) ? u : 0));
+    }
+
+    private bool IsAllAntennasSelected(SettingsEntry entry) =>
+        AvailableAntennas.All(ant => IsAntennaSelected(entry, ant));
+
+    private void ToggleAllAntennas(SettingsEntry entry)
+    {
+        if (IsAllAntennasSelected(entry))
+        {
+            values[entry.Key] = string.Empty;
+        }
+        else
+        {
+            values[entry.Key] = string.Join(", ", AvailableAntennas);
+        }
+    }
+
+    private bool IsChannelSelected(SettingsEntry entry, string channel)
+    {
+        string current = DisplayValue(entry);
+        var parts = current.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries);
+        return parts.Contains(channel);
+    }
+
+    private void ToggleChannel(SettingsEntry entry, string channel)
+    {
+        string current = DisplayValue(entry);
+        var parts = current.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries).ToList();
+        if (parts.Contains(channel))
+        {
+            parts.Remove(channel);
+        }
+        else
+        {
+            parts.Add(channel);
+        }
+        values[entry.Key] = string.Join(", ", parts);
+    }
+
+    private static string GetCustomTitle(SettingsEntry entry)
+    {
+        if (entry.Key == SettingsKeys.Antenna)
+        {
+            return "Default AISpec Antenna (0 = Global)";
+        }
+        if (entry.Key == SettingsKeys.AntennaIds)
+        {
+            return "Participating Antennas (寻卡天线)";
+        }
+        if (entry.Key == SettingsKeys.IndividualAntennaSettings)
+        {
+            return "Per-Antenna RF Configuration (每个天线独立设置)";
+        }
+        return entry.Title;
+    }
+
+    private IEnumerable<SettingsGroup> GetFilteredGroups()
+    {
+        var allGroups = BuildSettingsGroups();
+        if (activeCategory == "all" || !string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return allGroups;
+        }
+
+        return activeCategory switch
+        {
+            "rf" => allGroups.Where(g => g.Key is SettingsGroups.Power or SettingsGroups.Antenna),
+            "protocol" => allGroups.Where(g => g.Key is SettingsGroups.Manual or SettingsGroups.Frequency),
+            "filters" => allGroups.Where(g => g.Key is SettingsGroups.Filter or SettingsGroups.StateAware),
+            "triggers" => allGroups.Where(g => g.Key is SettingsGroups.Gpi or SettingsGroups.LowDuty),
+            "reports" => allGroups.Where(g => g.Key is SettingsGroups.Report or SettingsGroups.Other),
+            _ => allGroups,
+        };
+    }
+
+    private static string GetGroupIcon(string key) => key switch
+    {
+        SettingsGroups.Power => "bolt",
+        SettingsGroups.Antenna => "satellite-dish",
+        SettingsGroups.Manual => "search",
+        SettingsGroups.Frequency => "rotate",
+        SettingsGroups.Filter => "filter",
+        SettingsGroups.StateAware => "microchip",
+        SettingsGroups.Gpi => "zap",
+        SettingsGroups.LowDuty => "history",
+        SettingsGroups.Report => "tags",
+        _ => "gear",
+    };
+
     private static Guid? ParseReaderId(string? value) => Guid.TryParse(value, out Guid id) ? id : null;
 
     private IReadOnlyList<SettingsGroup> BuildSettingsGroups() => SettingsModel?.Layout.Entries
         .GroupBy(ResolveGroupKey, StringComparer.Ordinal)
         .OrderBy(group => GroupOrder(group.Key))
         .Select(group => new SettingsGroup(
+            group.Key,
             GroupTitle(group.Key),
             GroupDescription(group.Key),
             group.ToArray()))
@@ -296,7 +690,7 @@ else
             return SettingsGroups.Gpi;
         }
 
-        if (key.Contains("fixed-frequency-", StringComparison.Ordinal))
+        if (key.Contains("fixed-frequency-", StringComparison.Ordinal) || key.Contains("frequency-channel", StringComparison.Ordinal))
         {
             return SettingsGroups.Frequency;
         }
@@ -341,13 +735,13 @@ else
 
     private static int GroupOrder(string key) => key switch
     {
-        SettingsGroups.Manual => 0,
-        SettingsGroups.Power => 1,
-        SettingsGroups.Antenna => 2,
-        SettingsGroups.Filter => 3,
-        SettingsGroups.StateAware => 4,
-        SettingsGroups.Gpi => 5,
-        SettingsGroups.Frequency => 6,
+        SettingsGroups.Power => 0,
+        SettingsGroups.Antenna => 1,
+        SettingsGroups.Manual => 2,
+        SettingsGroups.Frequency => 3,
+        SettingsGroups.Filter => 4,
+        SettingsGroups.StateAware => 5,
+        SettingsGroups.Gpi => 6,
         SettingsGroups.LowDuty => 7,
         SettingsGroups.Report => 8,
         _ => 9,
@@ -355,38 +749,51 @@ else
 
     private static string GroupTitle(string key) => key switch
     {
-        SettingsGroups.Manual => "Inventory & RF",
-        SettingsGroups.Power => "Power defaults",
-        SettingsGroups.Antenna => "Per-antenna RF",
-        SettingsGroups.Filter => "Tag filters",
-        SettingsGroups.StateAware => "State-aware singulation",
-        SettingsGroups.Gpi => "GPI triggers",
-        SettingsGroups.Frequency => "Frequency",
-        SettingsGroups.LowDuty => "Low-duty cycle",
-        SettingsGroups.Report => "Tag report content",
-        _ => "Vendor & other",
+        SettingsGroups.Power => "Power & Antenna Selection",
+        SettingsGroups.Antenna => "Per-Antenna RF Configuration",
+        SettingsGroups.Manual => "Inventory & RF Protocol",
+        SettingsGroups.Frequency => "Frequency & Hop Channels",
+        SettingsGroups.Filter => "Tag Filters & Singulation",
+        SettingsGroups.StateAware => "State-Aware Inventory",
+        SettingsGroups.Gpi => "GPI Triggers & Debounce",
+        SettingsGroups.LowDuty => "Low-Duty Cycle Timing",
+        SettingsGroups.Report => "Tag Report Fields",
+        _ => "Vendor & Capabilities",
     };
 
     private static string GroupDescription(string key) => key switch
     {
-        SettingsGroups.Manual => "Inventory behavior and air-protocol parameters.",
-        SettingsGroups.Power => "Shared RF values and participating antennas.",
-        SettingsGroups.Antenna => "Capability-table indices written for each antenna.",
-        SettingsGroups.Filter => "EPC, TID, user-memory and action filters.",
-        SettingsGroups.StateAware => "State target and selected-flag behavior.",
-        SettingsGroups.Gpi => "Reader-side start and stop trigger conditions.",
-        SettingsGroups.Frequency => "Vendor-supported channel selection.",
-        SettingsGroups.LowDuty => "Reader-side idle and field timing controls.",
-        SettingsGroups.Report => "Fields requested in inventory reports.",
-        _ => "Additional capability-driven Reader settings.",
+        SettingsGroups.Power => "Participating antenna selection, default Tx power and Rx sensitivity.",
+        SettingsGroups.Antenna => "Specific Tx power and Rx sensitivity per antenna port.",
+        SettingsGroups.Manual => "Session, inventory behavior, tag population and air-protocol parameters.",
+        SettingsGroups.Frequency => "Channel list and hop table frequency configuration.",
+        SettingsGroups.Filter => "EPC, TID, user-memory match filters and action masks.",
+        SettingsGroups.StateAware => "State target and selected-flag singulation behavior.",
+        SettingsGroups.Gpi => "Hardware GPI start/stop trigger conditions and debounce timings.",
+        SettingsGroups.LowDuty => "Reader idle and field ping timing controls.",
+        SettingsGroups.Report => "Fields and metadata requested in tag inventory reports.",
+        _ => "Additional capability-driven Reader parameters.",
     };
 
     private sealed record SettingsGroup(
+        string Key,
         string Title,
         string Description,
         IReadOnlyList<SettingsEntry> Entries);
 
-    private void OnChanged(object? sender, EventArgs args) => InvokeAsync(StateHasChanged);
+    private async void OnChanged(object? sender, EventArgs args)
+    {
+        Guid? current = State.SelectedReaderId;
+        if (current != lastLoadedReaderId)
+        {
+            selectedReaderText = current?.ToString();
+            await LoadAsync(false);
+        }
+        else
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
 
     public void Dispose() => State.Changed -= OnChanged;
 }

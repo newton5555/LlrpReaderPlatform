@@ -8,8 +8,12 @@
         <p class="section-subtitle">Targeted C1G2 Read and Write memory operations with live visual memory map.</p>
     </div>
     <div class="toolbar">
-        <label class="form-label" for="tag-memory-reader">Reader</label>
-        <select id="tag-memory-reader" style="width: min(280px, 50vw);" value="@SelectedReaderText" @onchange="SelectReader">
+        <label class="check-line" style="margin-bottom: 0; font-size: 12.5px; cursor: pointer;" title="Automatically switch execution reader based on selected tag">
+            <input type="checkbox" @bind="autoSelectReader" />
+            <span>Auto-select Reader</span>
+        </label>
+        <label class="form-label" for="tag-memory-reader" style="margin-left: var(--space-2);">Reader</label>
+        <select id="tag-memory-reader" style="width: min(260px, 45vw);" value="@SelectedReaderText" @onchange="SelectReader" disabled="@(autoSelectReader && selectedTagRef is not null)">
             <option value="">Choose Reader</option>
             @foreach (ReaderRuntimeSnapshot reader in State.Readers)
             {
@@ -19,70 +23,104 @@
     </div>
 </div>
 
-@if (SelectedReader is null)
+@if (EffectiveReader is null && State.Readers.Count == 0)
 {
     <div class="card empty-state">
         <AppIcon Name="microchip" Size="36" />
-        <h2>Select a Reader</h2>
-        <p>Tag Operations run as isolated short-connection leases against the selected Reader.</p>
+        <h2>No Reader Available</h2>
+        <p>Please connect or activate a Reader first before performing tag memory access operations.</p>
         <a class="btn btn-primary" href="/readers" style="margin-top: var(--space-2);">Open Readers</a>
     </div>
 }
 else
 {
     <div class="access-layout">
-        <!-- Left: Tag Selector -->
+        <!-- Left: Observed Tags Selector -->
         <div class="tag-selector">
             <div class="tag-selector-header">
-                <input type="text" placeholder="Filter EPC / TID..." @bind="searchText" @bind:event="oninput" />
+                <span class="card-title" style="font-size: 12px;">Observed Tags</span>
                 <span class="tag-count-label">@FilteredTags.Count tags</span>
+            </div>
+            <div style="padding: 0 var(--space-3) var(--space-2) var(--space-3);">
+                <input type="text" placeholder="Filter EPC / TID..." @bind="searchText" @bind:event="oninput" style="height: 28px; font-size: 11.5px;" />
             </div>
             <div class="tag-list">
                 @if (FilteredTags.Count == 0)
                 {
                     <div class="empty-state" style="padding: var(--space-4); min-height: 120px;">
-                        <span class="muted" style="font-size: 11.5px;">No tags in inventory.<br />Enter a target EPC manually.</span>
+                        <span class="muted" style="font-size: 11.5px;">No tags observed in inventory.</span>
                     </div>
                 }
-                @foreach (TagObservation tag in FilteredTags)
+                @foreach (TagSourceItem item in FilteredTags)
                 {
-                    <button class="tag-list-item @(targetEpc.Equals(tag.Epc, StringComparison.OrdinalIgnoreCase) ? "selected" : string.Empty)"
-                            @onclick="() => SelectTag(tag)">
-                        <div class="tag-list-item-epc">@tag.Epc</div>
+                    bool isSelected = selectedTagRef is not null &&
+                                      ((selectionBank == TagMemoryBank.Epc && targetHex.Equals(item.Tag.Epc, StringComparison.OrdinalIgnoreCase)) ||
+                                       (selectionBank == TagMemoryBank.Tid && !string.IsNullOrWhiteSpace(item.Tag.Tid) && targetHex.Equals(item.Tag.Tid, StringComparison.OrdinalIgnoreCase)));
+                    <button class="tag-list-item @(isSelected ? "selected" : string.Empty)"
+                            @onclick="() => SelectTag(item)">
+                        <div class="tag-list-item-epc">@item.Tag.Epc</div>
+                        @if (!string.IsNullOrWhiteSpace(item.Tag.Tid))
+                        {
+                            <div class="mono muted" style="font-size: 10.5px; overflow: hidden; text-overflow: ellipsis;">TID: @item.Tag.Tid</div>
+                        }
                         <div class="tag-list-item-meta">
-                            <span>Ant @(tag.LastAntenna?.ToString() ?? "—")</span>
+                            <span class="status-badge neutral" style="font-size: 9.5px; padding: 1px 4px;">@item.ReaderName</span>
+                            <span>Ant @(item.Tag.LastAntenna?.ToString() ?? "—")</span>
                             <span>·</span>
-                            <span>@(tag.LastRssi?.ToString("0.0") ?? "—") dBm</span>
+                            <span>@(item.Tag.LastRssi?.ToString("0.0") ?? "—") dBm</span>
                             <span>·</span>
-                            <span>seen @tag.ReadCount</span>
+                            <span>seen @item.Tag.ReadCount</span>
                         </div>
                     </button>
                 }
-            </div>
-            <div style="padding: var(--space-2) var(--space-3); border-top: 1px solid var(--border); background: var(--surface-sunken);">
-                <button class="btn btn-sm" style="width: 100%;" @onclick="ClearTarget">
-                    <AppIcon Name="plus" Size="12" />
-                    <span>Custom / Manual Target</span>
-                </button>
             </div>
         </div>
 
         <!-- Right: Operations Panel -->
         <div class="operations-panel">
-            <!-- Selected Tag Banner -->
+            <!-- Target Tag Specification Card -->
             <div class="card selected-tag-card">
-                <div class="selected-tag-row">
-                    <div>
-                        <div class="stat-label">Target Tag</div>
-                        <div class="selected-epc-display">
-                            @(string.IsNullOrWhiteSpace(targetEpc) ? "Enter target EPC below" : targetEpc)
-                        </div>
+                <div class="card-header" style="padding: var(--space-2) var(--space-4); background: var(--surface-raised);">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <AppIcon Name="tags" Size="13" />
+                        <span class="card-title" style="font-size: 12.5px;">Target Tag Specification</span>
                     </div>
-                    <div class="selected-tag-meta">
-                        <span>@SelectedReader.Profile.Host:@SelectedReader.Profile.Port</span>
-                        <span class="status-badge @(SelectedReader.IsEnabled ? "ok" : "warn")" style="margin-left: 6px;">
-                            @(SelectedReader.IsEnabled ? "Active" : "Disabled")
+                    @if (EffectiveReader is not null)
+                    {
+                        <span class="status-badge @(EffectiveReader.IsEnabled ? "ok" : "warn")">
+                            Targeting: @EffectiveReader.Profile.Name (@EffectiveReader.Profile.Host:@EffectiveReader.Profile.Port)
                         </span>
+                    }
+                </div>
+                <div class="card-pad stack" style="gap: var(--space-3);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
+                        <div class="form-group" style="min-width: 170px;">
+                            <label class="form-label">Match Target Bank</label>
+                            <div class="bank-tabs">
+                                <button type="button"
+                                        class="bank-tab @(selectionBank == TagMemoryBank.Epc ? "active" : string.Empty)"
+                                        @onclick="() => SetSelectionBank(TagMemoryBank.Epc)"
+                                        disabled="@pageBusy">
+                                    EPC
+                                </button>
+                                <button type="button"
+                                        class="bank-tab @(selectionBank == TagMemoryBank.Tid ? "active" : string.Empty)"
+                                        @onclick="() => SetSelectionBank(TagMemoryBank.Tid)"
+                                        disabled="@pageBusy">
+                                    TID
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="flex: 1; min-width: 240px;">
+                            <label class="form-label">Target @(selectionBank == TagMemoryBank.Epc ? "EPC" : "TID") Hex Data</label>
+                            <input type="text"
+                                   value="@targetHex"
+                                   @oninput="OnTargetHexInput"
+                                   placeholder="Enter target hexadecimal pattern (e.g. E2801160...)"
+                                   class="mono"
+                                   disabled="@pageBusy" />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -94,61 +132,41 @@ else
                         <AppIcon Name="read" Size="15" />
                         <span>Read Memory</span>
                     </span>
-                    <button class="btn btn-sm btn-primary" @onclick="ReadAsync" disabled="@(pageBusy || !CanOperate)">
+                    <button class="btn btn-sm btn-primary" @onclick="ReadAsync" disabled="@(pageBusy || !CanOperate || string.IsNullOrWhiteSpace(targetHex))">
                         <AppIcon Name="play" Size="11" />
                         <span>Execute Read</span>
                     </button>
                 </div>
                 <div class="op-card-body">
-                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2);">
-                        <div class="form-group">
-                            <label class="form-label">Memory Bank</label>
-                            <div class="bank-tabs">
-                                @foreach (TagMemoryBank bank in BankOptions)
-                                {
-                                    <button class="bank-tab @(readBank == bank ? "active" : string.Empty)"
-                                            @onclick="() => SetReadBank(bank)"
-                                            disabled="@pageBusy">
-                                        @bank
-                                    </button>
-                                }
-                            </div>
-                        </div>
-
-                        <div class="form-group" style="min-width: 180px;">
-                            <label class="form-label">Match Bank</label>
-                            <div class="bank-tabs">
-                                <button class="bank-tab @(selectionBank == TagMemoryBank.Epc ? "active" : string.Empty)"
-                                        @onclick="() => selectionBank = TagMemoryBank.Epc"
-                                        disabled="@pageBusy">EPC</button>
-                                <button class="bank-tab @(selectionBank == TagMemoryBank.Tid ? "active" : string.Empty)"
-                                        @onclick="() => selectionBank = TagMemoryBank.Tid"
-                                        disabled="@pageBusy">TID</button>
-                            </div>
+                    <div class="form-group">
+                        <label class="form-label">Memory Bank</label>
+                        <div class="bank-tabs">
+                            @foreach (TagMemoryBank bank in BankOptions)
+                            {
+                                <button class="bank-tab @(readBank == bank ? "active" : string.Empty)"
+                                        @onclick="() => SetReadBank(bank)"
+                                        disabled="@pageBusy">
+                                    @bank
+                                </button>
+                            }
                         </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: var(--space-3);">
+                    <div style="display: grid; grid-template-columns: 140px 140px 1fr; gap: var(--space-3);">
                         <div class="form-group">
                             <label class="form-label">Word Pointer</label>
                             <input type="number" min="0" @bind="readPointer" disabled="@pageBusy" />
-                            <span class="form-hint">1 word = 16-bit. EPC starts at word 2.</span>
+                            <span class="form-hint">EPC starts at word 2.</span>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Word Count</label>
                             <input type="number" min="1" max="64" @bind="readCount" disabled="@pageBusy" />
-                            <span class="form-hint">Number of 16-bit words to read.</span>
+                            <span class="form-hint">16-bit words.</span>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Target EPC / TID Hex</label>
-                            <input type="text" @bind="targetEpc" placeholder="Hex target (e.g. E2801160...)" class="mono" disabled="@pageBusy" />
-                            <span class="form-hint">Editable target matching string.</span>
+                            <label class="form-label">Access Password (Hex)</label>
+                            <input type="text" @bind="accessPassword" placeholder="00000000" class="mono" disabled="@pageBusy" />
                         </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Access Password (Hex)</label>
-                        <input type="text" @bind="accessPassword" placeholder="00000000" class="mono" style="max-width: 220px;" disabled="@pageBusy" />
                     </div>
 
                     <div class="op-result @(lastReadSucceeded.HasValue ? (lastReadSucceeded.Value ? "success" : "error") : string.Empty)">
@@ -164,7 +182,7 @@ else
                         <AppIcon Name="write" Size="15" />
                         <span>Write Memory</span>
                     </span>
-                    <button class="btn btn-sm btn-primary" @onclick="WriteAsync" disabled="@(pageBusy || !CanOperate)">
+                    <button class="btn btn-sm btn-primary" @onclick="WriteAsync" disabled="@(pageBusy || !CanOperate || string.IsNullOrWhiteSpace(targetHex))">
                         <AppIcon Name="play" Size="11" />
                         <span>Execute Write</span>
                     </button>
@@ -184,16 +202,20 @@ else
                         </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 140px 1fr; gap: var(--space-3);">
+                    <div style="display: grid; grid-template-columns: 140px 1fr 180px; gap: var(--space-3);">
                         <div class="form-group">
                             <label class="form-label">Word Pointer</label>
                             <input type="number" min="0" @bind="writePointer" disabled="@pageBusy" />
-                            <span class="form-hint">Word offset (EPC word 2).</span>
+                            <span class="form-hint">EPC starts at word 2.</span>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Write Data (Hex Words)</label>
-                            <input type="text" @bind="writeDataHex" placeholder="Hex words, e.g. 1234 5678" class="mono" disabled="@pageBusy" />
-                            <span class="form-hint">Must be complete 16-bit words (4 hex digits per word).</span>
+                            <label class="form-label">Data Hex (16-bit Word Aligned)</label>
+                            <input type="text" @bind="writeDataHex" placeholder="e.g. 11223344" class="mono" disabled="@pageBusy" />
+                            <span class="form-hint">Must be 4, 8, 12, 16... hex chars.</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Access Password (Hex)</label>
+                            <input type="text" @bind="accessPassword" placeholder="00000000" class="mono" disabled="@pageBusy" />
                         </div>
                     </div>
 
@@ -203,14 +225,14 @@ else
                 </div>
             </div>
 
-            <!-- 16-Word Memory Map Viewer -->
-            <div class="card">
+            <!-- Visual Memory Map -->
+            <div class="card memory-map-card">
                 <div class="card-header">
                     <span class="card-title">
-                        <AppIcon Name="grid" Size="14" />
-                        <span>Memory Map — @readBank Bank (16 Words)</span>
+                        <AppIcon Name="microchip" Size="14" />
+                        <span>Live Visual Memory Map (Word 0x00 - 0x0F)</span>
                     </span>
-                    <span class="form-hint mono">Indices 0x00 – 0x0F</span>
+                    <span class="status-badge neutral">Bank: @readBank</span>
                 </div>
                 <div class="memory-view-container">
                     <div class="memory-view">
@@ -273,16 +295,20 @@ else
     private readonly List<TagAccessRecord> history = [];
     private string? selectedReaderText;
     private string searchText = string.Empty;
+    private bool autoSelectReader = true;
 
-    private string targetEpc = string.Empty;
+    // Target Selection
+    private string targetHex = string.Empty;
     private TagMemoryBank selectionBank = TagMemoryBank.Epc;
+    private TagObservation? selectedTagRef;
+    private Guid? tagOriginReaderId;
 
     // Read form
     private TagMemoryBank readBank = TagMemoryBank.Epc;
     private ushort readPointer = 2;
     private ushort readCount = 4;
     private string accessPassword = "00000000";
-    private string readStatusText = "Ready to execute. Select a tag and click Execute Read.";
+    private string readStatusText = "Ready to execute. Select a tag or type a target Hex above and click Execute Read.";
     private bool? lastReadSucceeded;
     private string activeMemoryDataHex = string.Empty;
     private int activeHighlightStart = -1;
@@ -298,15 +324,35 @@ else
     private bool pageBusy;
 
     private string SelectedReaderText => selectedReaderText ?? State.SelectedReaderId?.ToString() ?? string.Empty;
-    private ReaderRuntimeSnapshot? SelectedReader => State.Find(ParseReaderId(SelectedReaderText));
-    private bool CanOperate => SelectedReader is not null && !pageBusy;
+    private ReaderRuntimeSnapshot? ManualSelectedReader => State.Find(ParseReaderId(SelectedReaderText));
 
-    private IReadOnlyList<TagObservation> Tags => SelectedReader is { } reader ? State.GetTags(reader.ReaderId) : [];
+    // Effective Reader for Execution
+    private ReaderRuntimeSnapshot? EffectiveReader
+    {
+        get
+        {
+            if (autoSelectReader && tagOriginReaderId.HasValue)
+            {
+                return State.Find(tagOriginReaderId.Value) ?? ManualSelectedReader;
+            }
+            return ManualSelectedReader;
+        }
+    }
 
-    private IReadOnlyList<TagObservation> FilteredTags => Tags
-        .Where(t => string.IsNullOrWhiteSpace(searchText) ||
-                    t.Epc.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                    (t.Tid?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false))
+    private bool CanOperate => EffectiveReader is not null && !pageBusy;
+
+    private sealed record TagSourceItem(TagObservation Tag, Guid ReaderId, string ReaderName);
+
+    private IReadOnlyList<TagSourceItem> AvailableTags => State.Readers
+        .SelectMany(r => State.GetTags(r.ReaderId).Select(t => new TagSourceItem(t, r.ReaderId, r.Profile.Name)))
+        .OrderByDescending(item => item.Tag.LastSeen)
+        .ToList();
+
+    private IReadOnlyList<TagSourceItem> FilteredTags => AvailableTags
+        .Where(item => string.IsNullOrWhiteSpace(searchText) ||
+                       item.Tag.Epc.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                       (!string.IsNullOrWhiteSpace(item.Tag.Tid) && item.Tag.Tid.Contains(searchText, StringComparison.OrdinalIgnoreCase)) ||
+                       item.ReaderName.Contains(searchText, StringComparison.OrdinalIgnoreCase))
         .ToList();
 
     protected override async Task OnInitializedAsync()
@@ -323,26 +369,58 @@ else
     private void SelectReader(ChangeEventArgs args)
     {
         selectedReaderText = args.Value?.ToString();
-        State.Select(ParseReaderId(selectedReaderText));
-        ClearTarget();
+        Guid? id = ParseReaderId(selectedReaderText);
+        State.Select(id);
     }
 
-    private void SelectTag(TagObservation tag)
+    private void SelectTag(TagSourceItem item)
     {
-        targetEpc = tag.Epc;
-        selectionBank = TagMemoryBank.Epc;
-        if (!string.IsNullOrWhiteSpace(tag.Tid) && readBank == TagMemoryBank.Tid)
+        selectedTagRef = item.Tag;
+        tagOriginReaderId = item.ReaderId;
+
+        if (autoSelectReader)
         {
-            selectionBank = TagMemoryBank.Tid;
+            selectedReaderText = item.ReaderId.ToString();
+            State.Select(item.ReaderId);
+        }
+
+        if (selectionBank == TagMemoryBank.Tid && !string.IsNullOrWhiteSpace(item.Tag.Tid))
+        {
+            targetHex = item.Tag.Tid;
+        }
+        else
+        {
+            targetHex = item.Tag.Epc;
+            selectionBank = TagMemoryBank.Epc;
         }
     }
 
-    private void ClearTarget()
+    private void OnTargetHexInput(ChangeEventArgs args)
     {
-        targetEpc = string.Empty;
-        activeMemoryDataHex = string.Empty;
-        activeHighlightStart = -1;
-        activeHighlightLength = 0;
+        targetHex = args.Value?.ToString() ?? string.Empty;
+        if (selectedTagRef is not null &&
+            !targetHex.Equals(selectedTagRef.Epc, StringComparison.OrdinalIgnoreCase) &&
+            !targetHex.Equals(selectedTagRef.Tid, StringComparison.OrdinalIgnoreCase))
+        {
+            selectedTagRef = null;
+            tagOriginReaderId = null;
+        }
+    }
+
+    private void SetSelectionBank(TagMemoryBank bank)
+    {
+        selectionBank = bank;
+        if (selectedTagRef is not null)
+        {
+            if (bank == TagMemoryBank.Tid && !string.IsNullOrWhiteSpace(selectedTagRef.Tid))
+            {
+                targetHex = selectedTagRef.Tid;
+            }
+            else if (bank == TagMemoryBank.Epc)
+            {
+                targetHex = selectedTagRef.Epc;
+            }
+        }
     }
 
     private void SetReadBank(TagMemoryBank bank)
@@ -359,21 +437,21 @@ else
 
     private async Task ReadAsync()
     {
-        if (SelectedReader is not { } reader || pageBusy)
+        if (EffectiveReader is not { } reader || pageBusy)
         {
             return;
         }
 
-        string cleanTarget = NormalizeHex(targetEpc);
+        string cleanTarget = NormalizeHex(targetHex);
         if (string.IsNullOrWhiteSpace(cleanTarget))
         {
-            readStatusText = "Please select or enter a valid hexadecimal target EPC / TID.";
+            readStatusText = "Please specify a valid hexadecimal target EPC / TID.";
             lastReadSucceeded = false;
             return;
         }
 
         pageBusy = true;
-        readStatusText = "Executing read operation...";
+        readStatusText = $"Executing read on {reader.Profile.Name}...";
         DateTimeOffset startedAt = DateTimeOffset.UtcNow;
         TagAccessResult? result = null;
         Exception? failure = null;
@@ -415,8 +493,8 @@ else
             DateTimeOffset completedAt = DateTimeOffset.UtcNow;
             AddHistoryRecord(new TagAccessRecord(
                 "Read",
-                $"{reader.Profile.Host}:{reader.Profile.Port}",
-                cleanTarget,
+                $"{reader.Profile.Name} ({reader.Profile.Host}:{reader.Profile.Port})",
+                $"{selectionBank}:{cleanTarget}",
                 readBank,
                 readPointer,
                 readCount,
@@ -433,15 +511,15 @@ else
 
     private async Task WriteAsync()
     {
-        if (SelectedReader is not { } reader || pageBusy)
+        if (EffectiveReader is not { } reader || pageBusy)
         {
             return;
         }
 
-        string cleanTarget = NormalizeHex(targetEpc);
+        string cleanTarget = NormalizeHex(targetHex);
         if (string.IsNullOrWhiteSpace(cleanTarget))
         {
-            writeStatusText = "Please select or enter a valid hexadecimal target EPC / TID.";
+            writeStatusText = "Please specify a valid hexadecimal target EPC / TID.";
             lastWriteSucceeded = false;
             return;
         }
@@ -462,7 +540,7 @@ else
         }
 
         pageBusy = true;
-        writeStatusText = "Executing write operation...";
+        writeStatusText = $"Executing write on {reader.Profile.Name}...";
         DateTimeOffset startedAt = DateTimeOffset.UtcNow;
         TagAccessResult? result = null;
         Exception? failure = null;
@@ -504,8 +582,8 @@ else
             DateTimeOffset completedAt = DateTimeOffset.UtcNow;
             AddHistoryRecord(new TagAccessRecord(
                 "Write",
-                $"{reader.Profile.Host}:{reader.Profile.Port}",
-                cleanTarget,
+                $"{reader.Profile.Name} ({reader.Profile.Host}:{reader.Profile.Port})",
+                $"{selectionBank}:{cleanTarget}",
                 writeBank,
                 writePointer,
                 wordsWritten,
@@ -520,6 +598,15 @@ else
         }
     }
 
+    private void AddHistoryRecord(TagAccessRecord record)
+    {
+        history.Insert(0, record);
+        if (history.Count > 30)
+        {
+            history.RemoveAt(history.Count - 1);
+        }
+    }
+
     private string GetWordHex(int wordIndex)
     {
         if (string.IsNullOrWhiteSpace(activeMemoryDataHex) || activeHighlightStart < 0)
@@ -527,13 +614,13 @@ else
             return "0000";
         }
 
-        int relOffset = wordIndex - activeHighlightStart;
-        if (relOffset >= 0 && relOffset < activeHighlightLength)
+        int relIndex = wordIndex - activeHighlightStart;
+        if (relIndex >= 0 && relIndex < activeHighlightLength)
         {
-            int charIndex = relOffset * 4;
-            if (charIndex + 4 <= activeMemoryDataHex.Length)
+            int charStart = relIndex * 4;
+            if (charStart + 4 <= activeMemoryDataHex.Length)
             {
-                return activeMemoryDataHex.Substring(charIndex, 4).ToUpperInvariant();
+                return activeMemoryDataHex.Substring(charStart, 4).ToUpperInvariant();
             }
         }
 
@@ -546,37 +633,33 @@ else
         {
             return false;
         }
-
         return wordIndex >= activeHighlightStart && wordIndex < (activeHighlightStart + activeHighlightLength);
     }
 
-    private void AddHistoryRecord(TagAccessRecord record)
+    private static string NormalizeHex(string? raw)
     {
-        history.Insert(0, record);
-        if (history.Count > 30)
-        {
-            history.RemoveAt(history.Count - 1);
-        }
+        if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
+        var chars = raw.Where(c => Uri.IsHexDigit(c)).ToArray();
+        return new string(chars).ToUpperInvariant();
     }
-
-    private static string NormalizeHex(string? input) =>
-        new string((input ?? string.Empty).Where(c => Uri.IsHexDigit(c)).ToArray()).ToUpperInvariant();
 
     private static string FormatHexWords(string hex)
     {
-        var clean = NormalizeHex(hex);
-        var parts = new List<string>();
-        for (int i = 0; i < clean.Length; i += 4)
+        if (string.IsNullOrWhiteSpace(hex)) return string.Empty;
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < hex.Length; i += 4)
         {
-            parts.Add(clean.Substring(i, Math.Min(4, clean.Length - i)));
+            if (i > 0) sb.Append(' ');
+            int len = Math.Min(4, hex.Length - i);
+            sb.Append(hex.Substring(i, len));
         }
-        return string.Join(" ", parts);
+        return sb.ToString().ToUpperInvariant();
     }
 
     private static string FormatDuration(TimeSpan duration) =>
-        duration.TotalSeconds >= 1
-            ? $"{duration.TotalSeconds:0.00} s"
-            : $"{duration.TotalMilliseconds:0} ms";
+        duration.TotalMilliseconds < 1000
+            ? $"{duration.TotalMilliseconds:0}ms"
+            : $"{duration.TotalSeconds:0.00}s";
 
     private static Guid? ParseReaderId(string? value) => Guid.TryParse(value, out Guid id) ? id : null;
 
@@ -586,7 +669,7 @@ else
 
     private sealed record TagAccessRecord(
         string Kind,
-        string ReaderEndpoint,
+        string TargetReader,
         string Target,
         TagMemoryBank MemoryBank,
         ushort WordPointer,

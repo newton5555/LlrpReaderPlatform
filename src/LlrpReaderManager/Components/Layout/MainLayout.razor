@@ -3,14 +3,19 @@
 @inject ReaderManagerState State
 @inject VirtualReaderWidgetService VirtualDevices
 
-<div class="app-shell">
+<div class="app-shell @(navigationCollapsed ? "sidebar-collapsed" : string.Empty)">
     <header class="app-topbar">
-        <button class="brand-button" @onclick="ToggleNavigation" aria-label="Toggle navigation">
-            <span class="brand-mark" aria-hidden="true">RF</span>
-            <span>LLRP RFID Platform</span>
-        </button>
+        <div style="display: flex; align-items: center; gap: var(--space-3);">
+            <button class="topbar-toggle-btn" @onclick="ToggleNavigation" aria-label="Toggle navigation" title="@(navigationCollapsed ? "展开侧边栏" : "折叠侧边栏")">
+                <AppIcon Name="bars" Size="16" />
+            </button>
+            <div class="brand-button" style="cursor: pointer;" @onclick="ToggleNavigation">
+                <img src="img/appicon.png" alt="LLRP" class="brand-logo-img" />
+                <span>LLRP RFID Platform</span>
+            </div>
+        </div>
         <div class="topbar-meta">
-            <span class="topbar-badge">LLRP v1.0.1</span>
+            <span class="topbar-badge">@ProtocolBadgeText</span>
             <span class="topbar-separator">|</span>
             <span>@State.Readers.Count Reader(s)</span>
             <span class="topbar-separator">|</span>
@@ -21,45 +26,45 @@
     <aside class="app-sidebar @(navigationCollapsed ? "collapsed" : string.Empty)">
         <nav aria-label="Primary navigation">
             <div class="nav-section">Overview</div>
-            <NavLink href="/" Match="NavLinkMatch.All">
+            <NavLink href="/" Match="NavLinkMatch.All" title="Dashboard">
                 <span class="app-icon-wrapper"><AppIcon Name="dashboard" Size="16" /></span>
                 <span>Dashboard</span>
             </NavLink>
-            <NavLink href="/readers">
+            <NavLink href="/readers" title="Readers">
                 <span class="app-icon-wrapper"><AppIcon Name="readers" Size="16" /></span>
                 <span>Readers</span>
             </NavLink>
 
             <div class="nav-section">Operations</div>
-            <NavLink href="/inventory">
-                <span class="app-icon-wrapper"><AppIcon Name="satellite-dish" Size="16" /></span>
+            <NavLink href="/inventory" title="Tag Inventory">
+                <span class="app-icon-wrapper"><AppIcon Name="search" Size="16" /></span>
                 <span>Tag Inventory</span>
             </NavLink>
-            <NavLink href="/tag-memory">
+            <NavLink href="/tag-memory" title="Tag Operations">
                 <span class="app-icon-wrapper"><AppIcon Name="microchip" Size="16" /></span>
                 <span>Tag Operations</span>
             </NavLink>
-            <NavLink href="/runs">
+            <NavLink href="/runs" title="Inventory Runs">
                 <span class="app-icon-wrapper"><AppIcon Name="history" Size="16" /></span>
                 <span>Inventory Runs</span>
             </NavLink>
 
             <div class="nav-section">Configuration</div>
-            <NavLink href="/settings">
+            <NavLink href="/settings" title="Reader Settings">
                 <span class="app-icon-wrapper"><AppIcon Name="gear" Size="16" /></span>
                 <span>Reader Settings</span>
             </NavLink>
-            <NavLink href="/gpio">
+            <NavLink href="/gpio" title="GPI / GPO">
                 <span class="app-icon-wrapper"><AppIcon Name="bolt" Size="16" /></span>
                 <span>GPI / GPO</span>
             </NavLink>
-            <NavLink href="/tag-lists">
+            <NavLink href="/tag-lists" title="Tags of Interest (TOI)">
                 <span class="app-icon-wrapper"><AppIcon Name="tags" Size="16" /></span>
                 <span>TOI</span>
             </NavLink>
         </nav>
 
-        <div class="sidebar-footer">
+        <div class="sidebar-footer" title="@(State.IsInitialized ? "Platform ready" : "Loading platform")">
             <span class="status-dot @(State.IsInitialized ? "online" : "pending")"></span>
             <span>@(State.IsInitialized ? "Platform ready" : "Loading platform")</span>
         </div>
@@ -83,7 +88,37 @@
     private string currentTime = DateTime.Now.ToString("HH:mm:ss");
     private System.Threading.Timer? clockTimer;
 
-    protected override void OnInitialized()
+    private string ProtocolBadgeText
+    {
+        get
+        {
+            if (State.SelectedReaderId is { } id && State.Find(id) is { } reader)
+            {
+                if (reader.NegotiatedProtocolVersion is not null)
+                {
+                    return reader.NegotiatedProtocolVersion switch
+                    {
+                        LlrpProtocolVersion.Version101 => "LLRP 1.0.1",
+                        LlrpProtocolVersion.Version11 => "LLRP 1.1",
+                        LlrpProtocolVersion.Version20 => "LLRP 2.0",
+                        _ => $"LLRP {reader.NegotiatedProtocolVersion}",
+                    };
+                }
+
+                return reader.Profile.LlrpVersion switch
+                {
+                    LlrpProtocolVersionOption.Auto => "LLRP Auto (2.0 / 1.1 / 1.0.1)",
+                    LlrpProtocolVersionOption.Force101 => "LLRP 1.0.1 (Force)",
+                    LlrpProtocolVersionOption.Force11 => "LLRP 1.1 (Force)",
+                    LlrpProtocolVersionOption.Force20 => "LLRP 2.0 (Force)",
+                    _ => "LLRP 1.0.1 / 1.1 / 2.0",
+                };
+            }
+            return "LLRP 1.0.1 / 1.1 / 2.0";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
     {
         State.Changed += OnChanged;
         VirtualDevices.Changed += OnChanged;

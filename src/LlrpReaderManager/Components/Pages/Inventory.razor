@@ -1,14 +1,15 @@
 @page "/inventory"
 @implements IDisposable
 @inject ReaderManagerState State
+@inject ITagListStore TagListsStore
 
 <div class="section-header">
     <div>
         <h1 class="section-title">Tag Inventory</h1>
-        <p class="section-subtitle">Start and monitor real-time RFID inventory runs with live aggregation.</p>
+        <p class="section-subtitle">Start and monitor real-time RFID inventory runs with live aggregation, TOI classification, and RF metrics.</p>
     </div>
     <div class="toolbar">
-        <label class="form-label" for="inventory-reader">Reader</label>
+        <label class="form-label" for="inventory-reader">Selected Reader</label>
         <select id="inventory-reader" style="width: min(280px, 50vw);" value="@SelectedReaderText" @onchange="SelectReader">
             <option value="">Choose Reader</option>
             @foreach (ReaderRuntimeSnapshot reader in State.Readers)
@@ -19,30 +20,33 @@
     </div>
 </div>
 
-@if (SelectedReader is null)
+@if (SelectedReader is null && State.Readers.Count == 0)
 {
     <div class="card empty-state">
-        <AppIcon Name="satellite-dish" Size="36" />
-        <h2>Select a Reader</h2>
-        <p>Choose an enabled Reader to configure and run an inventory lease.</p>
+        <AppIcon Name="search" Size="36" />
+        <h2>No Reader Configured</h2>
+        <p>Please add and enable a Reader in the Readers page to start inventory.</p>
         <a class="btn btn-primary" href="/readers" style="margin-top: var(--space-2);">Open Readers</a>
     </div>
 }
 else
 {
+    <!-- Inventory Control Toolbar Card -->
     <div class="card" style="margin-bottom: var(--space-4);">
         <div class="card-pad">
-            <div class="toolbar">
+            <div class="toolbar" style="align-items: center; flex-wrap: wrap; gap: var(--space-3);">
                 <div>
                     <div class="field-label">Active Endpoint</div>
-                    <div class="mono" style="font-weight: 600;">@SelectedReader.Profile.Name · @SelectedReader.Profile.Host:@SelectedReader.Profile.Port</div>
+                    <div class="mono" style="font-weight: 600;">
+                        @(SelectedReader is not null ? $"{SelectedReader.Profile.Name} · {SelectedReader.Profile.Host}:{SelectedReader.Profile.Port}" : "No reader selected")
+                    </div>
                 </div>
                 <div class="toolbar-spacer"></div>
-                <div class="form-group" style="width: 130px;">
-                    <label class="form-label">Duration (s)</label>
-                    <input type="number" min="0" @bind="durationText" placeholder="0 = Manual" class="mono" />
+                <div class="duration-input-group">
+                    <label class="form-label" style="margin-bottom: 0; white-space: nowrap;">Duration (s):</label>
+                    <input type="number" min="0" @bind="durationText" placeholder="0 (Manual)" class="mono" style="width: 90px;" />
                 </div>
-                @if (SelectedReader.State == ReaderState.Inventorying)
+                @if (SelectedReader?.State == ReaderState.Inventorying)
                 {
                     <button class="btn btn-danger" @onclick="StopAsync" disabled="@State.IsBusy">
                         <AppIcon Name="stop" Size="13" />
@@ -51,13 +55,13 @@ else
                 }
                 else
                 {
-                    <button class="btn btn-primary" @onclick="StartAsync" disabled="@(State.IsBusy || !SelectedReader.IsEnabled)">
-                        <AppIcon Name="play" Size="13" />
+                    <button class="btn btn-primary" @onclick="StartAsync" disabled="@(State.IsBusy || SelectedReader is null || !SelectedReader.IsEnabled)">
+                        <AppIcon Name="search" Size="13" />
                         <span>Start Inventory</span>
                     </button>
                 }
                 <button class="btn" @onclick="StartAllAsync" disabled="@State.IsBusy">
-                    <AppIcon Name="play" Size="12" />
+                    <AppIcon Name="search" Size="12" />
                     <span>Start All Enabled</span>
                 </button>
                 <button class="btn" @onclick="StopAllAsync" disabled="@State.IsBusy">
@@ -75,40 +79,149 @@ else
         </div>
     }
 
-    <div class="card-grid" style="margin-bottom: var(--space-4);">
+    <!-- Stat Badges Grid -->
+    <div class="card-grid" style="margin-bottom: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
         <div class="card card-pad">
             <div class="stat-label">Reader State</div>
-            <div class="stat-value" style="font-size: 20px;">@SelectedReader.State</div>
-            <div class="stat-note">@(SelectedReader.Error ?? "Normal operation")</div>
+            <div class="stat-value" style="font-size: 18px;">@(SelectedReader?.State.ToString() ?? "—")</div>
+            <div class="stat-note">@(SelectedReader?.Error ?? "Normal operation")</div>
         </div>
         <div class="card card-pad">
             <div class="stat-label">Unique Tags</div>
-            <div class="stat-value">@Tags.Count</div>
+            <div class="stat-value">@RawTags.Count</div>
             <div class="stat-note">Distinct observed EPCs</div>
         </div>
         <div class="card card-pad">
             <div class="stat-label">Total Reads</div>
-            <div class="stat-value">@Tags.Sum(tag => tag.ReadCount)</div>
-            <div class="stat-note">Total observation count</div>
+            <div class="stat-value">@RawTags.Sum(t => t.Tag.ReadCount)</div>
+            <div class="stat-note">Observation count</div>
+        </div>
+        <div class="card card-pad">
+            <div class="stat-label">TOI Matches (关注标签)</div>
+            <div class="stat-value" style="color: var(--accent);">@ToiMatchedCount</div>
+            <div class="stat-note">Matched TOI classifications</div>
         </div>
     </div>
 
-    <section class="card">
-        <div class="card-header">
-            <span class="card-title">
-                <AppIcon Name="satellite-dish" Size="14" />
-                <span>Live Tag Observation Table</span>
-            </span>
-            <span class="status-badge @(SelectedReader.State == ReaderState.Inventorying ? "ok" : "neutral")">
-                @(SelectedReader.State == ReaderState.Inventorying ? "Live Streaming" : "Idle")
-            </span>
+    <!-- Table Column Visibility & Customization Card -->
+    <div class="column-toggle-card">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-3);">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <AppIcon Name="sliders" Size="14" />
+                <strong style="font-size: 12.5px;">Table Column Visibility (表格列显示定制与高级参数)</strong>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <button type="button" class="btn btn-sm btn-ghost" style="padding: 2px 8px; font-size: 11px;" @onclick="ApplyStandardColumns">Standard View</button>
+                <button type="button" class="btn btn-sm btn-ghost" style="padding: 2px 8px; font-size: 11px;" @onclick="ApplyRfColumns">RF & Phase View</button>
+                <button type="button" class="btn btn-sm btn-ghost" style="padding: 2px 8px; font-size: 11px;" @onclick="ApplyAllColumns">All Columns</button>
+                <button type="button" class="btn btn-sm btn-ghost" style="padding: 2px 8px; font-size: 11px;" @onclick="ApplyCompactColumns">Compact</button>
+            </div>
         </div>
-        @if (Tags.Count == 0)
+
+        <div class="column-toggle-pills">
+            <label class="column-pill active" style="opacity: 0.8; cursor: default;" title="EPC column is required">
+                <span>✓ EPC (Required)</span>
+            </label>
+            <label class="column-pill @(colToi ? "active" : string.Empty)">
+                <input type="checkbox" @bind="colToi" />
+                <span>@(colToi ? "✓" : "+") TOI 关注分类</span>
+            </label>
+            <label class="column-pill @(colReader ? "active" : string.Empty)">
+                <input type="checkbox" @bind="colReader" />
+                <span>@(colReader ? "✓" : "+") Reader (机台来源)</span>
+            </label>
+            <label class="column-pill @(colTid ? "active" : string.Empty)">
+                <input type="checkbox" @bind="colTid" />
+                <span>@(colTid ? "✓" : "+") TID</span>
+            </label>
+            <label class="column-pill @(colPhase ? "active" : string.Empty)">
+                <input type="checkbox" @bind="colPhase" />
+                <span>@(colPhase ? "✓" : "+") Phase (RF 相位)</span>
+            </label>
+            <label class="column-pill @(colDoppler ? "active" : string.Empty)">
+                <input type="checkbox" @bind="colDoppler" />
+                <span>@(colDoppler ? "✓" : "+") Doppler (多普勒)</span>
+            </label>
+            <label class="column-pill @(colPc ? "active" : string.Empty)">
+                <input type="checkbox" @bind="colPc" />
+                <span>@(colPc ? "✓" : "+") PC Bits</span>
+            </label>
+            <label class="column-pill @(colReads ? "active" : string.Empty)">
+                <input type="checkbox" @bind="colReads" />
+                <span>@(colReads ? "✓" : "+") Reads (次数)</span>
+            </label>
+            <label class="column-pill @(colRssi ? "active" : string.Empty)">
+                <input type="checkbox" @bind="colRssi" />
+                <span>@(colRssi ? "✓" : "+") RSSI (信号)</span>
+            </label>
+            <label class="column-pill @(colAntenna ? "active" : string.Empty)">
+                <input type="checkbox" @bind="colAntenna" />
+                <span>@(colAntenna ? "✓" : "+") Antenna (天线)</span>
+            </label>
+            <label class="column-pill @(colChannel ? "active" : string.Empty)">
+                <input type="checkbox" @bind="colChannel" />
+                <span>@(colChannel ? "✓" : "+") Channel (信道)</span>
+            </label>
+            <label class="column-pill @(colFirstSeen ? "active" : string.Empty)">
+                <input type="checkbox" @bind="colFirstSeen" />
+                <span>@(colFirstSeen ? "✓" : "+") First Seen (首次)</span>
+            </label>
+            <label class="column-pill @(colLastSeen ? "active" : string.Empty)">
+                <input type="checkbox" @bind="colLastSeen" />
+                <span>@(colLastSeen ? "✓" : "+") Last Seen (最后)</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Live Tag Table Section -->
+    <section class="card">
+        <div class="card-header" style="flex-wrap: wrap; gap: var(--space-3);">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <AppIcon Name="search" Size="14" />
+                <span class="card-title" style="margin-bottom: 0;">Live Tag Observation Table</span>
+                <span class="status-badge @(SelectedReader?.State == ReaderState.Inventorying ? "ok" : "neutral")">
+                    @(SelectedReader?.State == ReaderState.Inventorying ? "Live Streaming" : "Idle")
+                </span>
+
+                <!-- Scope Switcher: All Readers vs Current Reader -->
+                <div class="bank-tabs" style="margin-left: 8px; font-size: 11px;">
+                    <button type="button"
+                            class="bank-tab @(showAllReaders ? "active" : string.Empty)"
+                            style="padding: 2px 8px; font-size: 11px;"
+                            @onclick="() => showAllReaders = true">
+                        All Readers (@State.Readers.Count)
+                    </button>
+                    <button type="button"
+                            class="bank-tab @(!showAllReaders ? "active" : string.Empty)"
+                            style="padding: 2px 8px; font-size: 11px;"
+                            @onclick="() => showAllReaders = false">
+                        Current: @(SelectedReader?.Profile.Name ?? "None")
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table Filter Toolbar -->
+            <div style="display: flex; align-items: center; gap: var(--space-3); margin-left: auto; flex-wrap: wrap;">
+                <label class="check-line" style="margin-bottom: 0; font-size: 12px; cursor: pointer;">
+                    <input type="checkbox" @bind="onlyShowToi" />
+                    <span>Only TOI Tags (@ToiMatchedCount)</span>
+                </label>
+                <div style="width: min(220px, 40vw);">
+                    <input type="text"
+                           placeholder="Filter EPC / TID / TOI / Reader..."
+                           @bind="tableSearch"
+                           @bind:event="oninput"
+                           style="height: 28px; font-size: 11.5px;" />
+                </div>
+            </div>
+        </div>
+
+        @if (FilteredTags.Count == 0)
         {
             <div class="empty-state">
-                <AppIcon Name="tags" Size="32" />
-                <h3>No Tags In Current Run</h3>
-                <p>Start inventory above or check antenna configurations.</p>
+                <AppIcon Name="search" Size="32" />
+                <h3>@(RawTags.Count == 0 ? "No Tags In Current Run" : "No Matching Tags")</h3>
+                <p>@(RawTags.Count == 0 ? "Start inventory above or check antenna configurations." : "Try adjusting your search query or TOI filter.")</p>
             </div>
         }
         else
@@ -118,23 +231,134 @@ else
                     <thead>
                         <tr>
                             <th>EPC</th>
-                            <th>TID</th>
-                            <th>Reads</th>
-                            <th>RSSI</th>
-                            <th>Antenna</th>
-                            <th>Last Seen</th>
+                            @if (colToi)
+                            {
+                                <th>TOI / Classification</th>
+                            }
+                            @if (colReader)
+                            {
+                                <th>Reader (机台来源)</th>
+                            }
+                            @if (colTid)
+                            {
+                                <th>TID</th>
+                            }
+                            @if (colPhase)
+                            {
+                                <th>Phase (相位)</th>
+                            }
+                            @if (colDoppler)
+                            {
+                                <th>Doppler (多普勒)</th>
+                            }
+                            @if (colPc)
+                            {
+                                <th>PC</th>
+                            }
+                            @if (colReads)
+                            {
+                                <th>Reads</th>
+                            }
+                            @if (colRssi)
+                            {
+                                <th>RSSI</th>
+                            }
+                            @if (colAntenna)
+                            {
+                                <th>Antenna</th>
+                            }
+                            @if (colChannel)
+                            {
+                                <th>Channel</th>
+                            }
+                            @if (colFirstSeen)
+                            {
+                                <th>First Seen</th>
+                            }
+                            @if (colLastSeen)
+                            {
+                                <th>Last Seen</th>
+                            }
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (TagObservation tag in Tags)
+                        @foreach (TagRowItem item in FilteredTags)
                         {
-                            <tr>
+                            TagObservation tag = item.Tag;
+                            ToiMatchResult? toi = GetToiMatch(tag.Epc);
+                            string? phaseVal = GetExtensionField(tag, ReportFieldSemantics.Phase, "impinj.phaseAngle", "test.phase", "phase");
+                            string? dopplerVal = GetExtensionField(tag, "impinj.dopplerFrequency", "doppler");
+
+                            <tr class="@(toi is not null ? "toi-row" : string.Empty)" style="@(toi is not null ? $"border-left: 3px solid {toi.ColorHex};" : string.Empty)">
                                 <td class="mono" style="font-weight: 600;">@tag.Epc</td>
-                                <td class="mono">@(string.IsNullOrWhiteSpace(tag.Tid) ? "—" : tag.Tid)</td>
-                                <td class="mono">@tag.ReadCount</td>
-                                <td class="mono">@(tag.LastRssi?.ToString("0.0") ?? "—") dBm</td>
-                                <td class="mono">Ant @(tag.LastAntenna?.ToString() ?? "—")</td>
-                                <td class="mono">@tag.LastSeen.ToLocalTime().ToString("HH:mm:ss.fff")</td>
+                                @if (colToi)
+                                {
+                                    <td>
+                                        @if (toi is not null)
+                                        {
+                                            <span class="color-pill-tag" style="border-color: @toi.ColorHex;">
+                                                <span class="color-indicator" style="background-color: @toi.ColorHex;"></span>
+                                                <span style="color: var(--fg);">@toi.DisplayName</span>
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="muted" style="font-size: 11px;">—</span>
+                                        }
+                                    </td>
+                                }
+                                @if (colReader)
+                                {
+                                    <td>
+                                        <span class="status-badge neutral" style="font-size: 10px; padding: 1px 6px;">
+                                            @item.ReaderName
+                                        </span>
+                                    </td>
+                                }
+                                @if (colTid)
+                                {
+                                    <td class="mono">@(string.IsNullOrWhiteSpace(tag.Tid) ? "—" : tag.Tid)</td>
+                                }
+                                @if (colPhase)
+                                {
+                                    <td class="mono" style="color: var(--accent);">
+                                        @(string.IsNullOrWhiteSpace(phaseVal) ? "—" : phaseVal)
+                                    </td>
+                                }
+                                @if (colDoppler)
+                                {
+                                    <td class="mono">
+                                        @(string.IsNullOrWhiteSpace(dopplerVal) ? "—" : $"{dopplerVal} Hz")
+                                    </td>
+                                }
+                                @if (colPc)
+                                {
+                                    <td class="mono">@(tag.PcBitsHex ?? (tag.PcBits.HasValue ? tag.PcBits.Value.ToString("X4") : "—"))</td>
+                                }
+                                @if (colReads)
+                                {
+                                    <td class="mono">@tag.ReadCount</td>
+                                }
+                                @if (colRssi)
+                                {
+                                    <td class="mono">@(tag.LastRssi?.ToString("0.0") ?? "—") dBm</td>
+                                }
+                                @if (colAntenna)
+                                {
+                                    <td class="mono">Ant @(tag.LastAntenna?.ToString() ?? "—")</td>
+                                }
+                                @if (colChannel)
+                                {
+                                    <td class="mono">@(tag.LastChannelIndex?.ToString() ?? "—")</td>
+                                }
+                                @if (colFirstSeen)
+                                {
+                                    <td class="mono">@tag.FirstSeen.ToLocalTime().ToString("HH:mm:ss.fff")</td>
+                                }
+                                @if (colLastSeen)
+                                {
+                                    <td class="mono">@tag.LastSeen.ToLocalTime().ToString("HH:mm:ss.fff")</td>
+                                }
                             </tr>
                         }
                     </tbody>
@@ -149,12 +373,80 @@ else
     private string durationText = string.Empty;
     private string? message;
     private bool messageIsError;
+    private string tableSearch = string.Empty;
+    private bool onlyShowToi;
+    private bool showAllReaders = true;
+
+    // Table Column Visibility
+    private bool colToi = true;
+    private bool colReader = true;
+    private bool colTid = true;
+    private bool colPhase = true;
+    private bool colDoppler = false;
+    private bool colPc = true;
+    private bool colReads = true;
+    private bool colRssi = true;
+    private bool colAntenna = true;
+    private bool colChannel = false;
+    private bool colFirstSeen = false;
+    private bool colLastSeen = true;
+
+    // TOI list cache
+    private IReadOnlyList<TagListDefinition> tagLists = [];
 
     private string SelectedReaderText => selectedReaderText ?? State.SelectedReaderId?.ToString() ?? string.Empty;
-
     private ReaderRuntimeSnapshot? SelectedReader => State.Find(ParseReaderId(SelectedReaderText));
 
-    private IReadOnlyList<TagObservation> Tags => SelectedReader is { } reader ? State.GetTags(reader.ReaderId) : [];
+    private sealed record TagRowItem(TagObservation Tag, Guid ReaderId, string ReaderName);
+
+    private IReadOnlyList<TagRowItem> RawTags
+    {
+        get
+        {
+            if (showAllReaders)
+            {
+                return State.Readers
+                    .SelectMany(r => State.GetTags(r.ReaderId).Select(t => new TagRowItem(t, r.ReaderId, r.Profile.Name)))
+                    .OrderByDescending(item => item.Tag.LastSeen)
+                    .ToList();
+            }
+
+            if (SelectedReader is { } reader)
+            {
+                return State.GetTags(reader.ReaderId)
+                    .Select(t => new TagRowItem(t, reader.ReaderId, reader.Profile.Name))
+                    .OrderByDescending(item => item.Tag.LastSeen)
+                    .ToList();
+            }
+
+            return [];
+        }
+    }
+
+    private int ToiMatchedCount => RawTags.Count(t => GetToiMatch(t.Tag.Epc) is not null);
+
+    private IReadOnlyList<TagRowItem> FilteredTags => RawTags
+        .Where(item =>
+        {
+            TagObservation t = item.Tag;
+            if (onlyShowToi && GetToiMatch(t.Epc) is null)
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(tableSearch))
+            {
+                ToiMatchResult? toi = GetToiMatch(t.Epc);
+                bool matchesEpc = t.Epc.Contains(tableSearch, StringComparison.OrdinalIgnoreCase);
+                bool matchesTid = !string.IsNullOrWhiteSpace(t.Tid) && t.Tid.Contains(tableSearch, StringComparison.OrdinalIgnoreCase);
+                bool matchesReader = item.ReaderName.Contains(tableSearch, StringComparison.OrdinalIgnoreCase);
+                bool matchesToi = toi is not null && (toi.DisplayName.Contains(tableSearch, StringComparison.OrdinalIgnoreCase) || toi.ListName.Contains(tableSearch, StringComparison.OrdinalIgnoreCase));
+                return matchesEpc || matchesTid || matchesReader || matchesToi;
+            }
+
+            return true;
+        })
+        .ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -165,12 +457,129 @@ else
             State.Select(State.Readers.FirstOrDefault()?.ReaderId);
         }
         selectedReaderText = State.SelectedReaderId?.ToString();
+        await ReloadTagListsAsync();
+    }
+
+    private async Task ReloadTagListsAsync()
+    {
+        try
+        {
+            tagLists = await TagListsStore.GetAllAsync();
+        }
+        catch
+        {
+            tagLists = [];
+        }
     }
 
     private void SelectReader(ChangeEventArgs args)
     {
         selectedReaderText = args.Value?.ToString();
         State.Select(ParseReaderId(selectedReaderText));
+    }
+
+    private void ApplyStandardColumns()
+    {
+        colToi = true;
+        colReader = true;
+        colTid = true;
+        colPhase = true;
+        colDoppler = false;
+        colPc = true;
+        colReads = true;
+        colRssi = true;
+        colAntenna = true;
+        colChannel = false;
+        colFirstSeen = false;
+        colLastSeen = true;
+    }
+
+    private void ApplyRfColumns()
+    {
+        colToi = true;
+        colReader = true;
+        colTid = false;
+        colPhase = true;
+        colDoppler = true;
+        colPc = true;
+        colReads = true;
+        colRssi = true;
+        colAntenna = true;
+        colChannel = true;
+        colFirstSeen = false;
+        colLastSeen = true;
+    }
+
+    private void ApplyAllColumns()
+    {
+        colToi = true;
+        colReader = true;
+        colTid = true;
+        colPhase = true;
+        colDoppler = true;
+        colPc = true;
+        colReads = true;
+        colRssi = true;
+        colAntenna = true;
+        colChannel = true;
+        colFirstSeen = true;
+        colLastSeen = true;
+    }
+
+    private void ApplyCompactColumns()
+    {
+        colToi = true;
+        colReader = true;
+        colTid = false;
+        colPhase = false;
+        colDoppler = false;
+        colPc = false;
+        colReads = true;
+        colRssi = true;
+        colAntenna = true;
+        colChannel = false;
+        colFirstSeen = false;
+        colLastSeen = true;
+    }
+
+    private sealed record ToiMatchResult(string ListName, string DisplayName, string ColorHex);
+
+    private ToiMatchResult? GetToiMatch(string epc)
+    {
+        if (tagLists.Count == 0 || string.IsNullOrWhiteSpace(epc))
+        {
+            return null;
+        }
+
+        string cleanEpc = epc.Trim();
+        foreach (TagListDefinition list in tagLists.Where(l => l.IsEnabled))
+        {
+            TagListEntry? entry = list.Entries.FirstOrDefault(e =>
+                e.EpcHex.Equals(cleanEpc, StringComparison.OrdinalIgnoreCase) ||
+                cleanEpc.StartsWith(e.EpcHex, StringComparison.OrdinalIgnoreCase));
+
+            if (entry is not null)
+            {
+                return new ToiMatchResult(
+                    list.Name,
+                    string.IsNullOrWhiteSpace(entry.DisplayName) ? list.Name : entry.DisplayName,
+                    entry.ColorHex ?? list.ColorHex);
+            }
+        }
+
+        return null;
+    }
+
+    private static string? GetExtensionField(TagObservation tag, params string[] keys)
+    {
+        foreach (string key in keys)
+        {
+            if (tag.ExtensionFields.TryGetValue(key, out string? val) && !string.IsNullOrWhiteSpace(val))
+            {
+                return val;
+            }
+        }
+        return null;
     }
 
     private async Task StartAsync()
@@ -194,6 +603,8 @@ else
                 IncludeFirstSeenTimestamp = true,
                 IncludeLastSeenTimestamp = true,
                 IncludeTagSeenCount = true,
+                IncludePcBits = true,
+                ExtensionReportFields = [ReportFieldSemantics.Phase, ReportFieldSemantics.Gps, ReportFieldSemantics.Xpc],
             },
         });
         SetMessage(result.Succeeded ? "Inventory started." : result.Message ?? "Inventory failed to start.", !result.Succeeded);
@@ -275,6 +686,8 @@ else
             IncludeFirstSeenTimestamp = true,
             IncludeLastSeenTimestamp = true,
             IncludeTagSeenCount = true,
+            IncludePcBits = true,
+            ExtensionReportFields = [ReportFieldSemantics.Phase, ReportFieldSemantics.Gps, ReportFieldSemantics.Xpc],
         },
     };
 
@@ -290,7 +703,11 @@ else
         messageIsError = error;
     }
 
-    private void OnChanged(object? sender, EventArgs args) => InvokeAsync(StateHasChanged);
+    private async void OnChanged(object? sender, EventArgs args)
+    {
+        await ReloadTagListsAsync();
+        await InvokeAsync(StateHasChanged);
+    }
 
     public void Dispose() => State.Changed -= OnChanged;
 }

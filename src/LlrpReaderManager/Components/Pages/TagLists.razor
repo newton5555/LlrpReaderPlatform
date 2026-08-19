@@ -30,7 +30,7 @@
                 <div class="card">
                     <div class="card-header">
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="width: 14px; height: 14px; border-radius: 50%; background: @list.ColorHex; border: 1px solid var(--border-strong);"></span>
+                            <span class="color-indicator" style="background-color: @list.ColorHex; border: 1px solid var(--border-strong); width: 14px; height: 14px;"></span>
                             <span class="card-title" style="color: var(--fg); font-size: 13.5px; text-transform: none;">@list.Name</span>
                         </div>
                         <span class="status-badge @(list.IsEnabled ? "ok" : "neutral")">@(list.IsEnabled ? "Enabled" : "Disabled")</span>
@@ -55,18 +55,20 @@
                                         <tr>
                                             <th>Display Name</th>
                                             <th>EPC Pattern</th>
-                                            <th>Color</th>
+                                            <th style="min-width: 140px;">Color</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach (TagListEntry entry in list.Entries)
                                         {
+                                            string displayColor = entry.ColorHex ?? list.ColorHex;
                                             <tr>
                                                 <td><strong>@entry.DisplayName</strong></td>
                                                 <td class="mono">@entry.EpcHex</td>
                                                 <td>
-                                                    <span class="status-badge neutral" style="border-left: 4px solid @(entry.ColorHex ?? list.ColorHex);">
-                                                        @(entry.ColorHex ?? list.ColorHex)
+                                                    <span class="color-pill-tag">
+                                                        <span class="color-indicator" style="background-color: @displayColor;"></span>
+                                                        <span>@displayColor</span>
                                                     </span>
                                                 </td>
                                             </tr>
@@ -122,11 +124,26 @@
                 <label class="form-label">List Name</label>
                 <input type="text" @bind="newName" placeholder="VIP Inventory Tags" />
             </div>
+
             <div class="form-group">
                 <label class="form-label">Highlight Color</label>
-                <input type="color" @bind="newColor" title="Choose TOI display color" />
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="color" @bind="newColor" style="width: 36px; height: 32px; padding: 0; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer;" />
+                    <input type="text" @bind="newColor" class="mono" style="width: 100px; height: 32px;" />
+                </div>
+                <div class="color-palette-bar">
+                    @foreach (string preset in PresetColors)
+                    {
+                        <button type="button"
+                                class="color-dot-btn @(newColor.Equals(preset, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)"
+                                style="background-color: @preset;"
+                                title="@preset"
+                                @onclick="() => newColor = preset"></button>
+                    }
+                </div>
             </div>
-            <button class="btn btn-primary" style="width: 100%;" @onclick="CreateAsync" disabled="@(pageBusy || string.IsNullOrWhiteSpace(newName))">
+
+            <button class="btn btn-primary" style="width: 100%; margin-top: var(--space-2);" @onclick="CreateAsync" disabled="@(pageBusy || string.IsNullOrWhiteSpace(newName))">
                 <AppIcon Name="plus" Size="13" />
                 <span>Save Tag List</span>
             </button>
@@ -135,9 +152,22 @@
 </div>
 
 @code {
+    private static readonly string[] PresetColors =
+    [
+        "#14B8A6", // Teal
+        "#10B981", // Emerald
+        "#3B82F6", // Blue
+        "#6366F1", // Indigo
+        "#8B5CF6", // Purple
+        "#EC4899", // Pink
+        "#F43F5E", // Rose
+        "#F59E0B", // Amber
+        "#84CC16", // Lime
+    ];
+
     private List<TagListDefinition> lists = [];
     private string newName = string.Empty;
-    private string newColor = "#5EEAD4";
+    private string newColor = "#14B8A6";
     private Guid? selectedListId;
     private string entryName = string.Empty;
     private string entryEpc = string.Empty;
@@ -176,7 +206,7 @@
         {
             Id = Guid.NewGuid(),
             Name = newName.Trim(),
-            ColorHex = string.IsNullOrWhiteSpace(newColor) ? "#5EEAD4" : newColor.Trim(),
+            ColorHex = string.IsNullOrWhiteSpace(newColor) ? "#14B8A6" : newColor.Trim(),
             IsEnabled = true
         });
         newName = string.Empty;

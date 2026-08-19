@@ -27,6 +27,10 @@
 {
     <div class="notice error" style="margin-bottom: var(--space-4);">@error</div>
 }
+@if (!string.IsNullOrWhiteSpace(statusMessage))
+{
+    <div class="notice ok" style="margin-bottom: var(--space-4);">@statusMessage</div>
+}
 
 <section class="card">
     <div class="card-header">
@@ -67,7 +71,24 @@
                             <td><span class="status-badge neutral">@run.StopReason</span></td>
                             <td class="mono">@run.TotalReadCount</td>
                             <td class="mono" style="font-weight: 600;">@run.UniqueTagCount</td>
-                            <td class="mono" style="font-size: 11px; color: var(--muted);">@(string.IsNullOrWhiteSpace(run.SnapshotFilePath) ? "—" : run.SnapshotFilePath)</td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(run.SnapshotFilePath))
+                                {
+                                    <button class="btn btn-sm"
+                                            style="padding: 2px 8px; font-size: 11px; gap: 4px;"
+                                            @onclick="() => OpenSnapshotFileAsync(run.SnapshotFilePath)"
+                                            title="Click to open @run.SnapshotFilePath">
+                                        <AppIcon Name="folder-open" Size="12" />
+                                        <span class="mono" style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                            @System.IO.Path.GetFileName(run.SnapshotFilePath)
+                                        </span>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="muted mono">—</span>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -80,6 +101,7 @@
     private string? selectedReaderText;
     private List<InventoryRunRecord> runs = [];
     private string? error;
+    private string? statusMessage;
     private bool pageBusy;
 
     protected override async Task OnInitializedAsync()
@@ -107,6 +129,7 @@
 
         pageBusy = true;
         error = null;
+        statusMessage = null;
         try
         {
             runs = (await RunsStore.GetForReaderAsync(readerId.Value)).ToList();
@@ -118,6 +141,47 @@
         finally
         {
             pageBusy = false;
+        }
+    }
+
+    private async Task OpenSnapshotFileAsync(string? filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return;
+        }
+
+        error = null;
+        statusMessage = null;
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                if (OperatingSystem.IsWindows())
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = filePath,
+                        UseShellExecute = true
+                    });
+                    statusMessage = $"Opened snapshot file: {Path.GetFileName(filePath)}";
+                }
+                else
+                {
+                    await Launcher.Default.OpenAsync(new OpenFileRequest
+                    {
+                        File = new ReadOnlyFile(filePath)
+                    });
+                }
+            }
+            else
+            {
+                error = $"Snapshot file not found on disk: {filePath}";
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"Failed to open file: {ex.Message}";
         }
     }
 

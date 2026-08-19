@@ -86,18 +86,23 @@ else
             }
             else
             {
-                <div class="stack" style="padding: var(--space-3) var(--space-4);">
+                <div class="gpo-grid">
                     @foreach (GpoPortStatus port in snapshot!.Gpos)
                     {
-                        <div class="settings-row">
-                            <div>
-                                <div class="field-value">GPO @port.PortNumber</div>
-                                <div class="form-hint">Current state: @(port.State ? "ON" : "OFF")</div>
+                        <div class="gpo-card @(port.State ? "active" : string.Empty)">
+                            <div class="gpo-card-head">
+                                <strong style="font-size: 13px;">GPO Port @port.PortNumber</strong>
+                                <span class="status-badge @(port.State ? "ok" : "neutral")">@(port.State ? "ON" : "OFF")</span>
+                            </div>
+                            <div class="form-hint" style="font-size: 11px;">
+                                @(port.State ? "Digital output active (High)" : "Digital output idle (Low)")
                             </div>
                             <button class="btn btn-sm @(port.State ? "btn-danger" : "btn-primary")"
+                                    style="width: 100%; margin-top: 4px;"
                                     @onclick="() => SetGpoAsync(port)"
                                     disabled="@pageBusy">
-                                @(port.State ? "Turn OFF" : "Turn ON")
+                                <AppIcon Name="zap" Size="12" />
+                                <span>@(port.State ? "Turn OFF" : "Turn ON")</span>
                             </button>
                         </div>
                     }
