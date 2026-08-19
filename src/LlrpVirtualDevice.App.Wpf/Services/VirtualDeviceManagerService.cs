@@ -50,8 +50,7 @@ public sealed class VirtualDeviceManagerService : IVirtualDeviceManagerService
         {
             try
             {
-                await existing.Host.StopAsync(cancellationToken).ConfigureAwait(false);
-                await existing.Host.DisposeAsync().ConfigureAwait(false);
+                await DisposeHostAsync(existing.Host, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -72,32 +71,73 @@ public sealed class VirtualDeviceManagerService : IVirtualDeviceManagerService
             throw new KeyNotFoundException($"Instance {instanceId} not found.");
         }
 
-        if (entry.Host == null)
+        if (entry.Host is { State: VirtualLlrpDeviceHostState.Running or VirtualLlrpDeviceHostState.Starting })
         {
-            entry.Host = CreateHostFromConfig(entry.Config);
-            _instances[instanceId] = entry;
+            return;
         }
 
-        _logger.LogInformation("Starting virtual device host '{Name}' on port {Port}...", entry.Config.Name, entry.Config.Port);
-        await entry.Host.StartAsync(cancellationToken).ConfigureAwait(false);
+        if (entry.Host is not null)
+        {
+            await DisposeHostAsync(entry.Host, cancellationToken).ConfigureAwait(false);
+        }
+
+        IVirtualDeviceHost host = CreateHostFromConfig(entry.Config);
+        _instances[instanceId] = (entry.Config, host);
+        try
+        {
+            _logger.LogInformation("Starting virtual device host '{Name}' on port {Port}...", entry.Config.Name, entry.Config.Port);
+            await host.StartAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            try
+            {
+                await host.DisposeAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                _instances[instanceId] = (entry.Config, null);
+            }
+
+            throw;
+        }
     }
 
     public async Task StopHostAsync(string instanceId, CancellationToken cancellationToken = default)
     {
-        if (_instances.TryGetValue(instanceId, out var entry) && entry.Host != null)
+        if (!_instances.TryGetValue(instanceId, out var entry))
         {
-            _logger.LogInformation("Stopping virtual device host '{Name}'...", entry.Config.Name);
-            await entry.Host.StopAsync(cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        if (entry.Host is null)
+        {
+            return;
+        }
+
+        _logger.LogInformation("Stopping virtual device host '{Name}'...", entry.Config.Name);
+        try
+        {
+            await DisposeHostAsync(entry.Host, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            // A stopped Host owns the old VirtualLlrpDevice and its tag store. Keep the
+            // configuration, but force the next start to build a fresh Host from it.
+            _instances[instanceId] = (entry.Config, null);
         }
     }
 
     public async Task RestartHostAsync(string instanceId, CancellationToken cancellationToken = default)
     {
-        if (_instances.TryGetValue(instanceId, out var entry) && entry.Host != null)
+        if (!_instances.ContainsKey(instanceId))
         {
-            _logger.LogInformation("Restarting virtual device host '{Name}'...", entry.Config.Name);
-            await entry.Host.RestartAsync(cancellationToken).ConfigureAwait(false);
+            throw new KeyNotFoundException($"Instance {instanceId} not found.");
         }
+
+        _logger.LogInformation("Restarting virtual device host instance {Id} from current configuration...", instanceId);
+        await StopHostAsync(instanceId, cancellationToken).ConfigureAwait(false);
+        await StartHostAsync(instanceId, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task DeleteHostAsync(string instanceId, CancellationToken cancellationToken = default)
@@ -108,8 +148,7 @@ public sealed class VirtualDeviceManagerService : IVirtualDeviceManagerService
             {
                 try
                 {
-                    await entry.Host.StopAsync(cancellationToken).ConfigureAwait(false);
-                    await entry.Host.DisposeAsync().ConfigureAwait(false);
+                    await DisposeHostAsync(entry.Host, cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -212,6 +251,23 @@ public sealed class VirtualDeviceManagerService : IVirtualDeviceManagerService
             }
         }
         _instances.Clear();
+    }
+
+    private static async Task DisposeHostAsync(
+        IVirtualDeviceHost host,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (host.State is VirtualLlrpDeviceHostState.Running or VirtualLlrpDeviceHostState.Starting)
+            {
+                await host.StopAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            await host.DisposeAsync().ConfigureAwait(false);
+        }
     }
 
     private IVirtualDeviceHost CreateHostFromConfig(VirtualDeviceInstanceConfig config)

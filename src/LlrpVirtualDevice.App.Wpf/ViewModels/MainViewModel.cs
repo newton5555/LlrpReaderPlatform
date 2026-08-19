@@ -163,6 +163,11 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Status = "正在启动所有虚拟读写器...";
         await _managerService.StartAllAsync();
+        foreach (DeviceItemViewModel device in DeviceList)
+        {
+            device.RefreshHostBinding();
+        }
+
         Status = "所有虚拟读写器已启动";
         await _dialogService.ShowInfoAsync("批量操作", "已向所有虚拟读写器发送启动指令。");
     }
@@ -172,6 +177,11 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Status = "正在停止所有虚拟读写器...";
         await _managerService.StopAllAsync();
+        foreach (DeviceItemViewModel device in DeviceList)
+        {
+            device.RefreshHostBinding();
+        }
+
         Status = "所有虚拟读写器已停止";
         await _dialogService.ShowInfoAsync("批量操作", "已向所有虚拟读写器发送停止指令。");
     }

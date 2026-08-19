@@ -35,19 +35,19 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
-                        <Button Command="{Binding AddTagCommand}" Style="{StaticResource PrimaryActionButtonStyle}" Margin="0,0,8,0">
+                        <Button Command="{Binding AddTagCommand}" IsEnabled="{Binding CanEditConfig}" Style="{StaticResource PrimaryActionButtonStyle}" Margin="0,0,8,0">
                             <StackPanel Orientation="Horizontal">
                                 <fa:IconBlock Icon="Plus" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" />
                                 <TextBlock Text="添加标签" />
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding GenerateBatchTagsCommand}" CommandParameter="20" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,8,0">
+                        <Button Command="{Binding GenerateBatchTagsCommand}" CommandParameter="20" IsEnabled="{Binding CanEditConfig}" Style="{StaticResource FlatActionButtonStyle}" Margin="0,0,8,0">
                             <StackPanel Orientation="Horizontal">
                                 <fa:IconBlock Icon="WandMagicSparkles" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" />
                                 <TextBlock Text="快速生成 20 张" />
                             </StackPanel>
                         </Button>
-                        <Button Command="{Binding DeleteSelectedTagCommand}" Style="{StaticResource FlatActionButtonStyle}">
+                        <Button Command="{Binding DeleteSelectedTagCommand}" IsEnabled="{Binding CanEditConfig}" Style="{StaticResource FlatActionButtonStyle}">
                             <StackPanel Orientation="Horizontal">
                                 <fa:IconBlock Icon="Trash" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" Foreground="#DC2626" />
                                 <TextBlock Text="删除所选" Foreground="#DC2626" />
@@ -60,20 +60,20 @@
                 <WrapPanel Grid.Row="1" Margin="0,14,0,0">
                     <StackPanel Orientation="Horizontal" Margin="0,0,28,4" VerticalAlignment="Center">
                         <TextBlock Text="射频仿真场景:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12" />
-                        <ComboBox SelectedValue="{Binding Config.Scenario}" Width="130" Height="28"
+                        <ComboBox SelectedValue="{Binding Config.Scenario}" IsEnabled="{Binding CanEditConfig}" Width="130" Height="28"
                                   ItemsSource="{Binding Source={x:Type local_vm:AddDeviceViewModel}, Path=AvailableScenarios}"
                                   xmlns:local_vm="clr-namespace:LlrpVirtualDevice.App.Wpf.ViewModels" />
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,0,28,4" VerticalAlignment="Center">
                         <TextBlock Text="读取概率:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12" />
-                        <Slider Minimum="0.1" Maximum="1.0" Value="{Binding Config.DetectionProbability}" Width="100" VerticalAlignment="Center" />
+                        <Slider Minimum="0.1" Maximum="1.0" Value="{Binding Config.DetectionProbability}" IsEnabled="{Binding CanEditConfig}" Width="100" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding Config.DetectionProbability, StringFormat='{}{0:P0}'}" Margin="8,0,0,0" VerticalAlignment="Center" FontWeight="SemiBold" />
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,0,28,4" VerticalAlignment="Center">
                         <TextBlock Text="RSSI 抖动 (dB):" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" FontSize="12" />
-                        <Slider Minimum="0" Maximum="15" Value="{Binding Config.RssiJitterDb}" Width="90" VerticalAlignment="Center" />
+                        <Slider Minimum="0" Maximum="15" Value="{Binding Config.RssiJitterDb}" IsEnabled="{Binding CanEditConfig}" Width="90" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding Config.RssiJitterDb, StringFormat='{}±{0} dB'}" Margin="8,0,0,0" VerticalAlignment="Center" FontWeight="SemiBold" />
                     </StackPanel>
                 </WrapPanel>
@@ -84,6 +84,7 @@
         <Border Grid.Row="1" Style="{StaticResource StandardCardStyle}" Margin="0">
             <DataGrid ItemsSource="{Binding Tags}"
                       SelectedItem="{Binding SelectedTag}"
+                      IsReadOnly="True"
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"
                       GridLinesVisibility="Horizontal"

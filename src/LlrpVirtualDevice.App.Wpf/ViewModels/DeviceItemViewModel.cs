@@ -134,7 +134,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
         EditRelaxedRoSpecStateChecks = Config.RelaxedRoSpecStateChecks;
     }
 
-    public void UpdateHost(IVirtualDeviceHost newHost)
+    public void UpdateHost(IVirtualDeviceHost? newHost)
     {
         if (Host != null)
         {
@@ -148,6 +148,13 @@ public sealed partial class DeviceItemViewModel : ObservableObject
             State = Host.State;
             BoundPort = Host.BoundPort > 0 ? Host.BoundPort : Config.Port;
             ConnectedClientCount = Host.ConnectedClientCount;
+        }
+        else
+        {
+            State = VirtualLlrpDeviceHostState.Stopped;
+            BoundPort = Config.Port;
+            ConnectedClients.Clear();
+            ConnectedClientCount = 0;
         }
 
         OnPropertyChanged(nameof(DisplayPort));
@@ -277,6 +284,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
         try
         {
             await _managerService.StartHostAsync(Config.Id);
+            UpdateHost(_managerService.GetHost(Config.Id));
             BoundPort = Host?.BoundPort > 0 ? Host.BoundPort : Config.Port;
             OnPropertyChanged(nameof(DisplayPort));
             OnPropertyChanged(nameof(EndpointDisplay));
@@ -295,10 +303,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
         try
         {
             await _managerService.StopHostAsync(Config.Id);
-            ConnectedClients.Clear();
-            ConnectedClientCount = 0;
-            OnPropertyChanged(nameof(ConnectedClientsSummary));
-            OnPropertyChanged(nameof(HasConnectedClients));
+            UpdateHost(_managerService.GetHost(Config.Id));
         }
         catch (Exception ex)
         {
@@ -312,6 +317,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
         try
         {
             await _managerService.RestartHostAsync(Config.Id);
+            UpdateHost(_managerService.GetHost(Config.Id));
             BoundPort = Host?.BoundPort > 0 ? Host.BoundPort : Config.Port;
             OnPropertyChanged(nameof(DisplayPort));
             OnPropertyChanged(nameof(EndpointDisplay));
@@ -351,8 +357,13 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void AddTag()
+    private async Task AddTag()
     {
+        if (!CanEditConfig)
+        {
+            return;
+        }
+
         byte[] randomBytes = new byte[12];
         RandomNumberGenerator.Fill(randomBytes);
         randomBytes[0] = 0xE2;
@@ -369,23 +380,30 @@ public sealed partial class DeviceItemViewModel : ObservableObject
 
         Tags.Add(newTag);
         Config.Tags = Tags.ToList();
-        _ = _managerService.SaveConfigsAsync();
+        await _managerService.SaveConfigsAsync();
     }
 
     [RelayCommand]
-    private void DeleteSelectedTag()
+    private async Task DeleteSelectedTag()
     {
-        if (SelectedTag != null)
+        if (!CanEditConfig || SelectedTag is null)
         {
-            Tags.Remove(SelectedTag);
-            Config.Tags = Tags.ToList();
-            _ = _managerService.SaveConfigsAsync();
+            return;
         }
+
+        Tags.Remove(SelectedTag);
+        Config.Tags = Tags.ToList();
+        await _managerService.SaveConfigsAsync();
     }
 
     [RelayCommand]
-    private void GenerateBatchTags(string countStr)
+    private async Task GenerateBatchTags(string countStr)
     {
+        if (!CanEditConfig)
+        {
+            return;
+        }
+
         if (!int.TryParse(countStr, out int count) || count <= 0)
         {
             count = 20;
@@ -405,8 +423,11 @@ public sealed partial class DeviceItemViewModel : ObservableObject
         }
 
         Config.Tags = Tags.ToList();
-        _ = _managerService.SaveConfigsAsync();
+        await _managerService.SaveConfigsAsync();
     }
+
+    /// <summary>重新绑定管理器当前的 Host，供批量启停在重建 Host 后刷新 UI 事件订阅。</summary>
+    public void RefreshHostBinding() => UpdateHost(_managerService.GetHost(Config.Id));
 
     [RelayCommand]
     private async Task InjectAntennaEventAsync()
