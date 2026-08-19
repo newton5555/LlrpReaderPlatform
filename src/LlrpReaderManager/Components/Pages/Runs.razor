@@ -5,18 +5,21 @@
 <div class="section-header">
     <div>
         <h1 class="section-title">Inventory Runs</h1>
-        <p class="section-subtitle">Completed run summaries are loaded from the shared SQLite store; live tags remain on the inventory page.</p>
+        <p class="section-subtitle">Historical inventory session summaries and run logs persisted in SQLite.</p>
     </div>
     <div class="toolbar">
-        <label class="form-label">Reader</label>
-        <select style="width: min(280px, 55vw);" value="@selectedReaderText" @onchange="SelectReader">
+        <label class="form-label" for="runs-reader">Reader</label>
+        <select id="runs-reader" style="width: min(280px, 50vw);" value="@selectedReaderText" @onchange="SelectReader">
             <option value="">Choose Reader</option>
             @foreach (ReaderRuntimeSnapshot reader in State.Readers)
             {
-                <option value="@reader.ReaderId">@reader.Profile.Name · @reader.Profile.Host</option>
+                <option value="@reader.ReaderId">@reader.Profile.Name (@reader.Profile.Host:@reader.Profile.Port)</option>
             }
         </select>
-        <button class="btn btn-sm" @onclick="LoadAsync" disabled="@pageBusy">Refresh</button>
+        <button class="btn btn-sm" @onclick="LoadAsync" disabled="@pageBusy">
+            <AppIcon Name="rotate" Size="13" />
+            <span>Refresh</span>
+        </button>
     </div>
 </div>
 
@@ -26,26 +29,45 @@
 }
 
 <section class="card">
-    <div class="card-header"><h2 class="card-title">Run history</h2><span class="status-badge neutral">@runs.Count records</span></div>
+    <div class="card-header">
+        <span class="card-title">
+            <AppIcon Name="history" Size="14" />
+            <span>Run History</span>
+        </span>
+        <span class="status-badge neutral">@runs.Count record(s)</span>
+    </div>
     @if (runs.Count == 0)
     {
-        <div class="empty-state"><h2>No completed runs</h2><p>Start inventory on a Reader first. This page intentionally shows summaries, not the live tag table.</p></div>
+        <div class="empty-state">
+            <AppIcon Name="history" Size="36" />
+            <h2>No Completed Runs</h2>
+            <p>Start and stop inventory on a Reader to generate historical run records.</p>
+        </div>
     }
     else
     {
         <div class="table-wrap">
             <table>
-                <thead><tr><th>Started</th><th>Ended</th><th>Reason</th><th>Total reads</th><th>Unique tags</th><th>Snapshot</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>Started</th>
+                        <th>Ended</th>
+                        <th>Stop Reason</th>
+                        <th>Total Reads</th>
+                        <th>Unique Tags</th>
+                        <th>Snapshot File</th>
+                    </tr>
+                </thead>
                 <tbody>
                     @foreach (InventoryRunRecord run in runs)
                     {
                         <tr>
                             <td class="mono">@run.StartedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</td>
-                            <td class="mono">@(run.EndedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "Running")</td>
-                            <td><span class="tag-pill">@run.StopReason</span></td>
+                            <td class="mono">@(run.EndedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "In Progress")</td>
+                            <td><span class="status-badge neutral">@run.StopReason</span></td>
                             <td class="mono">@run.TotalReadCount</td>
-                            <td class="mono">@run.UniqueTagCount</td>
-                            <td class="mono">@(string.IsNullOrWhiteSpace(run.SnapshotFilePath) ? "—" : run.SnapshotFilePath)</td>
+                            <td class="mono" style="font-weight: 600;">@run.UniqueTagCount</td>
+                            <td class="mono" style="font-size: 11px; color: var(--muted);">@(string.IsNullOrWhiteSpace(run.SnapshotFilePath) ? "—" : run.SnapshotFilePath)</td>
                         </tr>
                     }
                 </tbody>
@@ -77,12 +99,26 @@
     private async Task LoadAsync()
     {
         Guid? readerId = ParseReaderId(selectedReaderText);
-        if (readerId is null || pageBusy) { runs = []; return; }
+        if (readerId is null || pageBusy)
+        {
+            runs = [];
+            return;
+        }
+
         pageBusy = true;
         error = null;
-        try { runs = (await RunsStore.GetForReaderAsync(readerId.Value)).ToList(); }
-        catch (Exception exception) { error = exception.Message; }
-        finally { pageBusy = false; }
+        try
+        {
+            runs = (await RunsStore.GetForReaderAsync(readerId.Value)).ToList();
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+        }
+        finally
+        {
+            pageBusy = false;
+        }
     }
 
     private static Guid? ParseReaderId(string? value) => Guid.TryParse(value, out Guid id) ? id : null;

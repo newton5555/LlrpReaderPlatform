@@ -5,59 +5,81 @@
 
 <div class="section-header">
     <div>
-        <h1 class="section-title">Reader Operations</h1>
-        <p class="section-subtitle">A cross-platform LLRP workbench backed by the shared platform services.</p>
+        <h1 class="section-title">Operations Dashboard</h1>
+        <p class="section-subtitle">Real-time overview of connected RFID readers, active inventory sessions, and system metrics.</p>
     </div>
     <div class="toolbar">
-        <a class="btn btn-primary" href="/readers">Manage readers</a>
-        <a class="btn" href="/inventory">Open inventory</a>
+        <a class="btn btn-primary" href="/inventory">
+            <AppIcon Name="satellite-dish" Size="13" />
+            <span>Tag Inventory</span>
+        </a>
+        <a class="btn" href="/tag-memory">
+            <AppIcon Name="microchip" Size="13" />
+            <span>Tag Operations</span>
+        </a>
+        <a class="btn" href="/readers">
+            <AppIcon Name="readers" Size="13" />
+            <span>Manage Readers</span>
+        </a>
     </div>
 </div>
 
 @if (!State.IsInitialized)
 {
-    <div class="notice info">Loading persisted Reader profiles and capability state…</div>
+    <div class="notice info" style="margin-bottom: var(--space-4);">
+        Loading persisted Reader profiles and synchronizing capabilities…
+    </div>
 }
 @if (!string.IsNullOrWhiteSpace(State.LastError))
 {
-    <div class="notice error">@State.LastError</div>
+    <div class="notice error" style="margin-bottom: var(--space-4);">
+        @State.LastError
+    </div>
 }
 
 <div class="card-grid">
     <div class="card card-pad">
-        <div class="stat-label">Readers</div>
+        <div class="stat-label">Total Readers</div>
         <div class="stat-value">@State.Readers.Count</div>
-        <div class="stat-note">@ConnectedCount connected or inventorying</div>
+        <div class="stat-note">@ConnectedCount connected or active</div>
     </div>
     <div class="card card-pad">
-        <div class="stat-label">Inventory leases</div>
+        <div class="stat-label">Inventory Leases</div>
         <div class="stat-value">@InventoryCount</div>
-        <div class="stat-note">Lifecycle state comes from the platform service</div>
+        <div class="stat-note">Active long-running sessions</div>
     </div>
     <div class="card card-pad">
-        <div class="stat-label">Live tags</div>
+        <div class="stat-label">Aggregated Tags</div>
         <div class="stat-value">@TagCount</div>
-        <div class="stat-note">Aggregated per Reader, not raw SDK objects</div>
+        <div class="stat-note">Unique observed in this session</div>
     </div>
     <div class="card card-pad">
-        <div class="stat-label">Virtual widgets</div>
-        <div class="stat-value">@VirtualDevices.Instances.Count</div>
-        <div class="stat-note">SDK TCP hosts attached to Readers</div>
+        <div class="stat-label">Virtual Device</div>
+        <div class="stat-value" style="font-size: 20px; line-height: 34px;">
+            @(VirtualDevices.IsRunning ? "Active" : "Idle")
+        </div>
+        <div class="stat-note">
+            @(VirtualDevices.IsRunning ? $"127.0.0.1:{VirtualDevices.CurrentInstance?.Port}" : "Test loopback target")
+        </div>
     </div>
 </div>
 
 <div class="split" style="margin-top: var(--space-4);">
     <section class="card">
         <div class="card-header">
-            <h2 class="card-title">Reader status</h2>
+            <span class="card-title">
+                <AppIcon Name="readers" Size="14" />
+                <span>Reader Status</span>
+            </span>
             <a class="btn btn-sm" href="/readers">View all</a>
         </div>
         @if (State.Readers.Count == 0)
         {
             <div class="empty-state">
-                <h3>No Readers yet</h3>
-                <p>Add a physical endpoint or launch a local protocol virtual Reader.</p>
-                <a class="btn btn-primary" href="/readers">Add Reader</a>
+                <AppIcon Name="readers" Size="32" />
+                <h3>No Registered Readers</h3>
+                <p>Add a physical endpoint or start the local virtual device test target.</p>
+                <a class="btn btn-primary" href="/readers" style="margin-top: var(--space-2);">Open Readers</a>
             </div>
         }
         else
@@ -67,7 +89,9 @@
                 {
                     <div class="reader-head card" style="box-shadow: none;">
                         <div class="reader-heading">
-                            <div class="reader-icon">RF</div>
+                            <div class="reader-icon @(IsVirtual(reader.ReaderId) ? "virtual" : string.Empty)">
+                                <AppIcon Name="@(IsVirtual(reader.ReaderId) ? "cube" : "satellite-dish")" Size="16" />
+                            </div>
                             <div>
                                 <div class="reader-name">@reader.Profile.Name</div>
                                 <div class="reader-endpoint">@reader.Profile.Host:@reader.Profile.Port</div>
@@ -80,14 +104,31 @@
         }
     </section>
 
-    <section class="card virtual-widget">
+    <section class="card virtual-widget-card">
         <div class="card-header">
-            <h2 class="card-title">Protocol virtual device</h2>
-            <span class="status-badge neutral">SDK host</span>
+            <span class="card-title">
+                <AppIcon Name="cube" Size="14" />
+                <span>Virtual Test Device</span>
+            </span>
+            <span class="status-badge @(VirtualDevices.IsRunning ? "ok" : "neutral")">
+                @(VirtualDevices.IsRunning ? "Running" : "Idle")
+            </span>
         </div>
-        <div class="card-pad">
-            <p class="muted">Launch a real TCP/LLRP endpoint from the UI, then attach it to the same Reader list used by hardware.</p>
-            <a class="btn btn-primary" style="margin-top: var(--space-4);" href="/readers">Open virtual device widget</a>
+        <div class="card-pad stack">
+            <p class="form-hint">
+                Quickly start a local protocol virtual device on loopback TCP (127.0.0.1) for testing Inventory and Tag Operations without physical hardware.
+            </p>
+            @if (VirtualDevices.IsRunning && VirtualDevices.CurrentInstance is { } instance)
+            {
+                <div class="notice ok" style="font-size: 12px;">
+                    <strong>@instance.Name</strong>
+                    <div class="mono" style="margin-top: 2px;">127.0.0.1:@instance.Port</div>
+                </div>
+            }
+            <a class="btn btn-primary" href="/readers" style="margin-top: var(--space-2);">
+                <AppIcon Name="cube" Size="13" />
+                <span>Manage Virtual Device</span>
+            </a>
         </div>
     </section>
 </div>
@@ -106,6 +147,8 @@
         VirtualDevices.Changed += OnChanged;
         await State.InitializeAsync();
     }
+
+    private bool IsVirtual(Guid readerId) => VirtualDevices.CurrentInstance?.ReaderId == readerId;
 
     private static string StatusClass(ReaderState state) => state switch
     {

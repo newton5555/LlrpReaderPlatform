@@ -4,19 +4,22 @@
 
 <div class="section-header">
     <div>
-        <h1 class="section-title">GPI / GPO</h1>
-        <p class="section-subtitle">Read input status and control standard LLRP output ports through the platform service.</p>
+        <h1 class="section-title">GPI / GPO Control</h1>
+        <p class="section-subtitle">Read digital input status and control standard LLRP output ports through platform services.</p>
     </div>
     <div class="toolbar">
-        <label class="form-label">Reader</label>
-        <select style="width: min(300px, 55vw);" value="@SelectedReaderText" @onchange="SelectReader">
+        <label class="form-label" for="gpio-reader">Reader</label>
+        <select id="gpio-reader" style="width: min(280px, 50vw);" value="@SelectedReaderText" @onchange="SelectReader">
             <option value="">Choose Reader</option>
             @foreach (ReaderRuntimeSnapshot reader in State.Readers)
             {
-                <option value="@reader.ReaderId">@reader.Profile.Name · @reader.Profile.Host</option>
+                <option value="@reader.ReaderId">@reader.Profile.Name (@reader.Profile.Host:@reader.Profile.Port)</option>
             }
         </select>
-        <button class="btn btn-sm" @onclick="LoadAsync" disabled="@(pageBusy || SelectedReader is null)">Refresh</button>
+        <button class="btn btn-sm" @onclick="LoadAsync" disabled="@(pageBusy || SelectedReader is null)">
+            <AppIcon Name="rotate" Size="13" />
+            <span>Refresh</span>
+        </button>
     </div>
 </div>
 
@@ -28,8 +31,9 @@
 @if (SelectedReader is null)
 {
     <div class="card empty-state">
+        <AppIcon Name="bolt" Size="36" />
         <h2>Select a Reader</h2>
-        <p>GPI/GPO uses the same short-operation lifecycle as the WPF consumer. Inventory must be stopped before querying or changing ports.</p>
+        <p>GPI/GPO uses short-operation leases. Inventory must be stopped before querying or toggling ports.</p>
     </div>
 }
 else
@@ -37,8 +41,11 @@ else
     <div class="split">
         <section class="card">
             <div class="card-header">
-                <h2 class="card-title">GPI inputs</h2>
-                <span class="status-badge neutral">Reader reported</span>
+                <span class="card-title">
+                    <AppIcon Name="bolt" Size="14" />
+                    <span>GPI Inputs</span>
+                </span>
+                <span class="status-badge neutral">Reader Reported</span>
             </div>
             @if (snapshot?.Gpis.Count is not > 0)
             {
@@ -67,8 +74,11 @@ else
 
         <section class="card">
             <div class="card-header">
-                <h2 class="card-title">GPO outputs</h2>
-                <span class="status-badge neutral">Short operation</span>
+                <span class="card-title">
+                    <AppIcon Name="zap" Size="14" />
+                    <span>GPO Outputs</span>
+                </span>
+                <span class="status-badge neutral">Short Operation</span>
             </div>
             @if (snapshot?.Gpos.Count is not > 0)
             {

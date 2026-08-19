@@ -6,112 +6,102 @@
 <div class="section-header">
     <div>
         <h1 class="section-title">Reader Management</h1>
-        <p class="section-subtitle">Reader profiles stay enabled; TCP connections are leased by operations, and Inventory owns the long-running connection.</p>
+        <p class="section-subtitle">Manage physical RFID reader endpoints or launch a single local virtual device for UI testing.</p>
+    </div>
+    <div class="toolbar">
+        <button class="btn btn-sm" @onclick="DiscoverAsync" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">
+            <AppIcon Name="rotate" Size="13" />
+            <span>Scan Network</span>
+        </button>
     </div>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(message))
 {
-    <div class="notice @(messageIsError ? "error" : "info")" style="margin-bottom: var(--space-4);">@message</div>
+    <div class="notice @(messageIsError ? "error" : "info")" style="margin-bottom: var(--space-4);">
+        @message
+    </div>
 }
 
 <div class="split">
     <section class="stack">
+        <!-- Physical Reader Add Form -->
         <div class="card">
             <div class="card-header">
-                <div>
-                    <h2 class="card-title">Discover Readers</h2>
-                    <div class="form-hint" style="margin-top: 4px;">Search the local network for LLRP service announcements.</div>
-                </div>
-                <button class="btn btn-sm" @onclick="DiscoverAsync" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">Scan</button>
+                <span class="card-title">
+                    <AppIcon Name="plus" Size="14" />
+                    <span>Add Physical Reader</span>
+                </span>
+                <span class="status-badge neutral">TCP Client</span>
             </div>
-            @if (State.DiscoveredReaders.Count == 0)
-            {
-                <div class="card-pad muted">No discovered endpoints. You can still add an IP address manually.</div>
-            }
-            else
-            {
+            <div class="card-pad">
+                <div class="inline-form">
+                    <div class="form-group">
+                        <label class="form-label">Reader Name</label>
+                        <input type="text" @bind="physicalName" placeholder="Warehouse Reader 1" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Host / IP Address</label>
+                        <input type="text" @bind="physicalHost" placeholder="192.168.1.100" class="mono" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Port</label>
+                        <input type="number" @bind="physicalPort" min="1" max="65535" class="mono" />
+                    </div>
+                    <button class="btn btn-primary" @onclick="AddPhysicalAsync" disabled="@(State.IsBusy || VirtualDevices.IsBusy || string.IsNullOrWhiteSpace(physicalHost))">
+                        <AppIcon Name="plus" Size="13" />
+                        <span>Add & Activate</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Discovered Readers -->
+        @if (State.DiscoveredReaders.Count > 0)
+        {
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <AppIcon Name="search" Size="14" />
+                        <span>Discovered Readers (@State.DiscoveredReaders.Count)</span>
+                    </span>
+                </div>
                 <div class="table-wrap">
-                    <table class="data-table compact-table">
-                        <thead><tr><th>Name</th><th>Endpoint</th><th></th></tr></thead>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Endpoint</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             @foreach (DiscoveredReader discovered in State.DiscoveredReaders)
                             {
                                 <tr>
-                                    <td>@discovered.DisplayName</td>
+                                    <td><strong>@discovered.DisplayName</strong></td>
                                     <td class="mono">@discovered.IpAddress:@discovered.Port</td>
-                                    <td class="table-actions"><button class="btn btn-sm" @onclick="() => AddDiscoveredAsync(discovered)" disabled="@State.IsBusy">Add</button></td>
+                                    <td style="text-align: right;">
+                                        <button class="btn btn-sm btn-primary" @onclick="() => AddDiscoveredAsync(discovered)" disabled="@State.IsBusy">
+                                            <AppIcon Name="plus" Size="11" />
+                                            <span>Add</span>
+                                        </button>
+                                    </td>
                                 </tr>
                             }
                         </tbody>
                     </table>
                 </div>
-            }
-        </div>
+            </div>
+        }
 
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">Add physical Reader</h2>
-                <span class="status-badge neutral">LLRP client</span>
-            </div>
-            <div class="card-pad">
-                <div class="inline-form">
-                    <div class="form-group">
-                        <label class="form-label">Name</label>
-                        <input type="text" @bind="physicalName" placeholder="Warehouse reader" />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Host / IP</label>
-                        <input type="text" @bind="physicalHost" placeholder="192.168.40.87" />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">LLRP port</label>
-                        <input type="number" @bind="physicalPort" min="1" max="65535" />
-                    </div>
-                    <button class="btn btn-primary" @onclick="AddPhysicalAsync" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">Add</button>
-                </div>
-                <div class="form-hint" style="margin-top: var(--space-3);">The platform performs Probe → extension match → persist → capability synchronization, then releases the connection.</div>
-            </div>
-        </div>
-
-        <div class="card virtual-widget">
-            <div class="card-header">
-                <div>
-                    <h2 class="card-title">Protocol virtual device widget</h2>
-                    <div class="form-hint" style="margin-top: 4px;">Starts an SDK TCP server, then registers its loopback endpoint as a normal Reader.</div>
-                </div>
-                <span class="status-badge neutral">No special UI path</span>
-            </div>
-            <div class="card-pad">
-                <div class="inline-form">
-                    <div class="form-group">
-                        <label class="form-label">Capability profile</label>
-                        <select @bind="virtualProfileId">
-                            @foreach (VirtualDeviceProfileInfo profile in VirtualDeviceProfiles.All)
-                            {
-                                <option value="@profile.Id">@profile.Name · @profile.ProtocolVersion</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Widget name</label>
-                        <input type="text" @bind="virtualName" placeholder="Virtual standard reader" />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">TCP port</label>
-                        <input type="number" @bind="virtualPort" min="0" max="65535" />
-                    </div>
-                    <button class="btn btn-primary" @onclick="StartVirtualAsync" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">Run</button>
-                </div>
-                <div class="form-hint" style="margin-top: var(--space-3);">Port 0 selects an available loopback port. The displayed port is the actual TCP endpoint.</div>
-            </div>
-        </div>
-
+        <!-- Active Readers List -->
         @if (State.Readers.Count == 0)
         {
             <div class="card empty-state">
-                <h2>No Reader profiles</h2>
-                <p>Use either form above. Virtual devices will appear here immediately after activation.</p>
+                <AppIcon Name="readers" Size="36" />
+                <h2>No Readers Registered</h2>
+                <p>Add a physical reader above or start the virtual device test target on the right.</p>
             </div>
         }
         else
@@ -121,7 +111,9 @@
                 <div class="card reader-card">
                     <div class="reader-head">
                         <div class="reader-heading">
-                            <div class="reader-icon @(IsVirtual(reader.ReaderId) ? "virtual" : string.Empty)">@(IsVirtual(reader.ReaderId) ? "V" : "RF")</div>
+                            <div class="reader-icon @(IsVirtual(reader.ReaderId) ? "virtual" : string.Empty)">
+                                <AppIcon Name="@(IsVirtual(reader.ReaderId) ? "cube" : "satellite-dish")" Size="18" />
+                            </div>
                             <div>
                                 <div class="reader-name">@reader.Profile.Name</div>
                                 <div class="reader-endpoint">@reader.Profile.Host:@reader.Profile.Port · @ProtocolText(reader)</div>
@@ -133,22 +125,53 @@
                         </div>
                     </div>
                     <div class="reader-body">
-                        <div><div class="field-label">Model</div><div class="field-value">@(reader.Model ?? "Not captured")</div></div>
-                        <div><div class="field-label">Firmware</div><div class="field-value">@(reader.Firmware ?? "—")</div></div>
-                        <div><div class="field-label">Antennas</div><div class="field-value">@(reader.Antennas.Count > 0 ? reader.Antennas.Count : 0)</div></div>
-                        <div><div class="field-label">GPI / GPO</div><div class="field-value">@(reader.GpiCount?.ToString() ?? "—") / @(reader.GpoCount?.ToString() ?? "—")</div></div>
+                        <div>
+                            <div class="field-label">Model</div>
+                            <div class="field-value">@(reader.Model ?? "Not captured")</div>
+                        </div>
+                        <div>
+                            <div class="field-label">Firmware</div>
+                            <div class="field-value mono">@(reader.Firmware ?? "—")</div>
+                        </div>
+                        <div>
+                            <div class="field-label">Antennas</div>
+                            <div class="field-value mono">@(reader.Antennas.Count > 0 ? reader.Antennas.Count : 0)</div>
+                        </div>
+                        <div>
+                            <div class="field-label">GPI / GPO</div>
+                            <div class="field-value mono">@(reader.GpiCount?.ToString() ?? "—") / @(reader.GpoCount?.ToString() ?? "—")</div>
+                        </div>
                     </div>
                     <div class="reader-actions">
-                        <button class="btn btn-sm" @onclick="() => ToggleReaderAsync(reader)" disabled="@State.IsBusy">@(reader.IsEnabled ? "Disable" : "Enable")</button>
-                        <a class="btn btn-sm" href="/settings">Settings</a>
-                        <a class="btn btn-sm" href="/inventory">Inventory</a>
+                        <button class="btn btn-sm" @onclick="() => ToggleReaderAsync(reader)" disabled="@State.IsBusy">
+                            @(reader.IsEnabled ? "Disable" : "Enable")
+                        </button>
+                        <a class="btn btn-sm" href="/inventory">
+                            <AppIcon Name="satellite-dish" Size="12" />
+                            <span>Inventory</span>
+                        </a>
+                        <a class="btn btn-sm" href="/tag-memory">
+                            <AppIcon Name="microchip" Size="12" />
+                            <span>Tag Ops</span>
+                        </a>
+                        <a class="btn btn-sm" href="/settings">
+                            <AppIcon Name="gear" Size="12" />
+                            <span>Settings</span>
+                        </a>
+
                         @if (IsVirtual(reader.ReaderId))
                         {
-                            <button class="btn btn-sm btn-danger push-right" @onclick="() => StopVirtualAsync(reader.ReaderId)" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">Stop virtual</button>
+                            <button class="btn btn-sm btn-danger push-right" @onclick="() => StopVirtualAsync(reader.ReaderId)" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">
+                                <AppIcon Name="stop" Size="11" />
+                                <span>Stop Virtual</span>
+                            </button>
                         }
                         else
                         {
-                            <button class="btn btn-sm btn-danger push-right" @onclick="() => RemoveReaderAsync(reader.ReaderId)" disabled="@State.IsBusy">Remove</button>
+                            <button class="btn btn-sm btn-danger push-right" @onclick="() => RemoveReaderAsync(reader.ReaderId)" disabled="@State.IsBusy">
+                                <AppIcon Name="trash" Size="11" />
+                                <span>Remove</span>
+                            </button>
                         }
                     </div>
                 </div>
@@ -156,25 +179,63 @@
         }
     </section>
 
+    <!-- Right: Single Virtual Device Test Target -->
     <aside class="stack">
-        <section class="card action-panel">
-            <div class="card-header"><h2 class="card-title">Virtual hosts</h2></div>
-            @if (VirtualDevices.Instances.Count == 0)
-            {
-                <div class="card-pad muted">No local TCP host is running.</div>
-            }
-            else
-            {
-                <div class="stack" style="padding: var(--space-3) var(--space-4);">
-                    @foreach (VirtualReaderInstance instance in VirtualDevices.Instances)
-                    {
-                        <div class="notice">
-                            <div style="display: flex; justify-content: space-between; gap: 8px;"><strong>@instance.Name</strong><span class="status-badge ok">@instance.State</span></div>
-                            <div class="mono muted" style="margin-top: 4px;">127.0.0.1:@instance.Port · clients @instance.ConnectedClientCount</div>
+        <section class="card virtual-widget-card">
+            <div class="card-header">
+                <span class="card-title">
+                    <AppIcon Name="cube" Size="15" />
+                    <span>Virtual Test Device</span>
+                </span>
+                <span class="status-badge @(VirtualDevices.IsRunning ? "ok" : "neutral")">
+                    @(VirtualDevices.IsRunning ? "Running" : "Stopped")
+                </span>
+            </div>
+            <div class="card-pad stack">
+                <p class="form-hint">
+                    A lightweight protocol test host that runs locally on loopback TCP (127.0.0.1) for testing the UI client.
+                </p>
+
+                @if (VirtualDevices.IsRunning && VirtualDevices.CurrentInstance is { } instance)
+                {
+                    <div class="notice ok">
+                        <strong>@instance.Name</strong>
+                        <div class="mono" style="margin-top: 4px; font-size: 11px;">
+                            Listening on 127.0.0.1:@instance.Port
                         </div>
-                    }
-                </div>
-            }
+                        <div class="form-hint" style="margin-top: 2px;">
+                            Connected Clients: @instance.ConnectedClientCount · State: @instance.State
+                        </div>
+                    </div>
+
+                    <button class="btn btn-danger" style="width: 100%;" @onclick="() => StopVirtualAsync(instance.ReaderId)" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">
+                        <AppIcon Name="stop" Size="13" />
+                        <span>Stop Virtual Device</span>
+                    </button>
+                }
+                else
+                {
+                    <div class="form-group">
+                        <label class="form-label">Capability Profile</label>
+                        <select @bind="virtualProfileId" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">
+                            @foreach (VirtualDeviceProfileInfo profile in VirtualDeviceProfiles.All)
+                            {
+                                <option value="@profile.Id">@profile.Name (@profile.ProtocolVersion)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">TCP Port (0 = auto-assign)</label>
+                        <input type="number" min="0" max="65535" @bind="virtualPort" class="mono" disabled="@(State.IsBusy || VirtualDevices.IsBusy)" />
+                    </div>
+
+                    <button class="btn btn-primary" style="width: 100%;" @onclick="StartVirtualAsync" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">
+                        <AppIcon Name="play" Size="13" />
+                        <span>Start Virtual Device</span>
+                    </button>
+                }
+            </div>
         </section>
     </aside>
 </div>
@@ -184,8 +245,7 @@
     private string physicalHost = string.Empty;
     private int physicalPort = 5084;
     private string virtualProfileId = VirtualDeviceProfiles.Standard101Id;
-    private string virtualName = string.Empty;
-    private int virtualPort;
+    private int virtualPort = 5084;
     private string? message;
     private bool messageIsError;
 
@@ -258,15 +318,10 @@
 
     private async Task StartVirtualAsync()
     {
-        VirtualReaderStartResult result = await VirtualDevices.StartAsync(virtualProfileId, virtualName, virtualPort);
+        VirtualReaderStartResult result = await VirtualDevices.StartAsync(virtualProfileId, null, virtualPort);
         SetMessage(result.Succeeded
-            ? $"Virtual Reader started on 127.0.0.1:{result.Instance!.Port} and added to Readers."
+            ? $"Virtual Reader started on 127.0.0.1:{result.Instance!.Port} and registered."
             : result.Error ?? "Virtual Reader start failed.", !result.Succeeded);
-        if (result.Succeeded)
-        {
-            virtualName = string.Empty;
-            virtualPort = 0;
-        }
     }
 
     private async Task ToggleReaderAsync(ReaderRuntimeSnapshot reader)
@@ -276,8 +331,8 @@
             await State.SetEnabledAsync(reader.ReaderId, !reader.IsEnabled);
             SetMessage(
                 reader.IsEnabled
-                    ? "Reader disabled and its active connection released."
-                    : "Reader enabled, capabilities synchronized, and the connection released.",
+                    ? "Reader disabled and connection released."
+                    : "Reader enabled and capabilities synchronized.",
                 false);
         }
         catch (Exception exception)
@@ -304,7 +359,7 @@
         try
         {
             await VirtualDevices.StopAsync(readerId);
-            SetMessage("Virtual host stopped and removed from Readers.", false);
+            SetMessage("Virtual host stopped and removed.", false);
         }
         catch (Exception exception)
         {
@@ -312,7 +367,7 @@
         }
     }
 
-    private bool IsVirtual(Guid readerId) => VirtualDevices.Instances.Any(instance => instance.ReaderId == readerId);
+    private bool IsVirtual(Guid readerId) => VirtualDevices.CurrentInstance?.ReaderId == readerId;
 
     private static string ProtocolText(ReaderRuntimeSnapshot reader) => reader.NegotiatedProtocolVersion?.ToString() ?? "LLRP auto";
 

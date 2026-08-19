@@ -5,15 +5,15 @@
 <div class="section-header">
     <div>
         <h1 class="section-title">Tag Inventory</h1>
-        <p class="section-subtitle">Start and stop a complete LLRP inventory lease; the page consumes platform lifecycle events.</p>
+        <p class="section-subtitle">Start and monitor real-time RFID inventory runs with live aggregation.</p>
     </div>
     <div class="toolbar">
         <label class="form-label" for="inventory-reader">Reader</label>
-        <select id="inventory-reader" style="width: min(280px, 55vw);" value="@SelectedReaderText" @onchange="SelectReader">
+        <select id="inventory-reader" style="width: min(280px, 50vw);" value="@SelectedReaderText" @onchange="SelectReader">
             <option value="">Choose Reader</option>
             @foreach (ReaderRuntimeSnapshot reader in State.Readers)
             {
-                <option value="@reader.ReaderId">@reader.Profile.Name · @reader.Profile.Host</option>
+                <option value="@reader.ReaderId">@reader.Profile.Name (@reader.Profile.Host:@reader.Profile.Port)</option>
             }
         </select>
     </div>
@@ -22,9 +22,10 @@
 @if (SelectedReader is null)
 {
     <div class="card empty-state">
+        <AppIcon Name="satellite-dish" Size="36" />
         <h2>Select a Reader</h2>
-        <p>Inventory uses the same reader session ownership and stop reasons as the WPF consumer.</p>
-        <a class="btn btn-primary" href="/readers">Open Readers</a>
+        <p>Choose an enabled Reader to configure and run an inventory lease.</p>
+        <a class="btn btn-primary" href="/readers" style="margin-top: var(--space-2);">Open Readers</a>
     </div>
 }
 else
@@ -33,54 +34,108 @@ else
         <div class="card-pad">
             <div class="toolbar">
                 <div>
-                    <div class="field-label">Selected endpoint</div>
-                    <div class="mono">@SelectedReader.Profile.Name · @SelectedReader.Profile.Host:@SelectedReader.Profile.Port</div>
+                    <div class="field-label">Active Endpoint</div>
+                    <div class="mono" style="font-weight: 600;">@SelectedReader.Profile.Name · @SelectedReader.Profile.Host:@SelectedReader.Profile.Port</div>
                 </div>
                 <div class="toolbar-spacer"></div>
                 <div class="form-group" style="width: 130px;">
                     <label class="form-label">Duration (s)</label>
-                    <input type="number" min="0" @bind="durationText" placeholder="0 = manual" />
+                    <input type="number" min="0" @bind="durationText" placeholder="0 = Manual" class="mono" />
                 </div>
                 @if (SelectedReader.State == ReaderState.Inventorying)
                 {
-                    <button class="btn btn-danger" @onclick="StopAsync" disabled="@State.IsBusy">Stop inventory</button>
+                    <button class="btn btn-danger" @onclick="StopAsync" disabled="@State.IsBusy">
+                        <AppIcon Name="stop" Size="13" />
+                        <span>Stop Inventory</span>
+                    </button>
                 }
                 else
                 {
-                    <button class="btn btn-primary" @onclick="StartAsync" disabled="@(State.IsBusy || !SelectedReader.IsEnabled)">Start inventory</button>
+                    <button class="btn btn-primary" @onclick="StartAsync" disabled="@(State.IsBusy || !SelectedReader.IsEnabled)">
+                        <AppIcon Name="play" Size="13" />
+                        <span>Start Inventory</span>
+                    </button>
                 }
-                <button class="btn" @onclick="StartAllAsync" disabled="@State.IsBusy">Start all enabled</button>
-                <button class="btn" @onclick="StopAllAsync" disabled="@State.IsBusy">Stop all</button>
+                <button class="btn" @onclick="StartAllAsync" disabled="@State.IsBusy">
+                    <AppIcon Name="play" Size="12" />
+                    <span>Start All Enabled</span>
+                </button>
+                <button class="btn" @onclick="StopAllAsync" disabled="@State.IsBusy">
+                    <AppIcon Name="stop" Size="12" />
+                    <span>Stop All</span>
+                </button>
             </div>
         </div>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(message))
     {
-        <div class="notice @(messageIsError ? "error" : "info")" style="margin-bottom: var(--space-4);">@message</div>
+        <div class="notice @(messageIsError ? "error" : "info")" style="margin-bottom: var(--space-4);">
+            @message
+        </div>
     }
 
     <div class="card-grid" style="margin-bottom: var(--space-4);">
-        <div class="card card-pad"><div class="stat-label">Lifecycle</div><div class="stat-value" style="font-size: 20px;">@SelectedReader.State</div><div class="stat-note">@SelectedReader.Error</div></div>
-        <div class="card card-pad"><div class="stat-label">Unique tags</div><div class="stat-value">@Tags.Count</div><div class="stat-note">Aggregated live table</div></div>
-        <div class="card card-pad"><div class="stat-label">Total reads</div><div class="stat-value">@Tags.Sum(tag => tag.ReadCount)</div><div class="stat-note">Platform aggregation count</div></div>
+        <div class="card card-pad">
+            <div class="stat-label">Reader State</div>
+            <div class="stat-value" style="font-size: 20px;">@SelectedReader.State</div>
+            <div class="stat-note">@(SelectedReader.Error ?? "Normal operation")</div>
+        </div>
+        <div class="card card-pad">
+            <div class="stat-label">Unique Tags</div>
+            <div class="stat-value">@Tags.Count</div>
+            <div class="stat-note">Distinct observed EPCs</div>
+        </div>
+        <div class="card card-pad">
+            <div class="stat-label">Total Reads</div>
+            <div class="stat-value">@Tags.Sum(tag => tag.ReadCount)</div>
+            <div class="stat-note">Total observation count</div>
+        </div>
     </div>
 
     <section class="card">
-        <div class="card-header"><h2 class="card-title">Live tag table</h2><span class="status-badge @(SelectedReader.State == ReaderState.Inventorying ? "ok" : "neutral")">@(SelectedReader.State == ReaderState.Inventorying ? "Live" : "Idle")</span></div>
+        <div class="card-header">
+            <span class="card-title">
+                <AppIcon Name="satellite-dish" Size="14" />
+                <span>Live Tag Observation Table</span>
+            </span>
+            <span class="status-badge @(SelectedReader.State == ReaderState.Inventorying ? "ok" : "neutral")">
+                @(SelectedReader.State == ReaderState.Inventorying ? "Live Streaming" : "Idle")
+            </span>
+        </div>
         @if (Tags.Count == 0)
         {
-            <div class="empty-state"><h3>No tags in this run</h3><p>Start inventory or connect a virtual reader with its default tag pool.</p></div>
+            <div class="empty-state">
+                <AppIcon Name="tags" Size="32" />
+                <h3>No Tags In Current Run</h3>
+                <p>Start inventory above or check antenna configurations.</p>
+            </div>
         }
         else
         {
             <div class="table-wrap">
                 <table>
-                    <thead><tr><th>EPC</th><th>TID</th><th>Reads</th><th>RSSI</th><th>Antenna</th><th>Last seen</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>EPC</th>
+                            <th>TID</th>
+                            <th>Reads</th>
+                            <th>RSSI</th>
+                            <th>Antenna</th>
+                            <th>Last Seen</th>
+                        </tr>
+                    </thead>
                     <tbody>
                         @foreach (TagObservation tag in Tags)
                         {
-                            <tr><td class="mono">@tag.Epc</td><td class="mono">@(string.IsNullOrWhiteSpace(tag.Tid) ? "—" : tag.Tid)</td><td class="mono">@tag.ReadCount</td><td class="mono">@(tag.LastRssi?.ToString() ?? "—")</td><td class="mono">@(tag.LastAntenna?.ToString() ?? "—")</td><td class="mono">@tag.LastSeen.ToLocalTime().ToString("HH:mm:ss.fff")</td></tr>
+                            <tr>
+                                <td class="mono" style="font-weight: 600;">@tag.Epc</td>
+                                <td class="mono">@(string.IsNullOrWhiteSpace(tag.Tid) ? "—" : tag.Tid)</td>
+                                <td class="mono">@tag.ReadCount</td>
+                                <td class="mono">@(tag.LastRssi?.ToString("0.0") ?? "—") dBm</td>
+                                <td class="mono">Ant @(tag.LastAntenna?.ToString() ?? "—")</td>
+                                <td class="mono">@tag.LastSeen.ToLocalTime().ToString("HH:mm:ss.fff")</td>
+                            </tr>
                         }
                     </tbody>
                 </table>
@@ -154,7 +209,7 @@ else
         try
         {
             await State.StopInventoryAsync(reader.ReaderId);
-            SetMessage("Inventory stop requested; waiting for the lifecycle event.", false);
+            SetMessage("Inventory stop requested; waiting for lifecycle event.", false);
         }
         catch (Exception exception)
         {

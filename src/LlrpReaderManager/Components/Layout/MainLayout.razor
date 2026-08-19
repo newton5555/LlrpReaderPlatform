@@ -7,30 +7,58 @@
     <header class="app-topbar">
         <button class="brand-button" @onclick="ToggleNavigation" aria-label="Toggle navigation">
             <span class="brand-mark" aria-hidden="true">RF</span>
-            <span>LLRP Reader Manager</span>
+            <span>LLRP RFID Platform</span>
         </button>
         <div class="topbar-meta">
-            <span>SDK managed</span>
+            <span class="topbar-badge">LLRP v1.0.1</span>
             <span class="topbar-separator">|</span>
             <span>@State.Readers.Count Reader(s)</span>
-            <span class="topbar-time">@DateTime.Now.ToString("HH:mm:ss")</span>
+            <span class="topbar-separator">|</span>
+            <span class="topbar-time">@currentTime</span>
         </div>
     </header>
 
     <aside class="app-sidebar @(navigationCollapsed ? "collapsed" : string.Empty)">
         <nav aria-label="Primary navigation">
             <div class="nav-section">Overview</div>
-            <NavLink href="/" Match="NavLinkMatch.All"><span class="nav-icon">⌂</span><span>Dashboard</span></NavLink>
-            <NavLink href="/readers"><span class="nav-icon">▣</span><span>Readers</span></NavLink>
+            <NavLink href="/" Match="NavLinkMatch.All">
+                <span class="app-icon-wrapper"><AppIcon Name="dashboard" Size="16" /></span>
+                <span>Dashboard</span>
+            </NavLink>
+            <NavLink href="/readers">
+                <span class="app-icon-wrapper"><AppIcon Name="readers" Size="16" /></span>
+                <span>Readers</span>
+            </NavLink>
+
             <div class="nav-section">Operations</div>
-            <NavLink href="/inventory"><span class="nav-icon">◈</span><span>Tag Inventory</span></NavLink>
-            <NavLink href="/tag-memory"><span class="nav-icon">▤</span><span>Tag Memory</span></NavLink>
-            <NavLink href="/runs"><span class="nav-icon">◷</span><span>Inventory Runs</span></NavLink>
+            <NavLink href="/inventory">
+                <span class="app-icon-wrapper"><AppIcon Name="satellite-dish" Size="16" /></span>
+                <span>Tag Inventory</span>
+            </NavLink>
+            <NavLink href="/tag-memory">
+                <span class="app-icon-wrapper"><AppIcon Name="microchip" Size="16" /></span>
+                <span>Tag Operations</span>
+            </NavLink>
+            <NavLink href="/runs">
+                <span class="app-icon-wrapper"><AppIcon Name="history" Size="16" /></span>
+                <span>Inventory Runs</span>
+            </NavLink>
+
             <div class="nav-section">Configuration</div>
-            <NavLink href="/settings"><span class="nav-icon">⚙</span><span>Reader Settings</span></NavLink>
-            <NavLink href="/gpio"><span class="nav-icon">⌁</span><span>GPI / GPO</span></NavLink>
-            <NavLink href="/tag-lists"><span class="nav-icon">●</span><span>TOI</span></NavLink>
+            <NavLink href="/settings">
+                <span class="app-icon-wrapper"><AppIcon Name="gear" Size="16" /></span>
+                <span>Reader Settings</span>
+            </NavLink>
+            <NavLink href="/gpio">
+                <span class="app-icon-wrapper"><AppIcon Name="bolt" Size="16" /></span>
+                <span>GPI / GPO</span>
+            </NavLink>
+            <NavLink href="/tag-lists">
+                <span class="app-icon-wrapper"><AppIcon Name="tags" Size="16" /></span>
+                <span>TOI</span>
+            </NavLink>
         </nav>
+
         <div class="sidebar-footer">
             <span class="status-dot @(State.IsInitialized ? "online" : "pending")"></span>
             <span>@(State.IsInitialized ? "Platform ready" : "Loading platform")</span>
@@ -43,17 +71,27 @@
 
     @if (State.IsBusy || VirtualDevices.IsBusy)
     {
-        <div class="busy-strip">Working with Reader services…</div>
+        <div class="busy-strip">
+            <AppIcon Name="rotate" Size="14" Class="animate-spin" />
+            <span>Working with Reader services…</span>
+        </div>
     }
 </div>
 
 @code {
     private bool navigationCollapsed;
+    private string currentTime = DateTime.Now.ToString("HH:mm:ss");
+    private System.Threading.Timer? clockTimer;
 
     protected override void OnInitialized()
     {
         State.Changed += OnChanged;
         VirtualDevices.Changed += OnChanged;
+        clockTimer = new System.Threading.Timer(_ =>
+        {
+            currentTime = DateTime.Now.ToString("HH:mm:ss");
+            _ = InvokeAsync(StateHasChanged);
+        }, null, 1000, 1000);
     }
 
     private void ToggleNavigation() => navigationCollapsed = !navigationCollapsed;
@@ -62,6 +100,7 @@
 
     public void Dispose()
     {
+        clockTimer?.Dispose();
         State.Changed -= OnChanged;
         VirtualDevices.Changed -= OnChanged;
     }

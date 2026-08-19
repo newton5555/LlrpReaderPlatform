@@ -5,25 +5,34 @@
 <div class="section-header">
     <div>
         <h1 class="section-title">Reader Settings</h1>
-        <p class="section-subtitle">The same capability-driven settings model used by the WPF consumer, projected into Blazor controls.</p>
+        <p class="section-subtitle">Capability-driven configuration synchronized directly with the reader hardware.</p>
     </div>
     <div class="toolbar">
         <label class="form-label" for="settings-reader">Reader</label>
-        <select id="settings-reader" style="width: min(280px, 55vw);" value="@SelectedReaderText" @onchange="SelectReader">
+        <select id="settings-reader" style="width: min(280px, 50vw);" value="@SelectedReaderText" @onchange="SelectReader">
             <option value="">Choose Reader</option>
             @foreach (ReaderRuntimeSnapshot reader in State.Readers)
             {
-                <option value="@reader.ReaderId">@reader.Profile.Name · @reader.Profile.Host</option>
+                <option value="@reader.ReaderId">@reader.Profile.Name (@reader.Profile.Host:@reader.Profile.Port)</option>
             }
         </select>
     </div>
 </div>
 
 <div class="toolbar" style="margin-bottom: var(--space-4);">
-    <button class="btn" @onclick="() => LoadAsync(false)" disabled="@(pageBusy || SelectedReader is null)">Refresh from Reader</button>
-    <button class="btn" @onclick="() => LoadAsync(true)" disabled="@(pageBusy || SelectedReader is null)">Load SDK defaults</button>
+    <button class="btn btn-sm" @onclick="() => LoadAsync(false)" disabled="@(pageBusy || SelectedReader is null)">
+        <AppIcon Name="rotate" Size="13" />
+        <span>Refresh from Reader</span>
+    </button>
+    <button class="btn btn-sm" @onclick="() => LoadAsync(true)" disabled="@(pageBusy || SelectedReader is null)">
+        <AppIcon Name="history" Size="13" />
+        <span>Load SDK Defaults</span>
+    </button>
     <span class="toolbar-spacer"></span>
-    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@(pageBusy || SettingsModel is null)">Save configuration</button>
+    <button class="btn btn-sm btn-primary" @onclick="SaveAsync" disabled="@(pageBusy || SettingsModel is null)">
+        <AppIcon Name="check" Size="13" />
+        <span>Save Configuration</span>
+    </button>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(message))
@@ -33,7 +42,11 @@
 
 @if (SettingsModel is null)
 {
-    <div class="card empty-state"><h2>No settings model</h2><p>Choose an activated Reader and load its capability-driven settings.</p></div>
+    <div class="card empty-state">
+        <AppIcon Name="gear" Size="36" />
+        <h2>No Settings Model</h2>
+        <p>Choose an activated Reader above and load its capability-driven settings.</p>
+    </div>
 }
 else
 {
