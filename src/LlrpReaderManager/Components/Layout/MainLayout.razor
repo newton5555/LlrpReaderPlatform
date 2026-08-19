@@ -3,88 +3,201 @@
 @inject ReaderManagerState State
 @inject VirtualReaderWidgetService VirtualDevices
 
-<div class="app-shell @(navigationCollapsed ? "sidebar-collapsed" : string.Empty)">
-    <header class="app-topbar">
-        <div style="display: flex; align-items: center; gap: var(--space-3);">
-            <button class="topbar-toggle-btn" @onclick="ToggleNavigation" aria-label="Toggle navigation" title="@(navigationCollapsed ? "展开侧边栏" : "折叠侧边栏")">
-                <AppIcon Name="bars" Size="16" />
+@if (handheldPreviewMode)
+{
+    <!-- Simulated Handheld Device Stage for Desktop -->
+    <div class="handheld-stage">
+        <div class="handheld-stage-header">
+            <div class="handheld-stage-title">
+                <AppIcon Name="mobile" Size="16" />
+                <span>Handheld / Mobile Device Preview (390 × 844)</span>
+            </div>
+            <button class="btn btn-sm btn-primary" @onclick="ToggleHandheldPreview">
+                <AppIcon Name="desktop" Size="13" />
+                <span>Exit Handheld Preview</span>
             </button>
-            <div class="brand-button" style="cursor: pointer;" @onclick="ToggleNavigation">
-                <img src="img/appicon.png" alt="LLRP" class="brand-logo-img" />
-                <span>LLRP RFID Platform</span>
+        </div>
+
+        <div class="handheld-device-bezel">
+            <!-- Simulated Hardware Speaker & Camera Notch -->
+            <div class="handheld-device-notch">
+                <div class="handheld-speaker"></div>
+                <div class="handheld-camera"></div>
+            </div>
+
+            <!-- Handheld Screen Viewport -->
+            <div class="handheld-screen">
+                <div class="app-shell handheld-mode">
+                    <header class="app-topbar handheld-topbar">
+                        <div style="display: flex; align-items: center; gap: var(--space-2);">
+                            <img src="img/appicon.png" alt="LLRP" class="brand-logo-img" style="width: 20px; height: 20px;" />
+                            <span style="font-weight: 700; font-size: 13px;">LLRP Mobile</span>
+                        </div>
+                        <div class="topbar-meta">
+                            <span class="topbar-badge" style="font-size: 10px; padding: 2px 6px;">@ProtocolBadgeText</span>
+                        </div>
+                    </header>
+
+                    <main class="app-content handheld-content">
+                        @Body
+                    </main>
+
+                    <nav class="mobile-bottom-nav" aria-label="Handheld Navigation">
+                        <NavLink href="/" Match="NavLinkMatch.All" class="mobile-nav-item" title="Dashboard">
+                            <AppIcon Name="dashboard" Size="18" />
+                            <span>Home</span>
+                        </NavLink>
+                        <NavLink href="/inventory" class="mobile-nav-item" title="Tag Inventory">
+                            <AppIcon Name="search" Size="18" />
+                            <span>Inventory</span>
+                        </NavLink>
+                        <NavLink href="/tag-memory" class="mobile-nav-item" title="Tag Operations">
+                            <AppIcon Name="microchip" Size="18" />
+                            <span>Tag Ops</span>
+                        </NavLink>
+                        <NavLink href="/readers" class="mobile-nav-item" title="Readers">
+                            <AppIcon Name="readers" Size="18" />
+                            <span>Readers</span>
+                        </NavLink>
+                        <NavLink href="/settings" class="mobile-nav-item" title="Settings">
+                            <AppIcon Name="gear" Size="18" />
+                            <span>Settings</span>
+                        </NavLink>
+                    </nav>
+
+                    @if (State.IsBusy || VirtualDevices.IsBusy)
+                    {
+                        <div class="busy-strip" style="font-size: 11px;">
+                            <AppIcon Name="rotate" Size="12" Class="animate-spin" />
+                            <span>Working with Reader…</span>
+                        </div>
+                    }
+                </div>
             </div>
         </div>
-        <div class="topbar-meta">
-            <span class="topbar-badge">@ProtocolBadgeText</span>
-            <span class="topbar-separator">|</span>
-            <span>@State.Readers.Count Reader(s)</span>
-            <span class="topbar-separator">|</span>
-            <span class="topbar-time">@currentTime</span>
-        </div>
-    </header>
+    </div>
+}
+else
+{
+    <!-- Standard Responsive Desktop / Mobile Layout (Automatically adapts to viewport) -->
+    <div class="app-shell @(navigationCollapsed ? "sidebar-collapsed" : string.Empty)">
+        <header class="app-topbar">
+            <div style="display: flex; align-items: center; gap: var(--space-3);">
+                <button class="topbar-toggle-btn" @onclick="ToggleNavigation" aria-label="Toggle navigation" title="@(navigationCollapsed ? "展开侧边栏" : "折叠侧边栏")">
+                    <AppIcon Name="bars" Size="16" />
+                </button>
+                <div class="brand-button" style="cursor: pointer;" @onclick="ToggleNavigation">
+                    <img src="img/appicon.png" alt="LLRP" class="brand-logo-img" />
+                    <span>LLRP RFID Platform</span>
+                </div>
+            </div>
+            <div class="topbar-meta">
+                <!-- One-click Handheld Mode Preview Toggle for Windows Desktop -->
+                <button class="btn btn-sm btn-ghost handheld-toggle-btn"
+                        @onclick="ToggleHandheldPreview"
+                        title="Simulate Handheld / Mobile Device on Windows"
+                        style="gap: 5px; height: 26px; padding: 0 9px; font-size: 11.5px; border-color: var(--border-strong);">
+                    <AppIcon Name="mobile" Size="13" />
+                    <span>Handheld Mode</span>
+                </button>
 
-    <aside class="app-sidebar @(navigationCollapsed ? "collapsed" : string.Empty)">
-        <nav aria-label="Primary navigation">
-            <div class="nav-section">Overview</div>
-            <NavLink href="/" Match="NavLinkMatch.All" title="Dashboard">
-                <span class="app-icon-wrapper"><AppIcon Name="dashboard" Size="16" /></span>
-                <span>Dashboard</span>
+                <span class="topbar-separator">|</span>
+                <span class="topbar-badge">@ProtocolBadgeText</span>
+                <span class="topbar-separator">|</span>
+                <span>@State.Readers.Count Reader(s)</span>
+                <span class="topbar-separator">|</span>
+                <span class="topbar-time">@currentTime</span>
+            </div>
+        </header>
+
+        <aside class="app-sidebar @(navigationCollapsed ? "collapsed" : string.Empty)">
+            <nav aria-label="Primary navigation">
+                <div class="nav-section">Overview</div>
+                <NavLink href="/" Match="NavLinkMatch.All" title="Dashboard">
+                    <span class="app-icon-wrapper"><AppIcon Name="dashboard" Size="16" /></span>
+                    <span>Dashboard</span>
+                </NavLink>
+                <NavLink href="/readers" title="Readers">
+                    <span class="app-icon-wrapper"><AppIcon Name="readers" Size="16" /></span>
+                    <span>Readers</span>
+                </NavLink>
+
+                <div class="nav-section">Operations</div>
+                <NavLink href="/inventory" title="Tag Inventory">
+                    <span class="app-icon-wrapper"><AppIcon Name="search" Size="16" /></span>
+                    <span>Tag Inventory</span>
+                </NavLink>
+                <NavLink href="/tag-memory" title="Tag Operations">
+                    <span class="app-icon-wrapper"><AppIcon Name="microchip" Size="16" /></span>
+                    <span>Tag Operations</span>
+                </NavLink>
+                <NavLink href="/runs" title="Inventory Runs">
+                    <span class="app-icon-wrapper"><AppIcon Name="history" Size="16" /></span>
+                    <span>Inventory Runs</span>
+                </NavLink>
+
+                <div class="nav-section">Configuration</div>
+                <NavLink href="/settings" title="Reader Settings">
+                    <span class="app-icon-wrapper"><AppIcon Name="gear" Size="16" /></span>
+                    <span>Reader Settings</span>
+                </NavLink>
+                <NavLink href="/gpio" title="GPI / GPO">
+                    <span class="app-icon-wrapper"><AppIcon Name="bolt" Size="16" /></span>
+                    <span>GPI / GPO</span>
+                </NavLink>
+                <NavLink href="/tag-lists" title="Tags of Interest (TOI)">
+                    <span class="app-icon-wrapper"><AppIcon Name="tags" Size="16" /></span>
+                    <span>TOI</span>
+                </NavLink>
+            </nav>
+
+            <div class="sidebar-footer" title="@(State.IsInitialized ? "Platform ready" : "Loading platform")">
+                <span class="status-dot @(State.IsInitialized ? "online" : "pending")"></span>
+                <span>@(State.IsInitialized ? "Platform ready" : "Loading platform")</span>
+            </div>
+        </aside>
+
+        <main class="app-content">
+            @Body
+        </main>
+
+        <!-- Native Mobile Bottom Bar (Active on real mobile screens <= 768px) -->
+        <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+            <NavLink href="/" Match="NavLinkMatch.All" class="mobile-nav-item" title="Dashboard">
+                <AppIcon Name="dashboard" Size="18" />
+                <span>Home</span>
             </NavLink>
-            <NavLink href="/readers" title="Readers">
-                <span class="app-icon-wrapper"><AppIcon Name="readers" Size="16" /></span>
+            <NavLink href="/inventory" class="mobile-nav-item" title="Tag Inventory">
+                <AppIcon Name="search" Size="18" />
+                <span>Inventory</span>
+            </NavLink>
+            <NavLink href="/tag-memory" class="mobile-nav-item" title="Tag Operations">
+                <AppIcon Name="microchip" Size="18" />
+                <span>Tag Ops</span>
+            </NavLink>
+            <NavLink href="/readers" class="mobile-nav-item" title="Readers">
+                <AppIcon Name="readers" Size="18" />
                 <span>Readers</span>
             </NavLink>
-
-            <div class="nav-section">Operations</div>
-            <NavLink href="/inventory" title="Tag Inventory">
-                <span class="app-icon-wrapper"><AppIcon Name="search" Size="16" /></span>
-                <span>Tag Inventory</span>
-            </NavLink>
-            <NavLink href="/tag-memory" title="Tag Operations">
-                <span class="app-icon-wrapper"><AppIcon Name="microchip" Size="16" /></span>
-                <span>Tag Operations</span>
-            </NavLink>
-            <NavLink href="/runs" title="Inventory Runs">
-                <span class="app-icon-wrapper"><AppIcon Name="history" Size="16" /></span>
-                <span>Inventory Runs</span>
-            </NavLink>
-
-            <div class="nav-section">Configuration</div>
-            <NavLink href="/settings" title="Reader Settings">
-                <span class="app-icon-wrapper"><AppIcon Name="gear" Size="16" /></span>
-                <span>Reader Settings</span>
-            </NavLink>
-            <NavLink href="/gpio" title="GPI / GPO">
-                <span class="app-icon-wrapper"><AppIcon Name="bolt" Size="16" /></span>
-                <span>GPI / GPO</span>
-            </NavLink>
-            <NavLink href="/tag-lists" title="Tags of Interest (TOI)">
-                <span class="app-icon-wrapper"><AppIcon Name="tags" Size="16" /></span>
-                <span>TOI</span>
+            <NavLink href="/settings" class="mobile-nav-item" title="Settings">
+                <AppIcon Name="gear" Size="18" />
+                <span>Settings</span>
             </NavLink>
         </nav>
 
-        <div class="sidebar-footer" title="@(State.IsInitialized ? "Platform ready" : "Loading platform")">
-            <span class="status-dot @(State.IsInitialized ? "online" : "pending")"></span>
-            <span>@(State.IsInitialized ? "Platform ready" : "Loading platform")</span>
-        </div>
-    </aside>
-
-    <main class="app-content">
-        @Body
-    </main>
-
-    @if (State.IsBusy || VirtualDevices.IsBusy)
-    {
-        <div class="busy-strip">
-            <AppIcon Name="rotate" Size="14" Class="animate-spin" />
-            <span>Working with Reader services…</span>
-        </div>
-    }
-</div>
+        @if (State.IsBusy || VirtualDevices.IsBusy)
+        {
+            <div class="busy-strip">
+                <AppIcon Name="rotate" Size="14" Class="animate-spin" />
+                <span>Working with Reader services…</span>
+            </div>
+        }
+    </div>
+}
 
 @code {
     private bool navigationCollapsed;
+    private bool handheldPreviewMode;
     private string currentTime = DateTime.Now.ToString("HH:mm:ss");
     private System.Threading.Timer? clockTimer;
 
@@ -130,6 +243,8 @@
     }
 
     private void ToggleNavigation() => navigationCollapsed = !navigationCollapsed;
+
+    private void ToggleHandheldPreview() => handheldPreviewMode = !handheldPreviewMode;
 
     private void OnChanged(object? sender, EventArgs args) => InvokeAsync(StateHasChanged);
 

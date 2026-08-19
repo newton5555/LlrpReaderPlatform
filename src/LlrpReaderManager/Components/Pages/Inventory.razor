@@ -226,7 +226,8 @@ else
         }
         else
         {
-            <div class="table-wrap">
+            <!-- Desktop Table View -->
+            <div class="table-wrap desktop-table-view">
                 <table>
                     <thead>
                         <tr>
@@ -363,6 +364,71 @@ else
                         }
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Handheld / Mobile Card Stream View -->
+            <div class="mobile-tag-cards-view stack" style="gap: var(--space-2);">
+                @foreach (TagRowItem item in FilteredTags)
+                {
+                    TagObservation tag = item.Tag;
+                    ToiMatchResult? toi = GetToiMatch(tag.Epc);
+                    string? phaseVal = GetExtensionField(tag, ReportFieldSemantics.Phase, "impinj.phaseAngle", "test.phase", "phase");
+
+                    <div class="card card-pad mobile-tag-card @(toi is not null ? "toi-row" : string.Empty)" style="@(toi is not null ? $"border-left: 4px solid {toi.ColorHex};" : string.Empty); margin-bottom: 0;">
+                        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px;">
+                            <div class="mono" style="font-size: 13.5px; font-weight: 700; word-break: break-all; color: var(--fg);">
+                                @tag.Epc
+                            </div>
+                            <span class="status-badge ok" style="font-size: 10px; font-weight: 700;">@tag.ReadCount reads</span>
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 6px;">
+                            @if (toi is not null)
+                            {
+                                <span class="color-pill-tag" style="border-color: @toi.ColorHex; font-size: 11px;">
+                                    <span class="color-indicator" style="background-color: @toi.ColorHex;"></span>
+                                    <span>@toi.DisplayName</span>
+                                </span>
+                            }
+                            <span class="status-badge neutral" style="font-size: 10px; padding: 1px 6px;">@item.ReaderName</span>
+                            @if (tag.LastAntenna.HasValue)
+                            {
+                                <span class="status-badge neutral" style="font-size: 10px; padding: 1px 6px;">Ant @tag.LastAntenna.Value</span>
+                            }
+                        </div>
+
+                        <div class="mobile-tag-stats-grid">
+                            <div class="mobile-stat-box">
+                                <span class="mobile-stat-k">RSSI</span>
+                                <span class="mobile-stat-v mono" style="color: @(tag.LastRssi > -60 ? "var(--ok)" : tag.LastRssi > -75 ? "var(--warn)" : "var(--danger)");">
+                                    @(tag.LastRssi?.ToString("0.0") ?? "—") dBm
+                                </span>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(phaseVal))
+                            {
+                                <div class="mobile-stat-box">
+                                    <span class="mobile-stat-k">Phase</span>
+                                    <span class="mobile-stat-v mono" style="color: var(--accent);">@phaseVal</span>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(tag.Tid))
+                            {
+                                <div class="mobile-stat-box" style="grid-column: 1 / -1;">
+                                    <span class="mobile-stat-k">TID</span>
+                                    <span class="mobile-stat-v mono" style="font-size: 11px; word-break: break-all;">@tag.Tid</span>
+                                </div>
+                            }
+                        </div>
+
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px; font-size: 10.5px; color: var(--muted-light);">
+                            <span>Last: @tag.LastSeen.ToLocalTime().ToString("HH:mm:ss.fff")</span>
+                            <a class="btn btn-sm btn-ghost" href="/tag-memory" style="height: 24px; padding: 0 6px; font-size: 11px;">
+                                <AppIcon Name="microchip" Size="11" />
+                                <span>Tag Ops</span>
+                            </a>
+                        </div>
+                    </div>
+                }
             </div>
         }
     </section>

@@ -1237,55 +1237,280 @@ tbody tr:last-child td {
     font-size: 12px;
 }
 
-/* Responsive */
+/* ========================================================= */
+/* MOBILE & HANDHELD BOTTOM NAVIGATION                       */
+/* ========================================================= */
+
+.mobile-bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 58px;
+    background: var(--surface);
+    border-top: 1px solid var(--border-strong);
+    z-index: var(--z-fixed);
+    box-shadow: 0 -4px 16px oklch(0% 0 0 / 0.08);
+    backdrop-filter: blur(10px);
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 var(--space-1);
+}
+
+.mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    flex: 1;
+    height: 100%;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 10.5px;
+    font-weight: 600;
+    transition: color 0.15s, transform 0.1s;
+    position: relative;
+}
+
+.mobile-nav-item span {
+    line-height: 1;
+}
+
+.mobile-nav-item:active {
+    transform: scale(0.92);
+}
+
+.mobile-nav-item.active {
+    color: var(--accent);
+}
+
+.mobile-nav-item.active::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 20%;
+    right: 20%;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 0 0 3px 3px;
+}
+
+/* ========================================================= */
+/* HANDHELD SIMULATOR STAGE (FOR WINDOWS DESKTOP PREVIEW)    */
+/* ========================================================= */
+
+.handheld-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: var(--space-3);
+    background: oklch(18% 0.02 240);
+    box-sizing: border-box;
+}
+
+.handheld-stage-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: min(400px, 94vw);
+    margin-bottom: var(--space-2);
+    color: oklch(90% 0.01 240);
+}
+
+.handheld-stage-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+.handheld-device-bezel {
+    width: min(390px, 94vw);
+    height: min(844px, 88vh);
+    background: #0f172a;
+    border: 9px solid #1e293b;
+    border-radius: 42px;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+.handheld-device-notch {
+    height: 22px;
+    width: 100%;
+    background: #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-shrink: 0;
+    z-index: 100;
+}
+
+.handheld-speaker {
+    width: 44px;
+    height: 3.5px;
+    background: #334155;
+    border-radius: 2px;
+}
+
+.handheld-camera {
+    width: 7px;
+    height: 7px;
+    background: #1e293b;
+    border-radius: 50%;
+    box-shadow: inset 0 0 2px #3b82f6;
+}
+
+.handheld-screen {
+    flex: 1;
+    width: 100%;
+    height: calc(100% - 22px);
+    overflow: hidden;
+    position: relative;
+    background: var(--bg);
+}
+
+.handheld-mode {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 44px 1fr !important;
+    height: 100% !important;
+    max-height: 100% !important;
+}
+
+.handheld-mode .app-sidebar {
+    display: none !important;
+}
+
+.handheld-mode .mobile-bottom-nav {
+    display: flex !important;
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+}
+
+.handheld-mode .app-content {
+    padding: var(--space-2) var(--space-3) 68px var(--space-3) !important;
+    overflow-y: auto !important;
+    height: 100% !important;
+}
+
+.desktop-table-view {
+    display: block;
+}
+
+.mobile-tag-cards-view,
+.mobile-runs-cards-view {
+    display: none;
+}
+
+.mobile-tag-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    background: var(--surface-sunken);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+}
+
+.mobile-stat-box {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.mobile-stat-k {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--muted-light);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.mobile-stat-v {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.handheld-mode .desktop-table-view {
+    display: none !important;
+}
+
+.handheld-mode .mobile-tag-cards-view,
+.handheld-mode .mobile-runs-cards-view {
+    display: flex !important;
+}
+
+.handheld-mode .split,
+.handheld-mode .access-layout,
+.handheld-mode .inline-form,
+.handheld-mode .setting-row,
+.handheld-mode .antenna-rf-grid,
+.handheld-mode .settings-card-grid {
+    grid-template-columns: 1fr !important;
+}
+
+.handheld-mode .card-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: var(--space-2) !important;
+}
+
+.handheld-mode .gpo-grid {
+    grid-template-columns: 1fr 1fr !important;
+    padding: var(--space-2) !important;
+}
+
+.handheld-mode .reader-actions {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+}
+
+.handheld-mode .reader-actions .push-right {
+    margin-left: 0 !important;
+}
+
+.handheld-mode .reader-body {
+    grid-template-columns: 1fr 1fr !important;
+    gap: var(--space-2) !important;
+}
+
+.handheld-mode .tag-selector {
+    height: 220px !important;
+}
+
+.handheld-mode .memory-view {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+.handheld-mode .bank-tabs,
+.handheld-mode .settings-nav-tabs {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 3px;
+    max-width: 100%;
+}
+
+.handheld-mode .bank-tab,
+.handheld-mode .settings-nav-tab {
+    white-space: nowrap !important;
+    flex-shrink: 0;
+}
+
+/* ========================================================= */
+/* RESPONSIVE MEDIA QUERIES (AUTOMATIC ADAPTATION)           */
+/* ========================================================= */
+
 @media (max-width: 960px) {
-    .app-shell {
-        grid-template-columns: 1fr;
-        grid-template-rows: 50px auto minmax(0, 1fr);
-        height: 100vh;
-    }
-
-    .app-topbar {
-        padding: 0 var(--space-3);
-    }
-
-    .topbar-meta .topbar-separator, .topbar-meta span:first-child {
-        display: none;
-    }
-
-    .app-sidebar, .app-sidebar.collapsed {
-        width: 100%;
-        min-height: auto;
-        overflow-x: auto;
-        overflow-y: hidden;
-        border-right: 0;
-        border-bottom: 1px solid var(--border);
-        padding: var(--space-1) var(--space-2);
-    }
-
-    .app-sidebar nav {
-        flex-direction: row;
-        min-width: max-content;
-    }
-
-    .app-sidebar nav a {
-        min-height: 32px;
-        padding: 0 var(--space-3);
-        margin: 0 2px;
-    }
-
-    .app-sidebar .nav-section, .sidebar-footer {
-        display: none;
-    }
-
-    .app-content {
-        padding: var(--space-3);
-    }
-
-    .section-header {
-        flex-direction: column;
-    }
-
     .access-layout, .split, .inline-form, .setting-row {
         grid-template-columns: 1fr;
     }
@@ -1293,9 +1518,146 @@ tbody tr:last-child td {
     .tag-selector {
         height: 240px;
     }
+}
+
+@media (max-width: 768px) {
+    .app-shell {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: 46px 1fr !important;
+        height: 100vh;
+    }
+
+    .app-sidebar {
+        display: none !important;
+    }
+
+    .mobile-bottom-nav {
+        display: flex !important;
+    }
+
+    .app-content {
+        padding: var(--space-2) var(--space-3) 68px var(--space-3) !important;
+        overflow-y: auto;
+    }
+
+    .topbar-toggle-btn {
+        display: none !important;
+    }
+
+    .handheld-toggle-btn {
+        display: none !important;
+    }
+
+    .section-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+        margin-bottom: var(--space-3) !important;
+    }
+
+    .section-title {
+        font-size: 17px !important;
+    }
+
+    .section-subtitle {
+        font-size: 11px !important;
+    }
+
+    .toolbar {
+        width: 100%;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+    }
+
+    .toolbar .btn {
+        flex: 1 1 auto;
+        min-height: 36px;
+    }
+
+    .card-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: var(--space-2) !important;
+    }
+
+    .split, .access-layout, .inline-form, .setting-row {
+        grid-template-columns: 1fr !important;
+    }
+
+    .tag-selector {
+        height: 220px !important;
+    }
 
     .memory-view {
-        grid-template-columns: repeat(8, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+
+    .desktop-table-view {
+        display: none !important;
+    }
+
+    .mobile-tag-cards-view,
+    .mobile-runs-cards-view {
+        display: flex !important;
+    }
+
+    .antenna-rf-grid,
+    .settings-card-grid {
+        grid-template-columns: 1fr !important;
+        padding: var(--space-2) !important;
+    }
+
+    .gpo-grid {
+        grid-template-columns: 1fr 1fr !important;
+        padding: var(--space-2) !important;
+    }
+
+    .reader-actions {
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+    }
+
+    .reader-actions .push-right {
+        margin-left: 0 !important;
+    }
+
+    .reader-body {
+        grid-template-columns: 1fr 1fr !important;
+        gap: var(--space-2) !important;
+    }
+
+    .bank-tabs,
+    .settings-nav-tabs {
+        overflow-x: auto !important;
+        flex-wrap: nowrap !important;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 3px;
+        max-width: 100%;
+    }
+
+    .bank-tab,
+    .settings-nav-tab {
+        white-space: nowrap !important;
+        flex-shrink: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .card-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .gpo-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .reader-body {
+        grid-template-columns: 1fr !important;
+    }
+
+    .topbar-meta .topbar-time,
+    .topbar-meta span:nth-child(3),
+    .topbar-meta .topbar-separator {
+        display: none !important;
     }
 }
 

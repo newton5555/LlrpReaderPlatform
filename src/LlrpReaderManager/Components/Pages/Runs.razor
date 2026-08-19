@@ -86,7 +86,8 @@
     }
     else
     {
-        <div class="table-wrap">
+        <!-- Desktop Runs Table View -->
+        <div class="table-wrap desktop-table-view">
             <table>
                 <thead>
                     <tr>
@@ -129,13 +130,59 @@
                                 }
                                 else
                                 {
-                                    <span class="muted mono">—</span>
+                                    <span class="muted mono" style="font-size: 11px;">—</span>
                                 }
                             </td>
                         </tr>
                     }
                 </tbody>
             </table>
+        </div>
+
+        <!-- Handheld / Mobile Runs Card Stream -->
+        <div class="mobile-runs-cards-view stack" style="gap: var(--space-2); padding: var(--space-3);">
+            @foreach (InventoryRunRecord run in FilteredRuns)
+            {
+                TimeSpan? duration = run.EndedAtUtc.HasValue ? run.EndedAtUtc.Value - run.StartedAtUtc : null;
+                <div class="card card-pad" style="margin-bottom: 0;">
+                    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px;">
+                        <div>
+                            <div class="mono" style="font-size: 12.5px; font-weight: 700;">
+                                @run.StartedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                            </div>
+                            <div class="form-hint" style="margin-top: 2px;">
+                                Duration: @(duration.HasValue ? FormatDuration(duration.Value) : "In Progress")
+                            </div>
+                        </div>
+                        <span class="status-badge @(run.StopReason == "Manual" ? "ok" : "neutral")" style="font-size: 10px;">
+                            @run.StopReason
+                        </span>
+                    </div>
+
+                    <div class="mobile-tag-stats-grid" style="margin-top: var(--space-2);">
+                        <div class="mobile-stat-box">
+                            <span class="mobile-stat-k">Total Reads</span>
+                            <span class="mobile-stat-v mono" style="color: var(--accent);">@run.TotalReadCount.ToString("N0")</span>
+                        </div>
+                        <div class="mobile-stat-box">
+                            <span class="mobile-stat-k">Unique Tags</span>
+                            <span class="mobile-stat-v mono" style="color: var(--fg); font-weight: 700;">@run.UniqueTagCount.ToString("N0")</span>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(run.SnapshotFilePath))
+                    {
+                        <div style="margin-top: 8px; display: flex; justify-content: flex-end;">
+                            <button class="btn btn-sm"
+                                    style="padding: 2px 8px; font-size: 11px; gap: 5px;"
+                                    @onclick="() => OpenSnapshotFileAsync(run.SnapshotFilePath)">
+                                <AppIcon Name="folder-open" Size="11" />
+                                <span>Open Snapshot JSON</span>
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
         </div>
     }
 </section>
