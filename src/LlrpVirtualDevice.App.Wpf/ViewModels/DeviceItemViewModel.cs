@@ -4,8 +4,6 @@ using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using LlrpDevice.Abstractions;
-using LlrpDevice.Virtual;
 using LlrpDevice.Virtual.Hosting;
 using LlrpVirtualDevice.App.Wpf.Models;
 using LlrpVirtualDevice.App.Wpf.Services;
@@ -22,7 +20,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     private VirtualDeviceInstanceConfig _config;
 
     [ObservableProperty]
-    private IVirtualLlrpDeviceHost? _host;
+    private IVirtualDeviceHost? _host;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsRunning))]
@@ -72,10 +70,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     private string _editDeviceProfile = "Impinj-R420";
 
     [ObservableProperty]
-    private ushort _editMaxAntennas = 4;
-
-    [ObservableProperty]
-    private bool _editAllowImplicitStopOnDisable = true;
+    private bool _editRelaxedRoSpecStateChecks = true;
 
     public int DisplayPort => BoundPort > 0 ? BoundPort : Config.Port;
     public string EndpointDisplay => $"{Config.ListenAddress}:{DisplayPort}";
@@ -92,9 +87,9 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     public bool CanStart => CanEditConfig;
     public bool CanStop => State is VirtualLlrpDeviceHostState.Running or VirtualLlrpDeviceHostState.Starting;
 
-    public IReadOnlyList<string> AvailableProfiles { get; } = ["Standard", "Impinj-R420", "Zebra-FX9600"];
+    public IReadOnlyList<string> AvailableProfiles { get; } = ["Standard", "Impinj-R420"];
     public IReadOnlyList<string> AvailableProtocolVersions { get; } = ["1.0.1", "1.1", "2.0"];
-    public IReadOnlyList<VirtualRfScenario> AvailableScenarios { get; } = [VirtualRfScenario.Static, VirtualRfScenario.MovingTags, VirtualRfScenario.Noisy];
+    public IReadOnlyList<VirtualDeviceRfScenario> AvailableScenarios { get; } = [VirtualDeviceRfScenario.Static, VirtualDeviceRfScenario.MovingTags, VirtualDeviceRfScenario.Noisy];
 
     public ObservableCollection<ObservedMessageItem> ObservedMessages { get; } = [];
     public ObservableCollection<ClientConnectionItem> ConnectedClients { get; } = [];
@@ -102,7 +97,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
 
     public DeviceItemViewModel(
         VirtualDeviceInstanceConfig config,
-        IVirtualLlrpDeviceHost? host,
+        IVirtualDeviceHost? host,
         IVirtualDeviceManagerService managerService,
         IDialogService dialogService)
     {
@@ -136,11 +131,10 @@ public sealed partial class DeviceItemViewModel : ObservableObject
         EditPort = Config.Port;
         EditProtocolVersion = Config.ProtocolVersion;
         EditDeviceProfile = Config.DeviceProfile;
-        EditMaxAntennas = Config.MaxAntennas;
-        EditAllowImplicitStopOnDisable = Config.AllowImplicitStopOnDisable;
+        EditRelaxedRoSpecStateChecks = Config.RelaxedRoSpecStateChecks;
     }
 
-    public void UpdateHost(IVirtualLlrpDeviceHost newHost)
+    public void UpdateHost(IVirtualDeviceHost newHost)
     {
         if (Host != null)
         {
@@ -160,21 +154,21 @@ public sealed partial class DeviceItemViewModel : ObservableObject
         OnPropertyChanged(nameof(EndpointDisplay));
     }
 
-    private void BindHostEvents(IVirtualLlrpDeviceHost host)
+    private void BindHostEvents(IVirtualDeviceHost host)
     {
         host.LifecycleChanged += OnHostLifecycleChanged;
         host.ClientChanged += OnHostClientChanged;
         host.MessageObserved += OnHostMessageObserved;
     }
 
-    private void UnbindHostEvents(IVirtualLlrpDeviceHost host)
+    private void UnbindHostEvents(IVirtualDeviceHost host)
     {
         host.LifecycleChanged -= OnHostLifecycleChanged;
         host.ClientChanged -= OnHostClientChanged;
         host.MessageObserved -= OnHostMessageObserved;
     }
 
-    private void OnHostLifecycleChanged(object? sender, VirtualLlrpDeviceHostLifecycleChangedEventArgs e)
+    private void OnHostLifecycleChanged(object? sender, VirtualDeviceHostLifecycleChangedEventArgs e)
     {
         _dispatcher.InvokeAsync(() =>
         {
@@ -192,7 +186,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
         });
     }
 
-    private void OnHostClientChanged(object? sender, VirtualLlrpDeviceHostClientChangedEventArgs e)
+    private void OnHostClientChanged(object? sender, VirtualDeviceClientChangedEventArgs e)
     {
         _dispatcher.InvokeAsync(() =>
         {
@@ -211,7 +205,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
                         ConnectionId = e.Client.ConnectionId,
                         RemoteEndPoint = e.Client.RemoteEndPoint?.ToString() ?? "Unknown",
                         ConnectedAt = e.Client.ConnectedAt,
-                        NegotiatedVersion = e.Client.NegotiatedVersion?.ToString() ?? Config.ProtocolVersion,
+                        NegotiatedVersion = FormatProtocolVersion(e.Client.NegotiatedVersion) ?? Config.ProtocolVersion,
                         IsConnected = true,
                     });
                 }
@@ -234,13 +228,13 @@ public sealed partial class DeviceItemViewModel : ObservableObject
         });
     }
 
-    private void OnHostMessageObserved(object? sender, VirtualLlrpDeviceHostMessageObservedEventArgs e)
+    private void OnHostMessageObserved(object? sender, VirtualDeviceMessageObservedEventArgs e)
     {
         var item = new ObservedMessageItem
         {
             Timestamp = DateTimeOffset.Now,
             Incoming = e.Incoming,
-            ProtocolVersion = e.Version.ToString(),
+            ProtocolVersion = FormatProtocolVersion(e.Version),
             MessageType = e.MessageType,
             MessageName = ObservedMessageItem.ResolveMessageName(e.MessageType),
             MessageId = e.MessageId,
@@ -257,6 +251,17 @@ public sealed partial class DeviceItemViewModel : ObservableObject
             ObservedMessages.Add(item);
         });
     }
+
+    private static string? FormatProtocolVersion(VirtualDeviceProtocolVersion? version) => version switch
+    {
+        VirtualDeviceProtocolVersion.Llrp101 => "1.0.1",
+        VirtualDeviceProtocolVersion.Llrp11 => "1.1",
+        VirtualDeviceProtocolVersion.Llrp20 => "2.0",
+        _ => null,
+    };
+
+    private static string FormatProtocolVersion(VirtualDeviceProtocolVersion version) =>
+        FormatProtocolVersion((VirtualDeviceProtocolVersion?)version) ?? version.ToString();
 
     [RelayCommand]
     private void SwitchTab(string tabName)
@@ -331,8 +336,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
         Config.Port = EditPort;
         Config.ProtocolVersion = EditProtocolVersion;
         Config.DeviceProfile = EditDeviceProfile;
-        Config.MaxAntennas = EditMaxAntennas;
-        Config.AllowImplicitStopOnDisable = EditAllowImplicitStopOnDisable;
+        Config.RelaxedRoSpecStateChecks = EditRelaxedRoSpecStateChecks;
 
         var newHost = await _managerService.CreateOrUpdateHostAsync(Config);
         UpdateHost(newHost);

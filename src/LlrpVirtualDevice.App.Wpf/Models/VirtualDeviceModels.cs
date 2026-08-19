@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
-using LlrpDevice.Virtual;
+using CommunityToolkit.Mvvm.ComponentModel;
+using LlrpDevice.Virtual.Hosting;
 
 namespace LlrpVirtualDevice.App.Wpf.Models;
 
@@ -14,22 +15,64 @@ public sealed record VirtualTagConfig
     public string KillPasswordHex { get; init; } = "00000000";
 }
 
-public sealed class VirtualDeviceInstanceConfig
+public sealed partial class VirtualDeviceInstanceConfig : ObservableObject
 {
-    public string Id { get; set; } = Guid.NewGuid().ToString("N");
-    public string Name { get; set; } = "Virtual-Reader-1";
-    public string ListenAddress { get; set; } = "127.0.0.1";
-    public int Port { get; set; } = 5084;
-    public string ProtocolVersion { get; set; } = "1.0.1";
-    public string DeviceProfile { get; set; } = "Standard";
-    public ushort MaxAntennas { get; set; } = 4;
-    public VirtualRfScenario Scenario { get; set; } = VirtualRfScenario.Static;
-    public double DetectionProbability { get; set; } = 1.0;
-    public int RssiJitterDb { get; set; } = 2;
-    public int PresenceCycleRounds { get; set; } = 3;
-    public bool AllowImplicitStopOnDisable { get; set; } = true;
-    public bool AutoStart { get; set; }
-    public List<VirtualTagConfig> Tags { get; set; } = [];
+    [ObservableProperty]
+    private string _id = Guid.NewGuid().ToString("N");
+
+    [ObservableProperty]
+    private string _name = "Virtual-Reader-1";
+
+    [ObservableProperty]
+    private string _listenAddress = "127.0.0.1";
+
+    [ObservableProperty]
+    private int _port = 5084;
+
+    [ObservableProperty]
+    private string _protocolVersion = "1.0.1";
+
+    [ObservableProperty]
+    private string _deviceProfile = "Standard";
+
+    [ObservableProperty]
+    private ushort _maxAntennas = 4;
+
+    [ObservableProperty]
+    private VirtualDeviceRfScenario _scenario = VirtualDeviceRfScenario.Static;
+
+    [ObservableProperty]
+    private double _detectionProbability = 1.0;
+
+    [ObservableProperty]
+    private int _rssiJitterDb = 2;
+
+    [ObservableProperty]
+    private int _presenceCycleRounds = 3;
+
+    [ObservableProperty]
+    private bool _relaxedRoSpecStateChecks = true;
+
+    /// <summary>Reads the pre-Hosting configuration key without writing it back.</summary>
+    [JsonPropertyName("AllowImplicitStopOnDisable")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? LegacyAllowImplicitStopOnDisable
+    {
+        get => null;
+        set
+        {
+            if (value is bool legacyValue)
+            {
+                RelaxedRoSpecStateChecks = legacyValue;
+            }
+        }
+    }
+
+    [ObservableProperty]
+    private bool _autoStart;
+
+    [ObservableProperty]
+    private List<VirtualTagConfig> _tags = [];
 
     public static VirtualDeviceInstanceConfig CreateDefault(int port = 5084, string name = "Virtual-Reader-1")
     {

@@ -62,13 +62,13 @@
                 <TextBlock Grid.Row="4" Grid.Column="0" Text="LLRP 协议版本:" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13" Opacity="0.85" Margin="0,8" />
                 <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding AvailableProtocolVersions}" SelectedItem="{Binding ProtocolVersion}" Margin="0,4" Padding="8,6" FontSize="13" />
 
-                <!-- 天线数量 -->
-                <TextBlock Grid.Row="5" Grid.Column="0" Text="最大天线数量:" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13" Opacity="0.85" Margin="0,8" />
-                <mah:NumericUpDown Grid.Row="5" Grid.Column="1" Value="{Binding MaxAntennas}" Minimum="1" Maximum="32" Margin="0,4" Padding="6,4" FontSize="13" HorizontalAlignment="Left" Width="140" />
+                <!-- 天线能力由 SDK 能力档案决定 -->
+                <TextBlock Grid.Row="5" Grid.Column="0" Text="天线能力:" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13" Opacity="0.85" Margin="0,8" />
+                <TextBlock Grid.Row="5" Grid.Column="1" Text="由 SDK 能力档案决定" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource MahApps.Brushes.Gray2}" Margin="0,8" />
 
-                <!-- 隐式停止策略 -->
-                <TextBlock Grid.Row="6" Grid.Column="0" Text="ROSpec 禁用策略:" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13" Opacity="0.85" Margin="0,8" />
-                <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding AllowImplicitStopOnDisable}" Content="允许在 Disable 时隐式停止 ROSpec 执行" Margin="0,6" VerticalAlignment="Center" />
+                <!-- ROSpec 状态策略 -->
+                <TextBlock Grid.Row="6" Grid.Column="0" Text="ROSpec 状态策略:" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13" Opacity="0.85" Margin="0,8" />
+                <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding RelaxedRoSpecStateChecks}" Content="启用宽松状态校验，允许常见生命周期命令幂等执行" Margin="0,6" VerticalAlignment="Center" />
             </Grid>
 
             <Separator Margin="0,0,0,16" Background="{DynamicResource MahApps.Brushes.Gray7}" />

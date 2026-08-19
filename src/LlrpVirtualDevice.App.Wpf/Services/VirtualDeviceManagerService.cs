@@ -1,10 +1,9 @@
+using System.Buffers.Binary;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Text.Json;
-using LlrpDevice.Abstractions;
-using LlrpDevice.Server;
-using LlrpDevice.Virtual;
 using LlrpDevice.Virtual.Hosting;
 using LlrpVirtualDevice.App.Wpf.Models;
 using Microsoft.Extensions.Logging;
@@ -14,7 +13,7 @@ namespace LlrpVirtualDevice.App.Wpf.Services;
 public sealed class VirtualDeviceManagerService : IVirtualDeviceManagerService
 {
     private readonly ILogger<VirtualDeviceManagerService> _logger;
-    private readonly ConcurrentDictionary<string, (VirtualDeviceInstanceConfig Config, IVirtualLlrpDeviceHost? Host)> _instances = new();
+    private readonly ConcurrentDictionary<string, (VirtualDeviceInstanceConfig Config, IVirtualDeviceHost? Host)> _instances = new();
     private readonly string _configFilePath;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -36,12 +35,12 @@ public sealed class VirtualDeviceManagerService : IVirtualDeviceManagerService
         return _instances.Values.Select(v => v.Config).ToList();
     }
 
-    public IVirtualLlrpDeviceHost? GetHost(string instanceId)
+    public IVirtualDeviceHost? GetHost(string instanceId)
     {
         return _instances.TryGetValue(instanceId, out var entry) ? entry.Host : null;
     }
 
-    public async Task<IVirtualLlrpDeviceHost> CreateOrUpdateHostAsync(
+    public async Task<IVirtualDeviceHost> CreateOrUpdateHostAsync(
         VirtualDeviceInstanceConfig config,
         CancellationToken cancellationToken = default)
     {
@@ -215,84 +214,42 @@ public sealed class VirtualDeviceManagerService : IVirtualDeviceManagerService
         _instances.Clear();
     }
 
-    private static IVirtualLlrpDeviceHost CreateHostFromConfig(VirtualDeviceInstanceConfig config)
+    private IVirtualDeviceHost CreateHostFromConfig(VirtualDeviceInstanceConfig config)
     {
-        IPAddress ip = IPAddress.TryParse(config.ListenAddress, out var parsedIp)
-            ? parsedIp
-            : IPAddress.Any;
+        string profileId = ResolveProfileId(config);
+        VirtualDeviceProfileInfo profile = VirtualDeviceProfiles.Get(profileId);
+        VirtualDeviceProtocolVersion protocolVersion = ParseProtocolVersion(config.ProtocolVersion);
 
-        var serverOptions = new LlrpDeviceServerOptions
+        if (string.Equals(profileId, VirtualDeviceProfiles.ImpinjR420Id, StringComparison.OrdinalIgnoreCase) &&
+            protocolVersion != VirtualDeviceProtocolVersion.Llrp101)
         {
-            ListenAddress = ip,
-            Port = config.Port,
-            AllowImplicitStopOnDisable = config.AllowImplicitStopOnDisable,
-        };
-
-        var tags = new List<VirtualTagDefinition>();
-        if (config.Tags.Count == 0)
-        {
-            tags.Add(new VirtualTagDefinition
-            {
-                ElectronicProductCode = Convert.FromHexString("E28011606000020485984444"),
-                Tid = Convert.FromHexString("E280116020007001"),
-                AntennaId = 1,
-                PeakRssi = -42,
-            });
-        }
-        else
-        {
-            foreach (var t in config.Tags)
-            {
-                byte[] epcBytes;
-                try { epcBytes = Convert.FromHexString(t.EpcHex); } catch { epcBytes = [0xE2, 0x80, 0x11, 0x60]; }
-                byte[] tidBytes;
-                try { tidBytes = Convert.FromHexString(t.TidHex); } catch { tidBytes = []; }
-
-                tags.Add(new VirtualTagDefinition
-                {
-                    ElectronicProductCode = epcBytes,
-                    Tid = tidBytes,
-                    AntennaId = t.AntennaId,
-                    PeakRssi = t.PeakRssi,
-                });
-            }
+            throw new InvalidDataException("Impinj-R420 capability profile only supports LLRP 1.0.1.");
         }
 
-        uint manId = 0;
-        uint modelId = 0;
-        if (config.DeviceProfile.Contains("Impinj", StringComparison.OrdinalIgnoreCase))
+        if (config.MaxAntennas != profile.MaxNumberOfAntennas)
         {
-            manId = 25882; // Impinj
-            modelId = 2001004; // Speedway R420
-        }
-        else if (config.DeviceProfile.Contains("Zebra", StringComparison.OrdinalIgnoreCase))
-        {
-            manId = 10610; // Zebra
-            modelId = 9600;
+            _logger.LogInformation(
+                "Capability profile {ProfileId} fixes the antenna count at {AntennaCount}; replacing saved value {SavedAntennaCount}.",
+                profileId,
+                profile.MaxNumberOfAntennas,
+                config.MaxAntennas);
+            config.MaxAntennas = profile.MaxNumberOfAntennas;
         }
 
-        var identity = new LlrpDeviceIdentity
+        IPAddress listenAddress = IPAddress.TryParse(config.ListenAddress, out var parsedAddress)
+            ? parsedAddress
+            : IPAddress.Loopback;
+
+        var hostOptions = new VirtualDeviceHostOptions
         {
-            ReaderId = (ulong)Math.Abs(config.Id.GetHashCode()),
+            ProfileId = profileId,
             Name = config.Name,
-            ManufacturerId = manId,
-            ModelId = modelId,
-            FirmwareVersion = $"virtual-{config.ProtocolVersion}",
-        };
-
-        ushort maxAntennas = Math.Max((ushort)1, config.MaxAntennas);
-        var capabilities = VirtualDeviceOptions.CreateDefaultCapabilities(maxAntennas);
-
-        var deviceOptions = new VirtualDeviceOptions
-        {
-            Identity = identity,
-            Capabilities = capabilities,
-            Configuration = new LlrpDeviceConfiguration
-            {
-                Antennas = VirtualDeviceOptions.CreateDefaultAntennaConfigurations(maxAntennas),
-            },
-            Tags = tags,
-            RfSimulation = new VirtualRfSimulationOptions
+            ListenAddress = listenAddress,
+            Port = config.Port,
+            ProtocolVersion = protocolVersion,
+            RelaxedRoSpecStateChecks = config.RelaxedRoSpecStateChecks,
+            Inventory = CreateInventoryOptions(config),
+            Simulation = new VirtualDeviceSimulationOptions
             {
                 Scenario = config.Scenario,
                 DetectionProbability = Math.Clamp(config.DetectionProbability, 0.0, 1.0),
@@ -301,12 +258,132 @@ public sealed class VirtualDeviceManagerService : IVirtualDeviceManagerService
             },
         };
 
-        var hostOptions = new VirtualLlrpDeviceHostOptions
-        {
-            Server = serverOptions,
-            Device = deviceOptions,
-        };
-
-        return new VirtualLlrpDeviceHost(hostOptions);
+        return VirtualLlrpDeviceHost.Create(hostOptions);
     }
+
+    private string ResolveProfileId(VirtualDeviceInstanceConfig config)
+    {
+        string profileName = config.DeviceProfile?.Trim() ?? string.Empty;
+        if (string.Equals(profileName, "Standard", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(profileName, "Standard101", StringComparison.OrdinalIgnoreCase))
+        {
+            return VirtualDeviceProfiles.Standard101Id;
+        }
+
+        if (string.Equals(profileName, "Impinj-R420", StringComparison.OrdinalIgnoreCase))
+        {
+            return VirtualDeviceProfiles.ImpinjR420Id;
+        }
+
+        if (string.Equals(profileName, "Zebra-FX9600", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning(
+                "Legacy profile {ProfileName} is no longer available in the SDK; migrating instance {InstanceId} to Standard.",
+                profileName,
+                config.Id);
+            config.DeviceProfile = "Standard";
+            return VirtualDeviceProfiles.Standard101Id;
+        }
+
+        if (VirtualDeviceProfiles.All.Any(profile =>
+                string.Equals(profile.Id, profileName, StringComparison.OrdinalIgnoreCase)))
+        {
+            return profileName;
+        }
+
+        throw new InvalidDataException(
+            $"Unknown virtual-device capability profile '{profileName}'.");
+    }
+
+    private static VirtualDeviceProtocolVersion ParseProtocolVersion(string? value)
+    {
+        string protocolVersion = value?.Trim() ?? string.Empty;
+        if (string.Equals(protocolVersion, "1.0.1", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(protocolVersion, "Llrp101", StringComparison.OrdinalIgnoreCase))
+        {
+            return VirtualDeviceProtocolVersion.Llrp101;
+        }
+
+        if (string.Equals(protocolVersion, "1.1", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(protocolVersion, "Llrp11", StringComparison.OrdinalIgnoreCase))
+        {
+            return VirtualDeviceProtocolVersion.Llrp11;
+        }
+
+        if (string.Equals(protocolVersion, "2.0", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(protocolVersion, "Llrp20", StringComparison.OrdinalIgnoreCase))
+        {
+            return VirtualDeviceProtocolVersion.Llrp20;
+        }
+
+        throw new InvalidDataException(
+            $"Unknown LLRP protocol version '{protocolVersion}'.");
+    }
+
+    private static VirtualInventoryOptions CreateInventoryOptions(VirtualDeviceInstanceConfig config)
+    {
+        IReadOnlyList<VirtualTagConfig> configuredTags = config.Tags ?? [];
+        IReadOnlyList<VirtualInventoryTag> tags = configuredTags.Count == 0
+            ? [new VirtualInventoryTag
+            {
+                ElectronicProductCode = Convert.FromHexString("E28011606000020485984444"),
+                Tid = Convert.FromHexString("E280116020007001"),
+                AntennaId = 1,
+                PeakRssi = -42,
+            }]
+            : configuredTags.Select(CreateInventoryTag).ToArray();
+
+        return new VirtualInventoryOptions
+        {
+            SourceId = config.Id,
+            Tags = tags,
+        };
+    }
+
+    private static VirtualInventoryTag CreateInventoryTag(VirtualTagConfig tag) => new()
+    {
+        ElectronicProductCode = ParseHexBytes(tag.EpcHex, [0xE2, 0x80, 0x11, 0x60]),
+        Tid = ParseHexBytes(tag.TidHex, []),
+        PeakRssi = tag.PeakRssi,
+        AntennaId = tag.AntennaId,
+        UserMemory = ParseUserMemory(tag.UserMemoryHex),
+        AccessPassword = ParsePassword(tag.AccessPasswordHex),
+        KillPassword = ParsePassword(tag.KillPasswordHex),
+    };
+
+    private static byte[] ParseHexBytes(string? value, byte[] fallback)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return fallback;
+        }
+
+        try
+        {
+            return Convert.FromHexString(value);
+        }
+        catch (FormatException)
+        {
+            return fallback;
+        }
+    }
+
+    private static IReadOnlyList<ushort> ParseUserMemory(string? value)
+    {
+        byte[] bytes = ParseHexBytes(value, []);
+        if (bytes.Length == 0 || bytes.Length % 2 != 0)
+        {
+            return [];
+        }
+
+        return Enumerable
+            .Range(0, bytes.Length / 2)
+            .Select(index => BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(index * 2, 2)))
+            .ToArray();
+    }
+
+    private static uint ParsePassword(string? value) =>
+        uint.TryParse(value, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out uint password)
+            ? password
+            : 0;
 }

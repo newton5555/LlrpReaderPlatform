@@ -24,12 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpDevice.Abstractions\LlrpDevice.Abstractions.csproj" />
-    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpDevice.Server\LlrpDevice.Server.csproj" />
-    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpDevice.Virtual\LlrpDevice.Virtual.csproj" />
     <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpDevice.Virtual.Hosting\LlrpDevice.Virtual.Hosting.csproj" />
-    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpNet\LlrpNet.Core\LlrpNet.Core.csproj" />
-    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpNet\LlrpNet.Protocol\LlrpNet.Protocol.csproj" />
   </ItemGroup>
 
   <ItemGroup>

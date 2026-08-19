@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using LlrpDevice.Virtual;
+using LlrpDevice.Virtual.Hosting;
 using LlrpVirtualDevice.App.Wpf.Models;
 
 namespace LlrpVirtualDevice.App.Wpf.ViewModels;
@@ -23,13 +23,10 @@ public sealed partial class AddDeviceViewModel : ObservableObject
     private string _deviceProfile = "Impinj-R420";
 
     [ObservableProperty]
-    private ushort _maxAntennas = 4;
+    private bool _relaxedRoSpecStateChecks = true;
 
     [ObservableProperty]
-    private bool _allowImplicitStopOnDisable = true;
-
-    [ObservableProperty]
-    private VirtualRfScenario _scenario = VirtualRfScenario.Static;
+    private VirtualDeviceRfScenario _scenario = VirtualDeviceRfScenario.Static;
 
     [ObservableProperty]
     private double _detectionProbability = 1.0;
@@ -40,9 +37,9 @@ public sealed partial class AddDeviceViewModel : ObservableObject
     [ObservableProperty]
     private int _presenceCycleRounds = 3;
 
-    public IReadOnlyList<string> AvailableProfiles { get; } = ["Standard", "Impinj-R420", "Zebra-FX9600"];
+    public IReadOnlyList<string> AvailableProfiles { get; } = ["Standard", "Impinj-R420"];
     public IReadOnlyList<string> AvailableProtocolVersions { get; } = ["1.0.1", "1.1", "2.0"];
-    public IReadOnlyList<VirtualRfScenario> AvailableScenarios { get; } = [VirtualRfScenario.Static, VirtualRfScenario.MovingTags, VirtualRfScenario.Noisy];
+    public IReadOnlyList<VirtualDeviceRfScenario> AvailableScenarios { get; } = [VirtualDeviceRfScenario.Static, VirtualDeviceRfScenario.MovingTags, VirtualDeviceRfScenario.Noisy];
 
     public event Action<VirtualDeviceInstanceConfig?>? RequestClose;
 
@@ -53,8 +50,7 @@ public sealed partial class AddDeviceViewModel : ObservableObject
         Port = config.Port;
         ProtocolVersion = config.ProtocolVersion;
         DeviceProfile = config.DeviceProfile;
-        MaxAntennas = config.MaxAntennas;
-        AllowImplicitStopOnDisable = config.AllowImplicitStopOnDisable;
+        RelaxedRoSpecStateChecks = config.RelaxedRoSpecStateChecks;
         Scenario = config.Scenario;
         DetectionProbability = config.DetectionProbability;
         RssiJitterDb = config.RssiJitterDb;
@@ -71,8 +67,7 @@ public sealed partial class AddDeviceViewModel : ObservableObject
             Port = Port,
             ProtocolVersion = ProtocolVersion,
             DeviceProfile = DeviceProfile,
-            MaxAntennas = MaxAntennas,
-            AllowImplicitStopOnDisable = AllowImplicitStopOnDisable,
+            RelaxedRoSpecStateChecks = RelaxedRoSpecStateChecks,
             Scenario = Scenario,
             DetectionProbability = DetectionProbability,
             RssiJitterDb = RssiJitterDb,

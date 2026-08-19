@@ -79,7 +79,7 @@
                             <TextBlock Text="{Binding Config.DeviceProfile}" FontWeight="SemiBold" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,32,8">
-                            <TextBlock Text="天线通道数: " Foreground="{DynamicResource MahApps.Brushes.Gray2}" />
+                            <TextBlock Text="能力档案天线数: " Foreground="{DynamicResource MahApps.Brushes.Gray2}" />
                             <TextBlock Text="{Binding Config.MaxAntennas, StringFormat='{}通道 1 ~ {0}'}" FontWeight="SemiBold" />
                         </StackPanel>
                     </WrapPanel>

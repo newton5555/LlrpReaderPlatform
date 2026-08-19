@@ -73,15 +73,15 @@
                         <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding AvailableProtocolVersions}" SelectedItem="{Binding EditProtocolVersion}" IsEnabled="{Binding CanEditConfig}" Margin="0,4" Height="30" />
                         <TextBlock Grid.Row="4" Grid.Column="2" Text="支持 LLRP 1.0.1、1.1 与 2.0" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource MahApps.Brushes.Gray2}" FontSize="11" />
 
-                        <!-- 天线通道数 -->
-                        <TextBlock Grid.Row="5" Grid.Column="0" Text="最大天线通道数:" VerticalAlignment="Center" Margin="0,8" FontWeight="SemiBold" />
-                        <mah:NumericUpDown Grid.Row="5" Grid.Column="1" Value="{Binding EditMaxAntennas}" IsEnabled="{Binding CanEditConfig}" Minimum="1" Maximum="32" Margin="0,4" Height="30" />
-                        <TextBlock Grid.Row="5" Grid.Column="2" Text="模拟支持的天线端口总数 (1 ~ 32)" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource MahApps.Brushes.Gray2}" FontSize="11" />
+                        <!-- 天线能力由 SDK 能力档案决定 -->
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="天线能力:" VerticalAlignment="Center" Margin="0,8" FontWeight="SemiBold" />
+                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Config.MaxAntennas, StringFormat='{}能力档案固定为 {0} 个通道'}" VerticalAlignment="Center" Margin="0,8" />
+                        <TextBlock Grid.Row="5" Grid.Column="2" Text="由 SDK capability profile 决定，不能单独修改" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource MahApps.Brushes.Gray2}" FontSize="11" />
 
-                        <!-- 隐式停止策略 -->
-                        <TextBlock Grid.Row="6" Grid.Column="0" Text="ROSpec 禁用策略:" VerticalAlignment="Center" Margin="0,8" FontWeight="SemiBold" />
-                        <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding EditAllowImplicitStopOnDisable}" IsEnabled="{Binding CanEditConfig}" Content="允许在 Disable 时隐式停止 ROSpec 执行" Margin="0,6" VerticalAlignment="Center" />
-                        <TextBlock Grid.Row="6" Grid.Column="2" Text="兼容传统上位机在 Disable 时不发 STOP 的行为" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource MahApps.Brushes.Gray2}" FontSize="11" />
+                        <!-- ROSpec 状态策略 -->
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="ROSpec 状态策略:" VerticalAlignment="Center" Margin="0,8" FontWeight="SemiBold" />
+                        <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding EditRelaxedRoSpecStateChecks}" IsEnabled="{Binding CanEditConfig}" Content="启用宽松状态校验，允许常见生命周期命令幂等执行" Margin="0,6" VerticalAlignment="Center" />
+                        <TextBlock Grid.Row="6" Grid.Column="2" Text="重复 Enable、Start、Stop、Disable 可成功；Active 时 Disable 会先隐式 Stop" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource MahApps.Brushes.Gray2}" FontSize="11" TextWrapping="Wrap" />
                     </Grid>
 
                     <Separator Margin="0,12,0,16" Background="{DynamicResource MahApps.Brushes.Gray8}" />
