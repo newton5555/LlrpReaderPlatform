@@ -73,7 +73,8 @@ else
             }
             else
             {
-                <div class="table-wrap">
+                <!-- Desktop GPI Table -->
+                <div class="table-wrap desktop-table-view">
                     <table class="data-table">
                         <thead>
                             <tr>
@@ -99,6 +100,28 @@ else
                             }
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Handheld / Mobile GPI Cards Stream -->
+                <div class="mobile-gpi-cards-view stack" style="gap: var(--space-2); padding: var(--space-3);">
+                    @foreach (GpiPortStatus port in snapshot!.Gpis)
+                    {
+                        <div class="card card-pad" style="margin: 0; background: var(--surface-raised);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span class="status-dot @(port.State ? "online" : string.Empty)"></span>
+                                    <strong class="mono" style="font-size: 13px;">Port @port.PortNumber</strong>
+                                </div>
+                                <span class="status-badge @(port.State ? "ok" : "neutral")" style="font-size: 10.5px;">
+                                    @(port.State ? "HIGH (ON)" : "LOW (OFF)")
+                                </span>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--muted-light);">
+                                <span>@(port.Configured ? "Configured" : "Unconfigured")</span>
+                                <span class="mono">@(port.Timestamp?.ToLocalTime().ToString("HH:mm:ss.fff") ?? "—")</span>
+                            </div>
+                        </div>
+                    }
                 </div>
             }
         </section>

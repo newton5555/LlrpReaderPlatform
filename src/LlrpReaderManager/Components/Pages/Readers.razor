@@ -39,7 +39,7 @@
                 <span class="status-badge neutral">TCP Client Endpoint</span>
             </div>
             <div class="card-pad">
-                <div class="inline-form" style="grid-template-columns: 1fr 1.2fr 90px 130px auto;">
+                <div class="inline-form reader-quick-add-form">
                     <div class="form-group">
                         <label class="form-label">Reader Name</label>
                         <input type="text" @bind="physicalName" placeholder="e.g. Reader-01" />
@@ -61,7 +61,7 @@
                             <option value="@LlrpProtocolVersionOption.Force20">LLRP 2.0</option>
                         </select>
                     </div>
-                    <div style="display: flex; gap: var(--space-1); align-self: flex-end;">
+                    <div class="reader-quick-add-actions" style="display: flex; gap: var(--space-1); align-self: flex-end;">
                         <button class="btn btn-primary" @onclick="AddPhysicalAsync" disabled="@(State.IsBusy || VirtualDevices.IsBusy || string.IsNullOrWhiteSpace(physicalHost))">
                             <AppIcon Name="plus" Size="12" />
                             <span>Add</span>
@@ -84,7 +84,8 @@
                         <span>Discovered Readers (@State.DiscoveredReaders.Count)</span>
                     </span>
                 </div>
-                <div class="table-wrap">
+                <!-- Desktop Discovered Table -->
+                <div class="table-wrap desktop-table-view">
                     <table>
                         <thead>
                             <tr>
@@ -109,6 +110,25 @@
                             }
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Handheld / Mobile Discovered Cards -->
+                <div class="mobile-only stack" style="gap: var(--space-2); padding: var(--space-3);">
+                    @foreach (DiscoveredReader discovered in State.DiscoveredReaders)
+                    {
+                        <div class="card card-pad" style="margin: 0; background: var(--surface-raised);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                <div>
+                                    <strong style="font-size: 13px;">@discovered.DisplayName</strong>
+                                    <div class="mono muted" style="font-size: 11px; margin-top: 2px;">@discovered.IpAddress:@discovered.Port</div>
+                                </div>
+                                <button class="btn btn-sm btn-primary" @onclick="() => AddDiscoveredAsync(discovered)" disabled="@State.IsBusy">
+                                    <AppIcon Name="plus" Size="11" />
+                                    <span>Add</span>
+                                </button>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
         }
@@ -297,7 +317,7 @@
                     <input type="text" @bind="modalName" placeholder="Warehouse Reader 1" />
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 140px; gap: var(--space-3);">
+                <div class="modal-endpoint-grid">
                     <div class="form-group">
                         <label class="form-label">Host / IP Address</label>
                         <input type="text" @bind="modalHost" placeholder="192.168.1.100 or host.domain" class="mono" />

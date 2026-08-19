@@ -63,7 +63,8 @@
                         </div>
                         @if (list.Entries.Count > 0)
                         {
-                            <div class="table-wrap">
+                            <!-- Desktop Tag Entries Table -->
+                            <div class="table-wrap desktop-table-view">
                                 <table>
                                     <thead>
                                         <tr>
@@ -90,6 +91,26 @@
                                     </tbody>
                                 </table>
                             </div>
+
+                            <!-- Handheld / Mobile Tag Entries Chips -->
+                            <div class="mobile-tag-entries-view stack" style="gap: var(--space-2);">
+                                @foreach (TagListEntry entry in list.Entries)
+                                {
+                                    string displayColor = entry.ColorHex ?? list.ColorHex;
+                                    <div class="card card-pad" style="margin: 0; padding: 8px 10px; background: var(--surface-raised); border-left: 3px solid @displayColor;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                            <strong style="font-size: 12.5px;">@entry.DisplayName</strong>
+                                            <span class="color-pill-tag" style="font-size: 10.5px; padding: 1px 6px;">
+                                                <span class="color-indicator" style="background-color: @displayColor;"></span>
+                                                <span>@displayColor</span>
+                                            </span>
+                                        </div>
+                                        <div class="mono muted" style="font-size: 11.5px; margin-top: 4px; word-break: break-all;">
+                                            @entry.EpcHex
+                                        </div>
+                                    </div>
+                                }
+                            </div>
                         }
                         else
                         {
@@ -98,7 +119,7 @@
 
                         @if (selectedListId == list.Id)
                         {
-                            <div class="inline-form" style="margin-top: var(--space-3); grid-template-columns: 1fr 1.5fr auto;">
+                            <div class="inline-form tag-list-entry-form" style="margin-top: var(--space-3);">
                                 <div class="form-group">
                                     <label class="form-label">Entry Name</label>
                                     <input type="text" @bind="entryName" placeholder="Palette item A" />

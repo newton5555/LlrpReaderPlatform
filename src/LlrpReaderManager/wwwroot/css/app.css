@@ -1354,17 +1354,72 @@ tbody tr:last-child td {
     z-index: 100;
 }
 
+.handheld-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    background: #090d16;
+    padding: 16px 10px 40px 10px;
+    overflow-y: auto;
+}
+
+.handheld-stage-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 390px;
+    max-width: 100%;
+    margin-bottom: 12px;
+    color: #e2e8f0;
+}
+
+.handheld-stage-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.handheld-device-bezel {
+    width: 390px;
+    height: 844px;
+    max-width: 100%;
+    background: #111827;
+    border-radius: 44px;
+    box-shadow: 0 0 0 3px #374151, 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    border: 8px solid #030712;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+.handheld-device-notch {
+    height: 20px;
+    background: #030712;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-shrink: 0;
+    z-index: 100;
+}
+
 .handheld-speaker {
-    width: 44px;
-    height: 3.5px;
-    background: #334155;
+    width: 40px;
+    height: 3px;
+    background: #374151;
     border-radius: 2px;
 }
 
 .handheld-camera {
-    width: 7px;
-    height: 7px;
-    background: #1e293b;
+    width: 6px;
+    height: 6px;
+    background: #1f2937;
     border-radius: 50%;
     box-shadow: inset 0 0 2px #3b82f6;
 }
@@ -1372,17 +1427,20 @@ tbody tr:last-child td {
 .handheld-screen {
     flex: 1;
     width: 100%;
-    height: calc(100% - 22px);
+    height: calc(100% - 20px);
     overflow: hidden;
     position: relative;
     background: var(--bg);
 }
 
 .handheld-mode {
-    grid-template-columns: 1fr !important;
-    grid-template-rows: 44px 1fr !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
     height: 100% !important;
-    max-height: 100% !important;
+    overflow: hidden !important;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 40px 1fr !important;
 }
 
 .handheld-mode .app-sidebar {
@@ -1395,12 +1453,29 @@ tbody tr:last-child td {
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
+    z-index: 100 !important;
 }
 
 .handheld-mode .app-content {
-    padding: var(--space-2) var(--space-3) 68px var(--space-3) !important;
+    flex: 1 !important;
+    padding: 8px 10px 60px 10px !important;
     overflow-y: auto !important;
-    height: 100% !important;
+    height: calc(100% - 40px) !important;
+}
+
+.handheld-topbar {
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 10px !important;
+    flex-shrink: 0 !important;
+}
+
+.mobile-only {
+    display: none !important;
+}
+
+.desktop-only {
+    display: block;
 }
 
 .desktop-table-view {
@@ -1408,8 +1483,117 @@ tbody tr:last-child td {
 }
 
 .mobile-tag-cards-view,
-.mobile-runs-cards-view {
+.mobile-runs-cards-view,
+.mobile-gpi-cards-view,
+.mobile-tag-entries-view {
     display: none;
+}
+
+/* Mobile Segmented Tab Controls */
+.mobile-view-tabs {
+    display: none;
+    background: var(--surface-sunken);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+    gap: 2px;
+    width: 100%;
+}
+
+.mobile-view-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    flex: 1;
+    min-height: 30px;
+    padding: 4px 8px;
+    border: none;
+    border-radius: calc(var(--radius-sm) - 2px);
+    background: transparent;
+    color: var(--muted);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.mobile-view-tab.active {
+    background: var(--surface);
+    color: var(--fg);
+    box-shadow: var(--shadow-xs);
+}
+
+/* Mobile Dense List Mode */
+.mobile-dense-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mobile-dense-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 7px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    transition: background 0.12s;
+}
+
+.mobile-dense-row:active {
+    background: var(--accent-bg-subtle);
+}
+
+/* Visual RSSI Signal Meter Bar */
+.rssi-meter-track {
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.rssi-meter-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.2s ease, background-color 0.2s ease;
+}
+
+/* Form grid for Tag Memory */
+.memory-op-form-grid {
+    display: grid;
+    grid-template-columns: 140px 140px 1fr;
+    gap: var(--space-3);
+}
+
+.memory-write-form-grid {
+    display: grid;
+    grid-template-columns: 140px 1fr 180px;
+    gap: var(--space-3);
+}
+
+/* Modal endpoint grid */
+.modal-endpoint-grid {
+    display: grid;
+    grid-template-columns: 1fr 140px;
+    gap: var(--space-3);
+}
+
+/* Tag list entry form */
+.tag-list-entry-form {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr auto;
+    gap: var(--space-2);
+}
+
+/* Reader Quick Add Grid */
+.reader-quick-add-form {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr 90px 130px auto;
+    gap: var(--space-3);
 }
 
 .mobile-tag-stats-grid {
@@ -1441,54 +1625,132 @@ tbody tr:last-child td {
     font-weight: 600;
 }
 
+/* Handheld Mode View Overrides */
+.handheld-mode .desktop-only {
+    display: none !important;
+}
+
+.handheld-mode .mobile-only {
+    display: flex !important;
+}
+
+.handheld-mode .mobile-view-tabs {
+    display: flex !important;
+}
+
 .handheld-mode .desktop-table-view {
     display: none !important;
 }
 
 .handheld-mode .mobile-tag-cards-view,
-.handheld-mode .mobile-runs-cards-view {
+.handheld-mode .mobile-runs-cards-view,
+.handheld-mode .mobile-gpi-cards-view,
+.handheld-mode .mobile-tag-entries-view {
     display: flex !important;
 }
 
 .handheld-mode .split,
 .handheld-mode .access-layout,
-.handheld-mode .inline-form,
 .handheld-mode .setting-row,
 .handheld-mode .antenna-rf-grid,
-.handheld-mode .settings-card-grid {
+.handheld-mode .settings-card-grid,
+.handheld-mode .tag-list-entry-form {
     grid-template-columns: 1fr !important;
+}
+
+.handheld-mode .modal-endpoint-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+}
+
+.handheld-mode .reader-quick-add-form {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+}
+
+.handheld-mode .reader-quick-add-form .form-group:nth-child(1),
+.handheld-mode .reader-quick-add-form .form-group:nth-child(2) {
+    grid-column: 1 / -1 !important;
+}
+
+.handheld-mode .reader-quick-add-actions {
+    grid-column: 1 / -1 !important;
+    display: flex !important;
+    width: 100% !important;
+}
+
+.handheld-mode .reader-quick-add-actions .btn-primary {
+    flex: 1 !important;
+}
+
+.handheld-mode .memory-op-form-grid,
+.handheld-mode .memory-write-form-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+}
+
+.handheld-mode .memory-op-form-grid .form-group:last-child,
+.handheld-mode .memory-write-form-grid .form-group:nth-child(2) {
+    grid-column: 1 / -1 !important;
 }
 
 .handheld-mode .card-grid {
     grid-template-columns: 1fr 1fr !important;
-    gap: var(--space-2) !important;
+    gap: 6px !important;
+}
+
+.handheld-mode .card-pad {
+    padding: 8px 10px !important;
 }
 
 .handheld-mode .gpo-grid {
     grid-template-columns: 1fr 1fr !important;
-    padding: var(--space-2) !important;
+    padding: 6px !important;
+    gap: 6px !important;
+}
+
+.handheld-mode .reader-head {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+}
+
+.handheld-mode .reader-heading {
+    width: 100% !important;
+}
+
+.handheld-mode .reader-statuses {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: 100% !important;
 }
 
 .handheld-mode .reader-actions {
-    flex-wrap: wrap !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
     gap: 6px !important;
 }
 
 .handheld-mode .reader-actions .push-right {
     margin-left: 0 !important;
+    grid-column: 1 / -1 !important;
 }
 
 .handheld-mode .reader-body {
     grid-template-columns: 1fr 1fr !important;
-    gap: var(--space-2) !important;
+    gap: 6px !important;
+    padding: 6px 10px !important;
 }
 
 .handheld-mode .tag-selector {
-    height: 220px !important;
+    max-height: 130px !important;
+    height: auto !important;
 }
 
 .handheld-mode .memory-view {
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 4px !important;
 }
 
 .handheld-mode .bank-tabs,
@@ -1496,7 +1758,7 @@ tbody tr:last-child td {
     overflow-x: auto !important;
     flex-wrap: nowrap !important;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 3px;
+    padding-bottom: 2px;
     max-width: 100%;
 }
 
@@ -1521,9 +1783,19 @@ tbody tr:last-child td {
 }
 
 @media (max-width: 768px) {
+    :root {
+        --space-1: 3px;
+        --space-2: 6px;
+        --space-3: 8px;
+        --space-4: 12px;
+        --space-5: 14px;
+        --space-6: 16px;
+        --space-8: 20px;
+    }
+
     .app-shell {
         grid-template-columns: 1fr !important;
-        grid-template-rows: 46px 1fr !important;
+        grid-template-rows: 42px 1fr !important;
         height: 100vh;
     }
 
@@ -1536,27 +1808,33 @@ tbody tr:last-child td {
     }
 
     .app-content {
-        padding: var(--space-2) var(--space-3) 68px var(--space-3) !important;
+        padding: 8px 10px 64px 10px !important;
         overflow-y: auto;
     }
 
-    .topbar-toggle-btn {
+    .topbar-toggle-btn,
+    .handheld-toggle-btn,
+    .desktop-only {
         display: none !important;
     }
 
-    .handheld-toggle-btn {
-        display: none !important;
+    .mobile-only {
+        display: flex !important;
+    }
+
+    .mobile-view-tabs {
+        display: flex !important;
     }
 
     .section-header {
         flex-direction: column !important;
         align-items: flex-start !important;
-        gap: 6px !important;
-        margin-bottom: var(--space-3) !important;
+        gap: 4px !important;
+        margin-bottom: 8px !important;
     }
 
     .section-title {
-        font-size: 17px !important;
+        font-size: 16px !important;
     }
 
     .section-subtitle {
@@ -1571,24 +1849,66 @@ tbody tr:last-child td {
 
     .toolbar .btn {
         flex: 1 1 auto;
-        min-height: 36px;
+        min-height: 34px;
+    }
+
+    .card-pad {
+        padding: 8px 10px !important;
     }
 
     .card-grid {
         grid-template-columns: 1fr 1fr !important;
-        gap: var(--space-2) !important;
+        gap: 6px !important;
     }
 
-    .split, .access-layout, .inline-form, .setting-row {
+    .split, .access-layout, .setting-row, .tag-list-entry-form {
         grid-template-columns: 1fr !important;
     }
 
+    .modal-endpoint-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+    }
+
+    .reader-quick-add-form {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+    }
+
+    .reader-quick-add-form .form-group:nth-child(1),
+    .reader-quick-add-form .form-group:nth-child(2) {
+        grid-column: 1 / -1 !important;
+    }
+
+    .reader-quick-add-actions {
+        grid-column: 1 / -1 !important;
+        display: flex !important;
+        width: 100% !important;
+    }
+
+    .reader-quick-add-actions .btn-primary {
+        flex: 1 !important;
+    }
+
+    .memory-op-form-grid,
+    .memory-write-form-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+    }
+
+    .memory-op-form-grid .form-group:last-child,
+    .memory-write-form-grid .form-group:nth-child(2) {
+        grid-column: 1 / -1 !important;
+    }
+
     .tag-selector {
-        height: 220px !important;
+        max-height: 130px !important;
+        height: auto !important;
     }
 
     .memory-view {
         grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        gap: 4px !important;
     }
 
     .desktop-table-view {
@@ -1596,33 +1916,56 @@ tbody tr:last-child td {
     }
 
     .mobile-tag-cards-view,
-    .mobile-runs-cards-view {
+    .mobile-runs-cards-view,
+    .mobile-gpi-cards-view,
+    .mobile-tag-entries-view {
         display: flex !important;
     }
 
     .antenna-rf-grid,
     .settings-card-grid {
         grid-template-columns: 1fr !important;
-        padding: var(--space-2) !important;
+        padding: 6px !important;
     }
 
     .gpo-grid {
         grid-template-columns: 1fr 1fr !important;
-        padding: var(--space-2) !important;
+        padding: 6px !important;
+        gap: 6px !important;
+    }
+
+    .reader-head {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+    }
+
+    .reader-heading {
+        width: 100% !important;
+    }
+
+    .reader-statuses {
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        width: 100% !important;
     }
 
     .reader-actions {
-        flex-wrap: wrap !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
         gap: 6px !important;
     }
 
     .reader-actions .push-right {
         margin-left: 0 !important;
+        grid-column: 1 / -1 !important;
     }
 
     .reader-body {
         grid-template-columns: 1fr 1fr !important;
-        gap: var(--space-2) !important;
+        gap: 6px !important;
+        padding: 6px 10px !important;
     }
 
     .bank-tabs,
@@ -1630,7 +1973,7 @@ tbody tr:last-child td {
         overflow-x: auto !important;
         flex-wrap: nowrap !important;
         -webkit-overflow-scrolling: touch;
-        padding-bottom: 3px;
+        padding-bottom: 2px;
         max-width: 100%;
     }
 
@@ -1642,18 +1985,6 @@ tbody tr:last-child td {
 }
 
 @media (max-width: 480px) {
-    .card-grid {
-        grid-template-columns: 1fr !important;
-    }
-
-    .gpo-grid {
-        grid-template-columns: 1fr !important;
-    }
-
-    .reader-body {
-        grid-template-columns: 1fr !important;
-    }
-
     .topbar-meta .topbar-time,
     .topbar-meta span:nth-child(3),
     .topbar-meta .topbar-separator {
