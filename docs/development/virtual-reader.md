@@ -100,26 +100,31 @@ Virtual Reader 是平台内进程 Session，用于 WPF 和 Services 全链路验
 
 ## 报文级虚拟设备管理 UI：运行与构建
 
-`src/LlrpVirtualDevice.App.Wpf` 当前不随正式 Release ZIP 发布。它仍直接引用相邻
-`LLRPCSharp` 的 `LlrpDevice.Virtual.Hosting` 项目，因此运行和构建时需要 SDK 源码；下面的
-`$llrpSdkRoot` 应改为本机 SDK 仓库路径。
+`src/LlrpVirtualDevice.App.Wpf` 当前不随主客户端 Release ZIP 发布，但已按正式依赖方式消费
+`LlrpDevice.Virtual.Hosting` 2.0.0 NuGet 包。只有跨仓库联调时显式设置
+`UseLocalLlrpSdk=true`，才会切换到相邻 `LLRPCSharp` 项目。
 
-从仓库根目录运行管理 UI：
+从仓库根目录以 NuGet 模式运行管理 UI：
+
+```powershell
+dotnet run --project src/LlrpVirtualDevice.App.Wpf/LlrpVirtualDevice.App.Wpf.csproj
+```
+
+需要源码联调时再显式启用本地 SDK：
 
 ```powershell
 $llrpSdkRoot = 'F:\Projects\LLRP\LLRPCSharp'
 dotnet run --project src/LlrpVirtualDevice.App.Wpf/LlrpVirtualDevice.App.Wpf.csproj `
-  -p:LlrpSdkSourceRoot=$llrpSdkRoot
+  -p:UseLocalLlrpSdk=true -p:LlrpSdkSourceRoot=$llrpSdkRoot
 ```
 
-构建 Release：
+构建 Release（NuGet 模式）：
 
 ```powershell
-$llrpSdkRoot = 'F:\Projects\LLRP\LLRPCSharp'
 dotnet restore src/LlrpVirtualDevice.App.Wpf/LlrpVirtualDevice.App.Wpf.csproj `
-  -p:LlrpSdkSourceRoot=$llrpSdkRoot
+  -p:UseLocalLlrpSdk=false
 dotnet build src/LlrpVirtualDevice.App.Wpf/LlrpVirtualDevice.App.Wpf.csproj `
-  -c Release --no-restore -p:LlrpSdkSourceRoot=$llrpSdkRoot
+  -c Release --no-restore -p:UseLocalLlrpSdk=false
 ```
 
 构建自包含单文件便携包：
@@ -131,7 +136,7 @@ dotnet publish src/LlrpVirtualDevice.App.Wpf/LlrpVirtualDevice.App.Wpf.csproj `
   -p:IncludeNativeLibrariesForSelfExtract=true `
   -p:EnableCompressionInSingleFile=true `
   -p:DebugType=None -p:DebugSymbols=false `
-  -p:LlrpSdkSourceRoot=$llrpSdkRoot `
+  -p:UseLocalLlrpSdk=false `
   -o artifacts/publish/virtual-device-manager
 ```
 

@@ -70,8 +70,8 @@ ADR-0015 已确定平台 Virtual Reader 是 WPF/Services 全链路开发替身�
   未实现完整高层行为前不出现在 UI；
 - 报文级 Virtual Reader Core、预设和 TCP Host 的计划由 `LLRPCSharp` 仓库维护；主客户端
   `LlrpReaderPlatform.App.Wpf` 的 Services 不托管或引用这条运行时。解决方案中的
-  `LlrpVirtualDevice.App.Wpf` 只是独立的 SDK 消费者，开发联调可以使用相邻 SDK 项目引用，发布时
-  再切换到 SDK 的 Virtual Device Hosting NuGet 包。
+  `LlrpVirtualDevice.App.Wpf` 只是独立的 SDK 消费者，正式构建使用 SDK 的 Virtual Device
+  Hosting 顶层 NuGet 包；开发联调仍可显式使用相邻 SDK 项目引用。
 
 长期新增项目继续遵守仓库现有目录边界：产品项目只放在 `src/`，测试项目只放在顶层
 `tests/`，不得把 `*.Tests` 放进产品项目目录或与源码文件混放：
