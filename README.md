@@ -24,6 +24,10 @@ LlrpReaderPlatform is a new LLRP application platform whose first deliverable is
 
 The frozen `../LlrpReaderStudio` repository is reference material only — it documents existing capabilities and migration boundaries and is never a runtime dependency.
 
+The primary deliverable is the real-reader client `LlrpReaderPlatform.App.Wpf`. The solution also contains
+`LlrpVirtualDevice.App.Wpf`, a separate auxiliary manager for SDK TCP/LLRP virtual devices; it is not part
+of the real-reader client service path.
+
 **Current baseline:** `1.5.0` · Windows x64 · self-contained single-file portable. The build is clean (0 warnings, 0 errors) and automated tests are green (382 tests, including the Virtual Reader suite). Most service tests use a `FakeSession`; the Virtual Reader suite exercises deterministic multi-step reader behavior. Real-device conclusions are recorded separately.
 
 ## Architecture
@@ -43,6 +47,7 @@ UI consumer -> Services -> Contracts
 - **Infrastructure** — SQLite, presets/profiles, discovery, and logging implementations.
 - **Extensions.\*** — pluggable vendor modules (Impinj baseline, Zebra experimental); they never pollute the common contracts.
 - **App.Wpf** — the first UI consumer (WPF, CommunityToolkit.Mvvm, MahApps.Metro); future UI frameworks can reuse the same services and contracts.
+- **LlrpVirtualDevice.App.Wpf** — an independent virtual-device manager UI; it consumes the SDK virtual-host boundary directly and does not add virtual-device branches to the client services.
 
 On the SDK side there are two outlets: core `LlrpSdk` (the standard LLRP adapter consumed by `Services`) and `LlrpSdk.Extensions.Impinj` / `LlrpSdk.Extensions.Zebra` (the vendor adapters consumed by `Extensions.*`).
 
@@ -106,41 +111,6 @@ The UI uses native WPF `ProgressBar`, MahApps.Metro, and FontAwesome icons. Tabl
 
 The authoritative record is the [device compatibility matrix](docs/compatibility/device-matrix.md). Code tests, protocol mappings, or SDK capability tables cannot replace acceptance with real readers, antennas, and tags.
 
-## Download & run
-
-Official releases are produced by GitHub Actions as a ZIP containing the self-contained single-file app plus README/release notes:
-
-- `LlrpReaderPlatform-v1.5.0-win-x64.zip`
-- matching `.sha256` checksum
-
-Requirements: Windows x64; the reader must be reachable over the network, default LLRP port `5084`. The single file bundles the .NET runtime, so target machines do not need a separate .NET Desktop Runtime.
-
-On first run the app creates its SQLite database, logs, and inventory snapshot directory under `%LocalAppData%\LlrpReaderPlatform\`.
-
-## Build & publish
-
-For WPF/service development without a physical reader, set `LLRP_VIRTUAL_SCENARIO` to a scenario JSON file before starting the app. The Virtual Reader uses the same `ReaderManager`, settings, inventory, Tag Access, GPI/GPO, and lifecycle events as a real session; JSONL tag logs are replayed first and inventory snapshots are the fallback. See [Virtual Reader development mode](docs/development/virtual-reader.md).
-
-On a Windows machine with the .NET 10 SDK:
-
-```powershell
-dotnet restore LlrpReaderPlatform.slnx -p:UseLocalLlrpSdk=false
-dotnet build LlrpReaderPlatform.slnx -c Release --no-restore -p:UseLocalLlrpSdk=false
-dotnet test LlrpReaderPlatform.slnx -c Release --no-build --no-restore -p:UseLocalLlrpSdk=false
-dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj `
-  -c Release -r win-x64 --self-contained true `
-  -p:PublishSingleFile=true `
-  -p:IncludeNativeLibrariesForSelfExtract=true `
-  -p:EnableCompressionInSingleFile=true `
-  -p:DebugType=None -p:DebugSymbols=false `
-  -p:UseLocalLlrpSdk=false `
-  -o artifacts/publish/win-x64 --no-restore
-```
-
-The publish result is `LlrpReaderPlatform.exe`. For a local portable package, keep only the EXE under `src/LlrpReaderPlatform.App.Wpf/bin/Portable/LLRPReaderPlatform-win-x64/`; the WPF single-file runtime may temporarily extract native components to the system temp directory, which is expected.
-
-By default the platform uses the centrally versioned `LlrpSdk` `1.5.0` and `LlrpSdk.Extensions.Impinj` / `LlrpSdk.Extensions.Zebra` `1.5.0` NuGet packages. Local SDK debugging is opt-in via `UseLocalLlrpSdk=true` (pointing at a sibling `LLRPCSharp` checkout); CI and releases always use the NuGet mode.
-
 ## Documentation
 
 ### For users & validation
@@ -161,8 +131,28 @@ By default the platform uses the centrally versioned `LlrpSdk` `1.5.0` and `Llrp
 - [Vendor extensions & settings model](docs/architecture/extensions-and-settings.md)
 - [Legacy WPF feature migration matrix](docs/development/legacy-feature-matrix.md)
 - [Testing strategy](docs/development/testing-strategy.md)
+- [Virtual Reader and virtual-device manager](docs/development/virtual-reader.md)
 - [ADR index](docs/decisions/README.md)
 
 ## Project boundaries
 
-This repository contains the new platform services, infrastructure, WPF application, and automated tests. The frozen legacy `LlrpReaderStudio` is used only for behavior and migration reference, never as a runtime dependency. The current deliverable is the WPF application; no platform class-library NuGet packages are published — the SDK NuGet packages are input dependencies only.
+This repository contains the new platform services, infrastructure, the primary real-reader WPF client, the auxiliary virtual-device manager UI, and automated tests. The frozen legacy `LlrpReaderStudio` is used only for behavior and migration reference, never as a runtime dependency. No platform class-library NuGet packages are published — the SDK NuGet packages are input dependencies only.
+
+## Virtual Device Manager UI
+
+`src/LlrpVirtualDevice.App.Wpf` is a separate WPF tool for managing TCP/LLRP virtual readers supplied by
+the adjacent SDK repository. It can create and delete multiple virtual-reader instances, configure the
+listen endpoint, choose a capability profile and protocol version, start/stop/restart the TCP host, save
+configuration, inspect connected clients and observed LLRP messages, and maintain the virtual tag pool with
+RF simulation settings.
+
+The current tag-pool UI supports adding a tag, generating 20 tags, and deleting the selected tag; it also
+supports Static/MovingTags/Noisy scenarios, detection probability, and RSSI jitter. These controls are
+disabled while the virtual reader is running. The manager persists the configuration in its own
+`virtual-devices.json`; the next start rebuilds the Host from the saved `Config.Tags`. The real-reader
+client connects to that host exactly as it connects to a hardware Reader. The event/fault injection page
+is currently only an interaction placeholder and is not described as a working injection feature.
+
+The virtual-device manager's source run, build, and packaging instructions are in
+[Virtual Reader development mode](docs/development/virtual-reader.md). The primary client's download and
+release procedure is in [Release spec & pipeline](docs/development/release.md).

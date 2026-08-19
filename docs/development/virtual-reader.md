@@ -2,6 +2,14 @@
 
 Virtual Reader 是平台的开发/验收替身，不是第二套业务实现。它复用 `IReaderSession`、`ReaderManager`、设置编译、盘存聚合、Tag Access、GPI/GPO 和 WPF 页面，因此可以在没有真机的情况下验证完整的上位机链路。
 
+当前文档涉及两种不同的虚拟 Reader：平台内进程 Session 与独立的报文级 TCP 虚拟设备。前者通过
+`LLRP_VIRTUAL_SCENARIO` 验证主客户端链路；后者由 `src/LlrpVirtualDevice.App.Wpf` 管理 UI 和相邻
+`LLRPCSharp` SDK 的 Virtual Device Hosting 提供 TCP/LLRP 服务。
+
+当前状态：平台内进程 Virtual Reader 已作为主客户端的显式开发模式交付；报文级管理 UI 已完成首版
+实例管理、Host 启停、客户端/报文观察和 Tag Pool 配置。平台级 Virtual Reader Data Source 化仍按
+ADR-0016 保留为长期未排期工作。
+
 > 当前实现状态：本页“启用方式”描述的是已实现的单场景开发模式。将平台虚拟设备纳入
 > Data Sources、允许真实/虚拟 Reader 并存和改用内置预设，属于 [ADR-0016](../decisions/ADR-0016-platform-virtual-reader-data-sources.md)
 > 与[主计划 7.1](../llrp-framework-vision.md)中的长期 VP1～VP6，尚未实现且未排期。
@@ -85,3 +93,47 @@ Virtual Reader 是平台内进程 Session，用于 WPF 和 Services 全链路验
 规划完成后，主 WPF 只管理平台级虚拟 Data Source；平台用户从内置预设中选择，不编辑任意
 场景参数，也不为无 TCP 的实例伪造 Host/Port。独立 Virtual Reader Manager 管理报文级 TCP
 设备，主 WPF 将其视为普通 LLRP 端点。平台预设与报文预设不共享运行时管理或强制共用格式。
+
+报文级管理 UI 的 Tag Pool 是虚拟设备自身的盘存源，不是主客户端 TOI。当前可通过添加、批量生成、删除
+标签，以及修改射频场景、读取概率和 RSSI 抖动来维护它；运行中这些控件锁定，停止后修改会保存到管理器
+配置。下次启动时由管理 UI 按已保存的标签配置重建 TCP Host。管理 UI 的配置与主客户端 SQLite 数据目录分离。
+
+## 报文级虚拟设备管理 UI：运行与构建
+
+`src/LlrpVirtualDevice.App.Wpf` 当前不随正式 Release ZIP 发布。它仍直接引用相邻
+`LLRPCSharp` 的 `LlrpDevice.Virtual.Hosting` 项目，因此运行和构建时需要 SDK 源码；下面的
+`$llrpSdkRoot` 应改为本机 SDK 仓库路径。
+
+从仓库根目录运行管理 UI：
+
+```powershell
+$llrpSdkRoot = 'F:\Projects\LLRP\LLRPCSharp'
+dotnet run --project src/LlrpVirtualDevice.App.Wpf/LlrpVirtualDevice.App.Wpf.csproj `
+  -p:LlrpSdkSourceRoot=$llrpSdkRoot
+```
+
+构建 Release：
+
+```powershell
+$llrpSdkRoot = 'F:\Projects\LLRP\LLRPCSharp'
+dotnet restore src/LlrpVirtualDevice.App.Wpf/LlrpVirtualDevice.App.Wpf.csproj `
+  -p:LlrpSdkSourceRoot=$llrpSdkRoot
+dotnet build src/LlrpVirtualDevice.App.Wpf/LlrpVirtualDevice.App.Wpf.csproj `
+  -c Release --no-restore -p:LlrpSdkSourceRoot=$llrpSdkRoot
+```
+
+构建自包含单文件便携包：
+
+```powershell
+dotnet publish src/LlrpVirtualDevice.App.Wpf/LlrpVirtualDevice.App.Wpf.csproj `
+  -c Release -r win-x64 --self-contained true `
+  -p:PublishSingleFile=true `
+  -p:IncludeNativeLibrariesForSelfExtract=true `
+  -p:EnableCompressionInSingleFile=true `
+  -p:DebugType=None -p:DebugSymbols=false `
+  -p:LlrpSdkSourceRoot=$llrpSdkRoot `
+  -o artifacts/publish/virtual-device-manager
+```
+
+输出程序名为 `LlrpVirtualDeviceStudio.exe`。管理器配置和日志位于
+`%LocalAppData%\LlrpVirtualDeviceStudio\`；主客户端使用管理器中配置的 IP/端口连接虚拟 Reader。

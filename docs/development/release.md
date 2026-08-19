@@ -11,6 +11,18 @@
 
 平台使用的 `LlrpSdk` NuGet 包属于输入依赖，不是本仓库的发布产物。
 
+当前正式流水线只发布主客户端 `LlrpReaderPlatform.exe`，不发布
+`LlrpVirtualDeviceStudio.exe`。虚拟设备管理 UI 目前仍直接引用相邻
+`LLRPCSharp` 的 `LlrpDevice.Virtual.Hosting` 项目，运行和构建方式见 [Virtual Reader 开发模式](virtual-reader.md)；待 SDK
+提供 Hosting NuGet 包后，再为管理 UI 增加独立的自包含发布资产。
+
+## 下载与运行
+
+主客户端从 GitHub Release 下载对应版本的 `LlrpReaderPlatform-v<version>-win-x64.zip`，解压后直接运行
+`LlrpReaderPlatform.exe`。发布包是 Windows x64 自包含单文件，目标机无需另装 .NET Desktop Runtime；
+Reader 需要通过网络可达，默认 LLRP 端口为 `5084`。首次运行会在
+`%LocalAppData%\LlrpReaderPlatform\` 创建 SQLite 数据库、日志和盘存快照目录。
+
 ## GitHub Actions
 
 仓库包含两条自动流程：

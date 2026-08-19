@@ -71,3 +71,10 @@
 - 高频 TagReport 下 SDK 消息泵、Services 和 WPF 均不阻塞。
 
 `FakeSession` 用于服务层确定性测试；不能替代 SDK 适配器和真实设备验收。
+
+## 当前验证基线
+
+当前解决方案 Release 基线为构建 0 警告/0 错误、自动化测试 382 项全绿：Contracts 5、Services 192、
+Infrastructure 10、App.Wpf 133、Architecture 9、Extensions.Impinj 17、Extensions.Zebra 6、
+VirtualReader 10。`LlrpVirtualDevice.App.Wpf` 当前没有独立的 UI 测试项目，使用解决方案构建、SDK
+Virtual Device Hosting 测试和人工启动/连接/报文观察进行验证。

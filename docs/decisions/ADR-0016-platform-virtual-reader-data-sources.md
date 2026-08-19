@@ -1,12 +1,13 @@
 # ADR-0016：平台虚拟 Reader 作为预设式 Data Source
 
-- 状态：Accepted（长期规划，未排期）
+- 状态：Accepted（平台级 Data Source 长期规划未排期；报文级管理 UI 首版已实现）
 - 日期：2026-08-16
 
 ## 决策
 
-本决策定义长期演进方向，不进入当前发布或近期迭代。现有单场景开发模式继续作为当前基线，
-只有在用户重新明确启动该长期工作包后，才按本文和主计划 VP1～VP6 实施。
+本文的 VP1～VP6 只定义平台级 Virtual Reader 纳入主 WPF Data Source 的长期演进方向，当前不进入
+发布或近期迭代。现有单场景开发模式继续作为平台级开发替身；独立的报文级 TCP Virtual Device
+Manager UI 已在当前解决方案落地，但不改变 VP1～VP6 的未排期状态。
 
 平台级 Virtual Reader 继续属于 `LlrpReaderPlatform`，并作为主 WPF 的正式 Data Source
 管理。它是进程内 `IReaderSession` 实现，不监听 TCP，不伪造 Host/Port，也不能被主程序
@@ -67,8 +68,10 @@ ADR-0015 已确定平台 Virtual Reader 是 WPF/Services 全链路开发替身�
 - 应用启动时先恢复平台虚拟实例并注册 Catalog，再由 ReaderManager 激活启用的数据源；
 - 平台首批只交付标准、严格标准、高速盘点和生命周期故障等预设；厂商预设只保留扩展架构，
   未实现完整高层行为前不出现在 UI；
-- 报文级 Virtual Reader Core、预设和独立 Manager 的计划由 `LLRPCSharp` 仓库维护，平台不产生
-  运行时项目引用。
+- 报文级 Virtual Reader Core、预设和 TCP Host 的计划由 `LLRPCSharp` 仓库维护；主客户端
+  `LlrpReaderPlatform.App.Wpf` 的 Services 不托管或引用这条运行时。解决方案中的
+  `LlrpVirtualDevice.App.Wpf` 只是独立的 SDK 消费者，开发联调可以使用相邻 SDK 项目引用，发布时
+  再切换到 SDK 的 Virtual Device Hosting NuGet 包。
 
 长期新增项目继续遵守仓库现有目录边界：产品项目只放在 `src/`，测试项目只放在顶层
 `tests/`，不得把 `*.Tests` 放进产品项目目录或与源码文件混放：

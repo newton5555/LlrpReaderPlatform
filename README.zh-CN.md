@@ -24,6 +24,10 @@ LlrpReaderPlatform 是一个新的 LLRP 应用平台，首个交付物是 Window
 
 冻结的 `../LlrpReaderStudio` 仓库仅作参考，只记录现有能力和迁移边界，不作为运行时依赖。
 
+当前主要交付对象是面向真实 Reader 的客户端 `LlrpReaderPlatform.App.Wpf`。解决方案同时包含
+独立的 `LlrpVirtualDevice.App.Wpf` 报文级虚拟设备管理 UI；它是辅助工具，不属于真实 Reader
+客户端的服务链路。
+
 **当前基线：** `1.5.0` · Windows x64 · 自包含单文件便携发布。构建 0 警告、0 错误，自动化测试 382 项全绿（含 Virtual Reader 场景与生命周期测试）；服务测试主要使用 `FakeSession`，Virtual Reader 套件覆盖确定性设备行为，真机结论单独记录。
 
 ## 架构
@@ -43,6 +47,7 @@ UI consumer -> Services -> Contracts
 - `Infrastructure` — SQLite、预设/Profile、发现和日志实现。
 - `Extensions.*` — 可插拔厂商模块（Impinj 为基线，Zebra 为实验性）；不污染通用契约。
 - `App.Wpf` — 首个 UI 消费者（WPF、CommunityToolkit.Mvvm、MahApps.Metro）；未来 UI 框架可复用同一套服务与契约。
+- `LlrpVirtualDevice.App.Wpf` — 独立的报文级虚拟设备管理 UI，直接消费 SDK 的虚拟设备 Host 边界，不向客户端服务层增加虚拟设备分支。
 
 SDK 侧有两个出口：核心 `LlrpSdk`（标准 LLRP 适配，由 `Services` 消费）与 `LlrpSdk.Extensions.Impinj` / `LlrpSdk.Extensions.Zebra`（厂商适配，由 `Extensions.*` 消费）。
 
@@ -106,41 +111,6 @@ SDK 侧有两个出口：核心 `LlrpSdk`（标准 LLRP 适配，由 `Services` 
 
 完整结论以[设备兼容性矩阵](docs/compatibility/device-matrix.md)为准。代码测试、协议映射或 SDK 能力表不能替代真实 Reader、天线和标签验收。
 
-## 下载与运行
-
-正式发布由 GitHub Actions 生成，ZIP 内含自包含单文件应用以及 README/发布说明：
-
-- `LlrpReaderPlatform-v1.5.0-win-x64.zip`
-- 对应的 `.sha256` 校验文件
-
-运行要求：Windows x64；Reader 网络可达，默认 LLRP 端口 `5084`。单文件已包含 .NET 运行时，目标机无需另装 .NET Desktop Runtime。
-
-首次运行会在 `%LocalAppData%\LlrpReaderPlatform\` 创建 SQLite 数据库、日志和盘存快照目录。
-
-## 本地构建与发布
-
-没有真机时可设置 `LLRP_VIRTUAL_SCENARIO` 指向场景 JSON，使用同一套 ReaderManager、设置、寻卡、Tag Memory、GPI/GPO 和 WPF 页面进行开发验收，详见[Virtual Reader 开发模式](docs/development/virtual-reader.md)。
-
-在安装 .NET 10 SDK 的 Windows 机器上：
-
-```powershell
-dotnet restore LlrpReaderPlatform.slnx -p:UseLocalLlrpSdk=false
-dotnet build LlrpReaderPlatform.slnx -c Release --no-restore -p:UseLocalLlrpSdk=false
-dotnet test LlrpReaderPlatform.slnx -c Release --no-build --no-restore -p:UseLocalLlrpSdk=false
-dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj `
-  -c Release -r win-x64 --self-contained true `
-  -p:PublishSingleFile=true `
-  -p:IncludeNativeLibrariesForSelfExtract=true `
-  -p:EnableCompressionInSingleFile=true `
-  -p:DebugType=None -p:DebugSymbols=false `
-  -p:UseLocalLlrpSdk=false `
-  -o artifacts/publish/win-x64 --no-restore
-```
-
-发布结果为 `LlrpReaderPlatform.exe`。本地便携包推荐只保留 EXE，放在 `src/LlrpReaderPlatform.App.Wpf/bin/Portable/LLRPReaderPlatform-win-x64/` 下；WPF 单文件运行时可能把 native 组件临时解压到系统临时目录，这是正常行为。
-
-默认使用中央版本管理的 `LlrpSdk` `1.5.0` 以及 `LlrpSdk.Extensions.Impinj` / `LlrpSdk.Extensions.Zebra` `1.5.0` NuGet 包。本地 SDK 联调通过 `UseLocalLlrpSdk=true` 显式开启（指向相邻 `LLRPCSharp` 仓库）；CI 与发布始终使用 NuGet 模式。
-
 ## 文档入口
 
 ### 使用与验收
@@ -161,8 +131,23 @@ dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj `
 - [厂商扩展与设置模型](docs/architecture/extensions-and-settings.md)
 - [旧 WPF 功能迁移矩阵](docs/development/legacy-feature-matrix.md)
 - [测试策略](docs/development/testing-strategy.md)
+- [Virtual Reader 与虚拟设备管理器](docs/development/virtual-reader.md)
 - [ADR 索引](docs/decisions/README.md)
 
 ## 项目边界
 
-本仓库包含新的平台服务、基础设施、WPF 应用和自动化测试。冻结的旧 `LlrpReaderStudio` 只用于行为和迁移参考，不作为运行时依赖。当前正式交付对象是 WPF 应用，不发布平台类库 NuGet 包；平台使用的 SDK NuGet 只是输入依赖。
+本仓库包含新的平台服务、基础设施、真实 Reader 客户端 WPF 应用、独立的虚拟设备管理 UI 和自动化测试。冻结的旧 `LlrpReaderStudio` 只用于行为和迁移参考，不作为运行时依赖。不发布平台类库 NuGet 包；平台使用的 SDK NuGet 只是输入依赖。
+
+## 虚拟设备管理 UI
+
+`src/LlrpVirtualDevice.App.Wpf` 是独立的 WPF 虚拟设备管理工具，管理相邻 SDK 提供的 TCP/LLRP
+虚拟 Reader。当前 UI 支持创建/删除多个虚拟设备实例、配置监听 IP/端口、选择能力档案和协议版本、
+启动/停止/重启 Host、保存配置、查看连接客户端和已观察到的 LLRP 报文，以及维护标签库和射频模拟参数。
+
+标签库当前支持添加标签、快速生成 20 张、删除所选标签，并支持 Static/MovingTags/Noisy 场景、读取概率
+和 RSSI 抖动设置；虚拟设备运行时这些控件会锁定。配置由管理器保存到自己的 `virtual-devices.json`，
+下次点击运行时按已保存的 `Config.Tags` 重建 Host。真实 Reader 客户端通过 IP 和端口连接该 Host，
+使用方式与连接真实 Reader 一致。事件与故障注入页目前只有交互入口和提示，尚未作为实际注入能力交付。
+
+虚拟设备管理器的源码运行、构建和打包命令见[Virtual Reader 开发模式](docs/development/virtual-reader.md)，
+主客户端的下载和正式发布流程见[发布规范与应用流水线](docs/development/release.md)。

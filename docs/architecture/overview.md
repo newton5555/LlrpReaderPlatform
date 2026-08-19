@@ -22,6 +22,7 @@ View/ViewModel -> Services -> Contracts
 - `Infrastructure`：SQLite、Preset、Profile、发现和日志实现；实现 Contracts/Services 定义的接口；
 - `Extensions.*`：厂商模块，引用 Services 与对应本地 SDK 扩展项目；
 - `App.*`：UI 组合根和展示层，注册 Services、Infrastructure 和扩展模块。
+- `LlrpVirtualDevice.App.Wpf`：独立的报文级 TCP 虚拟设备管理 UI，直接消费 SDK Virtual Device Hosting；不进入真实 Reader 客户端的 Services 链路。
 
 ## 解决方案结构
 
@@ -33,10 +34,13 @@ LlrpReaderPlatform.slnx
 ├── LlrpReaderPlatform.Extensions.Impinj
 ├── LlrpReaderPlatform.Extensions.Zebra
 ├── LlrpReaderPlatform.App.Wpf
+├── LlrpReaderPlatform.VirtualReader      进程内开发/验收用 Reader 替身
+├── LlrpVirtualDevice.App.Wpf              报文级 TCP 虚拟设备管理 UI（辅助工具）
 ├── LlrpReaderPlatform.Services.Tests
 ├── LlrpReaderPlatform.Extensions.Impinj.Tests
 ├── LlrpReaderPlatform.Extensions.Zebra.Tests
 ├── LlrpReaderPlatform.App.Wpf.Tests
+├── LlrpReaderPlatform.VirtualReader.Tests
 ├── LlrpReaderPlatform.Architecture.Tests
 ├── LlrpReaderPlatform.Hardware.Tests
 └── LlrpReaderPlatform.TestKit
@@ -51,6 +55,9 @@ App.Wpf (composition root)
   └── Extensions.* ──> Services/Contracts + vendor SDK
 
 Services ──> LlrpSdk (NuGet default / local projects optional)
+
+LlrpVirtualDevice.App.Wpf
+  └── LlrpDevice.Virtual.Hosting (SDK; current dev project reference / future top-level NuGet)
 ```
 
 - `Contracts` 和 `Services` 使用 `net10.0`；`App.Wpf` 使用 `net10.0-windows`；
@@ -75,11 +82,17 @@ Services ──> LlrpSdk (NuGet default / local projects optional)
 
 `LlrpReaderPlatform.App.Wpf` 是第一个 UI 消费者，采用 WPF、CommunityToolkit.Mvvm 和 MahApps.Metro。
 
+`LlrpVirtualDevice.App.Wpf` 是独立的辅助 UI，管理 SDK 提供的报文级 TCP/LLRP 虚拟 Reader。它拥有自己的
+实例、Host、端口、报文观察和 Tag Pool 生命周期，不复用真实 Reader 客户端的 TOI 或 ReaderManager。
+
 WPF 可以拥有自己的 View、ViewModel、DataTemplate、Dispatcher、导航和窗口行为，以及 WPF 控件到 `EditorKind` 的映射。这些内容不得下沉到 Contracts 或 Services。
 
 未来 Avalonia、WinUI、MAUI 或其他 .NET UI 消费者复用 Contracts DTO、`IReaderManager`、`IReaderSettingsService` 等服务接口，以及 Services 和已注册的 Infrastructure/Extension 实现。它们不需要复刻 Reader 生命周期、能力判断、设置编译或厂商分支。
 
 每个 UI 应用拥有自己的组合根，但使用相同的 `AddLlrpReaderPlatform()`、`AddLlrpInfrastructure()` 和扩展注册方法。持久化契约（包括应用设置、Tag List 和 Inventory Run）通过组合根注入，ViewModel 不自行创建 Store。UI 应用只决定使用哪些模块和具体 UI 技术，不改变共享层的设备语义。
+
+虚拟设备管理 UI 是例外的 SDK 消费者：它不注册平台 Services/Infrastructure，而是直接组合 SDK 的 Virtual Device
+Hosting。它与主客户端分开启动，主客户端通过 TCP IP/端口连接虚拟设备。
 
 ## 核心原则
 
