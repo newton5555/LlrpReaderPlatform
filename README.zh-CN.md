@@ -9,7 +9,7 @@
 </p>
 
 <p align='center'>
-  <strong>v1.5.0</strong> · Windows x64 · 自包含单文件便携发布 · <code>LlrpSdk</code> 1.5.0
+  <strong>v2.0.0</strong> · Windows x64 · 自包含单文件便携发布 · <code>LlrpSdk</code> 2.0.0
 </p>
 
 <p align='center'>
@@ -28,7 +28,7 @@ LlrpReaderPlatform 是一个新的 LLRP 应用平台，首个交付物是 Window
 独立的 `LlrpVirtualDevice.App.Wpf` 报文级虚拟设备管理 UI；它是辅助工具，不属于真实 Reader
 客户端的服务链路。
 
-**当前基线：** `1.5.0` · Windows x64 · 自包含单文件便携发布。构建 0 警告、0 错误，自动化测试 382 项全绿（含 Virtual Reader 场景与生命周期测试）；服务测试主要使用 `FakeSession`，Virtual Reader 套件覆盖确定性设备行为，真机结论单独记录。
+**当前基线：** `2.0.0` · Windows x64 · 自包含单文件便携发布。构建 0 警告、0 错误，自动化测试 382 项全绿（含 Virtual Reader 场景与生命周期测试）；服务测试主要使用 `FakeSession`，Virtual Reader 套件覆盖确定性设备行为，真机结论单独记录。
 
 ## 架构
 
@@ -119,7 +119,7 @@ SDK 侧有两个出口：核心 `LlrpSdk`（标准 LLRP 适配，由 `Services` 
 - [真机验收运行手册](docs/development/hardware-validation-runbook.md)
 - [硬件测试命令行项目](tests/LlrpReaderPlatform.Hardware.Tests/LlrpReaderPlatform.Hardware.Tests.csproj)
 - [设备兼容性矩阵](docs/compatibility/device-matrix.md)
-- [v1.5.0 发布说明](docs/releases/v1.5.0.md)
+- [v2.0.0 发布说明](docs/releases/v2.0.0.md)
 - [v1.4.0 发布说明](docs/releases/v1.4.0.md)
 - [发布规范与应用流水线](docs/development/release.md)
 

@@ -23,8 +23,12 @@
     <Resource Include="Assets\LlrpReader_Pro_Icon_Light_Title.png" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(UseLocalLlrpSdk)' == 'true'">
     <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpDevice.Virtual.Hosting\LlrpDevice.Virtual.Hosting.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalLlrpSdk)' != 'true'">
+    <PackageReference Include="LlrpDevice.Virtual.Hosting" />
   </ItemGroup>
 
   <ItemGroup>

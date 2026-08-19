@@ -12,9 +12,8 @@
 平台使用的 `LlrpSdk` NuGet 包属于输入依赖，不是本仓库的发布产物。
 
 当前正式流水线只发布主客户端 `LlrpReaderPlatform.exe`，不发布
-`LlrpVirtualDeviceStudio.exe`。虚拟设备管理 UI 目前仍直接引用相邻
-`LLRPCSharp` 的 `LlrpDevice.Virtual.Hosting` 项目，运行和构建方式见 [Virtual Reader 开发模式](virtual-reader.md)；待 SDK
-提供 Hosting NuGet 包后，再为管理 UI 增加独立的自包含发布资产。
+`LlrpVirtualDeviceStudio.exe`。虚拟设备管理 UI 已切换为直接引用
+`LlrpDevice.Virtual.Hosting` 顶层 NuGet 包；运行和构建方式见 [Virtual Reader 开发模式](virtual-reader.md)。
 
 ## 下载与运行
 
@@ -36,11 +35,12 @@ Reader 需要通过网络可达，默认 LLRP 端口为 `5084`。首次运行会
 
 主分支、CI 和发布默认使用 NuGet：
 
-- `LlrpSdk`：`1.5.0`
-- `LlrpSdk.Extensions.Impinj`：`1.5.0`
-- `LlrpSdk.Extensions.Zebra`：`1.5.0`
+- `LlrpSdk`：`2.0.0`
+- `LlrpSdk.Extensions.Impinj`：`2.0.0`
+- `LlrpSdk.Extensions.Zebra`：`2.0.0`
+- `LlrpDevice.Virtual.Hosting`：`2.0.0`（Virtual Device Studio 唯一直接依赖）
 
-版本统一维护在仓库根部的 `Directory.Packages.props`。`LlrpSdk` 包含平台所需的
+版本统一维护在仓库根部的 `Directory.Packages.props`。`LlrpSdk` 包含平台客户端所需的
 LlrpNet 和 SDK 扩展抽象依赖，`LlrpSdk.Extensions.Impinj` 传递依赖同版本的
 `LlrpSdk`；平台在 NuGet 模式下不单独引用底层 LlrpNet 包。
 
@@ -80,7 +80,7 @@ dotnet test LlrpReaderPlatform.slnx -c Release -p:UseLocalLlrpSdk=false --no-bui
 命令行属性优先于本地 props，因此即使开发机保留本地联调配置，上述命令仍强制使用
 NuGet。发布前还应确认：
 
-- Release 资产清单中的 `LlrpSdk/1.5.0` 类型为 `package`，不是 `project`；
+- Release 资产清单中的 `LlrpSdk/2.0.0` 和 `LlrpDevice.Virtual.Hosting/2.0.0` 类型为 `package`，不是 `project`；
 - 发布版本号与平台版本声明一致；
 - `bin/`、`obj/` 和 `artifacts/` 等本地生成物不提交。
 

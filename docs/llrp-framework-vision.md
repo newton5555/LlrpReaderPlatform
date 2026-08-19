@@ -694,7 +694,7 @@ Virtual Reader 已作为独立开发替身接入：它复用同一 Session、Rea
 
 本节是长期架构方向，不属于当前发布、近期迭代或默认下一任务。现阶段继续使用已经实现的
 `LLRP_VIRTUAL_SCENARIO` 单场景平台替身；报文级 TCP Virtual Device Manager UI 首版已经在当前
-解决方案实现，但仍直接消费相邻 SDK 的 Hosting 项目，不进入主客户端 Services，也不纳入当前正式发布资产。
+解决方案实现，2.0.0 起默认消费 SDK 的 Hosting 顶层 NuGet，不进入主客户端 Services，也不纳入当前正式发布资产。
 只有用户重新明确启动平台级 Data Source 工作包后，才按 VP1～VP6 执行。
 
 虚拟设备分成两个互不混合的产品边界：
@@ -832,7 +832,7 @@ Tab2 状态投影补充：主窗口状态刷新会重复向 Diagnostics 投影�
 4. ✅ **阶段 B：1.0.1+Zebra 扩展模块（实验性）**（完成）——新项目镜像 Impinj 四件套（本地 ProjectReference `LlrpNet.Protocol.Zebra`/`LlrpSdk.Extensions.Zebra`，NuGet 包双模式）；模块适用性 = 厂商 161 且 Version101；`UseZebra()`；报告投影 phase/gps/xpc 挂语义键；7+6 设置行仅 FX9600 画像（161/96008 + 固件 3.32.37.0）门控，未知 Zebra 只投影不给设置行；设置页 Zebra 分组标注 Experimental；寻卡页 Phase/GPS/XPC 三个可选列（默认隐藏，走列头选择器）；配套测试；未标定前不声明支持。
 5. ✅ **阶段 C：块级 Tag Access**（完成，版本无关）——Contracts 增块擦除/块写请求模型与 `StandardBlockTagAccess` 能力；Services 映射 `BlockEraseTagRequest` 与 `useBlockWrite`；Tag Memory UI 操作区按能力显隐；R420 真机验收块擦除/块写后回填矩阵。
 6. ✅ **阶段 E：厂商轴扩展性**（完成）——厂商模块 `IsApplicable` 统一带协商版本判定；新厂商接入步骤清单写入 [架构文档](architecture/extensions-and-settings.md)，为未来 1.1+其他厂商、2.0+厂商组合做准备。
-7. ⬜ **阶段 F：现场验证收口**（自动化完成，现场待办）——本地 SDK 与 NuGet 1.5.0 双模式 build/test 全绿；R420、标准 Reader、Zebra 现场剩余项按 [真机验收运行手册](development/hardware-validation-runbook.md) 逐项标定；设备矩阵与文档持续回填。
+7. ⬜ **阶段 F：现场验证收口**（自动化完成，现场待办）——本地 SDK 与 NuGet 2.0.0 双模式 build/test 全绿；R420、标准 Reader、Zebra 现场剩余项按 [真机验收运行手册](development/hardware-validation-runbook.md) 逐项标定；设备矩阵与文档持续回填。
 
 **SDK 未托管项的三层纪律**（“上层先做、留接口给 SDK”）：Contracts 契约与语义键先落地；Services 只留方法挂点；UI 行按 Feature 隐藏，不得以“页面可操作”冒充完成。**SDK 缺口跟踪清单**：BlockPermalock/Recommission、2.0 安全 Tag Access、标准 XPC——SDK 托管后按语义键点亮，不做迁移。
 
@@ -874,5 +874,5 @@ Tab2 状态投影补充：主窗口状态刷新会重复向 Diagnostics 投影�
 ### 10.2 SDK 边界
 
 管理 UI 只负责交互、实例配置和 Host 生命周期；TCP 监听、LLRP 报文编解码、设备能力档案和标签盘存行为由
-相邻 `LLRPCSharp` SDK 提供。当前开发联调使用 SDK 项目引用；未来 SDK 发布完整的 Virtual Device Hosting
-NuGet 后，管理 UI 的 SDK 部分切换为一个顶层包引用，依赖由 NuGet 传递解析。
+相邻 `LLRPCSharp` SDK 提供。2.0.0 起正式构建使用 `LlrpDevice.Virtual.Hosting` 顶层
+NuGet 包；跨仓库开发联调仍可显式切换为 SDK 项目引用，其他依赖由 NuGet 传递解析。

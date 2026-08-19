@@ -57,7 +57,7 @@ App.Wpf (composition root)
 Services ──> LlrpSdk (NuGet default / local projects optional)
 
 LlrpVirtualDevice.App.Wpf
-  └── LlrpDevice.Virtual.Hosting (SDK; current dev project reference / future top-level NuGet)
+  └── LlrpDevice.Virtual.Hosting (SDK; top-level NuGet, local project reference optional)
 ```
 
 - `Contracts` 和 `Services` 使用 `net10.0`；`App.Wpf` 使用 `net10.0-windows`；
