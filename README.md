@@ -9,7 +9,7 @@
 </p>
 
 <p align='center'>
-  <strong>v2.0.0</strong> · Windows x64 · self-contained single-file portable · <code>LlrpSdk</code> 2.0.0
+  <strong>v2.0.1</strong> · Windows x64 · self-contained single-file portable · <code>LlrpSdk</code> 2.0.1
 </p>
 
 <p align='center'>
@@ -30,7 +30,7 @@ The primary real-reader client is `LlrpReaderPlatform.App.Wpf`. The solution als
 consumer and WPF client share the same platform services; the standalone virtual-device manager remains
 outside the real-reader client service path.
 
-**Current baseline:** `2.0.0` · Windows x64 · self-contained single-file portable. The build is clean (0 warnings, 0 errors) and automated tests are green (385 tests, including the Virtual Reader suite). Most service tests use a `FakeSession`; the Virtual Reader suite exercises deterministic multi-step reader behavior. Real-device conclusions are recorded separately.
+**Current baseline:** `2.0.1` · Windows x64 · self-contained single-file portable. The build is clean (0 warnings, 0 errors) and automated tests are green (385 tests, including the Virtual Reader suite). Most service tests use a `FakeSession`; the Virtual Reader suite exercises deterministic multi-step reader behavior. Real-device conclusions are recorded separately.
 
 ## Architecture
 
@@ -123,6 +123,7 @@ The authoritative record is the [device compatibility matrix](docs/compatibility
 - [Hardware validation runbook](docs/development/hardware-validation-runbook.md)
 - [Hardware test CLI project](tests/LlrpReaderPlatform.Hardware.Tests/LlrpReaderPlatform.Hardware.Tests.csproj)
 - [Device compatibility matrix](docs/compatibility/device-matrix.md)
+- [v2.0.1 release notes](docs/releases/v2.0.1.md)
 - [v2.0.0 release notes](docs/releases/v2.0.0.md)
 - [v1.4.0 release notes](docs/releases/v1.4.0.md)
 - [Release spec & pipeline](docs/development/release.md)

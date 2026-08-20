@@ -38,9 +38,9 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
 
     <!-- LLRPCSharp NuGets -->
-    <PackageVersion Include="LlrpSdk" Version="2.0.0" />
-    <PackageVersion Include="LlrpSdk.Extensions.Impinj" Version="2.0.0" />
-    <PackageVersion Include="LlrpSdk.Extensions.Zebra" Version="2.0.0" />
-    <PackageVersion Include="LlrpDevice.Virtual.Hosting" Version="2.0.0" />
+    <PackageVersion Include="LlrpSdk" Version="2.0.1" />
+    <PackageVersion Include="LlrpSdk.Extensions.Impinj" Version="2.0.1" />
+    <PackageVersion Include="LlrpSdk.Extensions.Zebra" Version="2.0.1" />
+    <PackageVersion Include="LlrpDevice.Virtual.Hosting" Version="2.0.1" />
   </ItemGroup>
 </Project>
