@@ -250,7 +250,7 @@ jobs:
         run: dotnet restore src/LlrpReaderManager/LlrpReaderManager.csproj -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false
 
       - name: Publish unsigned Mac Catalyst application
-        run: dotnet publish src/LlrpReaderManager/LlrpReaderManager.csproj --framework net10.0-maccatalyst --runtime ${{ matrix.rid }} --configuration Release --self-contained true --no-restore -p:CreatePackage=false -p:EnableCodeSigning=false -p:UseLocalLlrpSdk=false -p:ApplicationDisplayVersion=${{ needs.validate-release.outputs.version }} --output ./artifacts/release/publish/reader-manager-macos-${{ matrix.arch }}
+        run: dotnet publish src/LlrpReaderManager/LlrpReaderManager.csproj --framework net10.0-maccatalyst --runtime ${{ matrix.rid }} --configuration Release --self-contained true --no-restore -p:CreatePackage=false -p:EnableCodeSigning=false -p:UseLocalLlrpSdk=false -p:ApplicationDisplayVersion=${{ needs.validate-release.outputs.version }}
 
       - name: Package macOS application
         env:
@@ -260,10 +260,19 @@ jobs:
           set -euo pipefail
 
           artifact_root="$GITHUB_WORKSPACE/artifacts/release"
+          project_output_directory="$GITHUB_WORKSPACE/src/LlrpReaderManager/bin/Release/net10.0-maccatalyst/${{ matrix.rid }}"
           publish_directory="$artifact_root/publish/reader-manager-macos-${{ matrix.arch }}"
-          app_path="$(find "$publish_directory" -type d -name '*.app' -print -quit)"
+          app_path=""
+          for search_root in "$project_output_directory" "$publish_directory"; do
+            if [[ -d "$search_root" ]]; then
+              app_path="$(find "$search_root" -type d -name '*.app' -print -quit)"
+              if [[ -n "$app_path" ]]; then
+                break
+              fi
+            fi
+          done
           if [[ -z "$app_path" ]]; then
-            echo "No Mac Catalyst .app found under $publish_directory" >&2
+            echo "No Mac Catalyst .app found under $project_output_directory or $publish_directory" >&2
             exit 1
           fi
 
