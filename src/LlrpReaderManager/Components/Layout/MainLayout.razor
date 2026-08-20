@@ -6,39 +6,36 @@
 
 @if (handheldPreviewMode)
 {
-    <!-- High-End Handheld Device Simulator with Realistic Phone Chassis -->
+    <!-- Handheld simulator with the platform's normal outer window chrome. -->
     <div class="handheld-stage">
-        <!-- Compact Simulator Top Control Bar -->
+        <!-- Simulator controls live inside the normal platform window. -->
         <div class="handheld-sim-controlbar">
             <!-- Device Preset Selector -->
             <div class="handheld-sim-presets">
-                <button type="button" class="sim-preset-btn @(devicePreset == "compact" ? "active" : string.Empty)" @onclick='() => SetDevicePreset("compact")' title="Compact (360×740)">
-                    <span>360×740</span>
-                </button>
-                <button type="button" class="sim-preset-btn @(devicePreset == "phone" ? "active" : string.Empty)" @onclick='() => SetDevicePreset("phone")' title="Phone (390×844)">
-                    <span>390×844</span>
-                </button>
-                <button type="button" class="sim-preset-btn @(devicePreset == "pda" ? "active" : string.Empty)" @onclick='() => SetDevicePreset("pda")' title="PDA (412×890)">
-                    <span>412×890</span>
-                </button>
-            </div>
-
-            <div class="sim-control-actions">
-                <!-- Return to Desktop Button -->
-                <button type="button" class="btn btn-sm btn-ghost sim-action-btn" @onclick="ToggleHandheldPreview" title="Return to Desktop Mode">
-                    <AppIcon Name="desktop" Size="12" />
-                    <span>Desktop</span>
-                </button>
-                <!-- Exit Application Button -->
-                <button type="button" class="btn btn-sm btn-danger sim-action-btn" @onclick="ExitApp" title="Exit / Close Application">
-                    <AppIcon Name="times" Size="12" />
-                    <span>Close</span>
-                </button>
+                <span class="sim-control-label">Resolution</span>
+                <div class="sim-preset-buttons">
+                    <button type="button" class="sim-preset-btn @(devicePreset == "compact" ? "active" : string.Empty)" aria-pressed="@(devicePreset == "compact")" @onclick='() => SetDevicePreset("compact")' title="Compact (360×740)">
+                        <span>360×740</span>
+                    </button>
+                    <button type="button" class="sim-preset-btn @(devicePreset == "phone" ? "active" : string.Empty)" aria-pressed="@(devicePreset == "phone")" @onclick='() => SetDevicePreset("phone")' title="Phone (390×844)">
+                        <span>390×844</span>
+                    </button>
+                    <button type="button" class="sim-preset-btn @(devicePreset == "pda" ? "active" : string.Empty)" aria-pressed="@(devicePreset == "pda")" @onclick='() => SetDevicePreset("pda")' title="PDA (412×890)">
+                        <span>412×890</span>
+                    </button>
+                </div>
+                <div class="sim-control-actions">
+                    <!-- Return to Desktop Button -->
+                    <button type="button" class="btn btn-sm btn-ghost sim-action-btn" @onclick="ToggleHandheldPreview" title="Return to Desktop Mode">
+                        <AppIcon Name="desktop" Size="12" />
+                        <span>Desktop</span>
+                    </button>
+                </div>
             </div>
         </div>
 
         <!-- Realistic Handheld Phone Device Chassis Frame -->
-        <div class="handheld-device-chassis" style="width: @(deviceWidth + 24)px; height: calc(100% - 46px); max-height: @(deviceHeight + 36)px;">
+        <div class="handheld-device-chassis" style="@HandheldChassisStyle">
             <!-- Simulated Hardware Speaker & Camera Island/Notch -->
             <div class="handheld-device-notch">
                 <div class="handheld-speaker"></div>
@@ -250,7 +247,7 @@ else
         }
         if (handheldPreviewMode)
         {
-            WindowService.EnterHandheldSimulator(deviceWidth + 48, deviceHeight + 84, 38);
+            ResizeHandheldSimulator();
         }
     }
 
@@ -259,7 +256,7 @@ else
         handheldPreviewMode = !handheldPreviewMode;
         if (handheldPreviewMode)
         {
-            WindowService.EnterHandheldSimulator(deviceWidth + 48, deviceHeight + 84, 38);
+            ResizeHandheldSimulator();
         }
         else
         {
@@ -267,10 +264,26 @@ else
         }
     }
 
-    private void ExitApp()
-    {
-        WindowService.ExitApplication();
-    }
+    private const int SimulatorControlBarHeight = 38;
+    private const int SimulatorChassisBorder = 20;
+    private const int SimulatorSidePadding = 16;
+
+    private int HandheldSimulatorWindowWidth =>
+        deviceWidth + SimulatorChassisBorder + (SimulatorSidePadding * 2);
+
+    private int HandheldSimulatorWindowHeight =>
+        deviceHeight + SimulatorChassisBorder + SimulatorControlBarHeight;
+
+    private string HandheldChassisStyle =>
+        $"width: {deviceWidth + SimulatorChassisBorder}px; " +
+        $"height: {deviceHeight + SimulatorChassisBorder}px; " +
+        $"max-height: calc(100% - {SimulatorControlBarHeight}px);";
+
+    private void ResizeHandheldSimulator() =>
+        WindowService.EnterHandheldSimulator(
+            HandheldSimulatorWindowWidth,
+            HandheldSimulatorWindowHeight - SimulatorControlBarHeight,
+            SimulatorControlBarHeight);
 
     private string ProtocolBadgeText
     {
@@ -302,7 +315,7 @@ else
         }
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         State.Changed += OnChanged;
         VirtualDevices.Changed += OnChanged;

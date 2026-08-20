@@ -1287,6 +1287,11 @@ public sealed class ReaderManager : IReaderManager, IInventoryService, IReaderSe
                 { ErrorCode = PlatformErrorCode.ReaderBusy };
             }
 
+            // Each new start attempt represents a new UI inventory run.
+            // Clear the previous aggregate before publishing the connecting state
+            // so desktop and Android consumers both begin with an empty result set.
+            ClearTags(readerId);
+
             // StartInventory is a complete connect -> inventory lease operation. Publish
             // the per-Reader transition before probe/connect so consumers can indicate
             // progress for this Reader without blocking unrelated Readers or the page.

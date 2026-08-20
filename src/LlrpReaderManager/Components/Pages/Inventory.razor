@@ -48,7 +48,7 @@ else
                 <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                     <div class="duration-input-group desktop-only">
                         <label class="form-label" style="margin-bottom: 0; white-space: nowrap; font-size: 11.5px;">Duration (s):</label>
-                        <input type="number" min="0" @bind="durationText" placeholder="0 (Manual)" class="mono" style="width: 80px; height: 30px; font-size: 11.5px;" />
+                        <input type="number" min="0" @bind="durationText" placeholder="0 (Manual)" class="mono" style="width: 120px; height: 30px; font-size: 11.5px;" />
                     </div>
                     @if (SelectedReader?.State == ReaderState.Inventorying)
                     {
@@ -85,7 +85,7 @@ else
     }
 
     <!-- Desktop Stat Badges Grid -->
-    <div class="card-grid desktop-only" style="margin-bottom: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+    <div class="card-grid inventory-stats-grid desktop-only" style="margin-bottom: var(--space-4);">
         <div class="card card-pad">
             <div class="stat-label">Reader State</div>
             <div class="stat-value" style="font-size: 18px;">@(SelectedReader?.State.ToString() ?? "—")</div>
