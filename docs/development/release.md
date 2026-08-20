@@ -2,34 +2,42 @@
 
 ## 交付边界
 
-`LlrpReaderPlatform` 当前是 WPF 应用，不发布平台 NuGet 包。正式发布产物为：
+`LlrpReaderPlatform` 不发布平台 NuGet 包。正式发布按应用和平台拆分为独立资产：
 
 - `LlrpReaderPlatform-v<version>-win-x64.zip`：包含自包含单文件
   `LlrpReaderPlatform.exe`、README 和发布说明；
-- 对应的 `.sha256` 校验文件；
+- `LlrpVirtualDeviceManager-v<version>-win-x64.zip`：虚拟设备管理 WPF 应用；
+- `LlrpReaderManager-v<version>-win-x64.zip`：MAUI Blazor Windows 桌面应用；
+- `LlrpReaderManager-v<version>-macos-x64.zip` 和
+  `LlrpReaderManager-v<version>-macos-arm64.zip`：Mac Catalyst 应用包；
+- `LlrpReaderManager-v<version>-android.apk`：Android 安装包；
+- 每个应用资产对应的 `.sha256` 校验文件；
 - GitHub Release 页面和版本说明。
 
 平台使用的 `LlrpSdk` NuGet 包属于输入依赖，不是本仓库的发布产物。
 
-当前正式流水线只发布主客户端 `LlrpReaderPlatform.exe`，不发布
-`LlrpVirtualDeviceStudio.exe`。虚拟设备管理 UI 已切换为直接引用
-`LlrpDevice.Virtual.Hosting` 顶层 NuGet 包；运行和构建方式见 [Virtual Reader 开发模式](virtual-reader.md)。
+两个 WPF 应用使用 Windows x64 自包含单文件交付；`LlrpReaderManager` 是 MAUI Blazor
+Hybrid 应用，Windows 使用目录包，Mac Catalyst 使用未签名 `.app` 压缩包，Android 使用 APK。
+Mac Catalyst 的签名、公证和 Android 的商店签名不由当前流水线提供，正式分发前需要补充对应平台凭据。
+虚拟设备管理 UI 已切换为直接引用 `LlrpDevice.Virtual.Hosting` 顶层 NuGet 包；运行和构建方式见
+[Virtual Reader 开发模式](virtual-reader.md)。
 
 ## 下载与运行
 
 主客户端从 GitHub Release 下载对应版本的 `LlrpReaderPlatform-v<version>-win-x64.zip`，解压后直接运行
-`LlrpReaderPlatform.exe`。发布包是 Windows x64 自包含单文件，目标机无需另装 .NET Desktop Runtime；
-Reader 需要通过网络可达，默认 LLRP 端口为 `5084`。首次运行会在
+`LlrpReaderPlatform.exe`。虚拟设备管理器使用对应的 `LlrpVirtualDeviceManager` 包；Windows 两个包都是
+自包含单文件，目标机无需另装 .NET Desktop Runtime。Reader 需要通过网络可达，默认 LLRP 端口为 `5084`。首次运行会在
 `%LocalAppData%\LlrpReaderPlatform\` 创建 SQLite 数据库、日志和盘存快照目录。
 
 ## GitHub Actions
 
 仓库包含两条自动流程：
 
-- `.github/workflows/ci.yml`：`master`、`release/*` 的 push/PR，以及手动触发时执行 NuGet 模式还原、Release 构建和自动化测试；
-- `.github/workflows/release.yml`：推送 `vMAJOR.MINOR.PATCH` Tag 或手动触发时，重复执行构建和测试，然后发布 `win-x64` ZIP、SHA256 和 GitHub Release。
+- `.github/workflows/ci.yml`：`master`、`release/*` 的 push/PR，以及手动触发时在 Windows 执行 NuGet 模式还原、Release 构建和自动化测试，并在 macOS 构建 Mac Catalyst 目标；
+- `.github/workflows/release.yml`：推送 `vMAJOR.MINOR.PATCH` Tag 或手动触发时，重复执行构建和测试，然后并行发布两个 WPF、MAUI Blazor 的 Windows/Mac Catalyst/Android 资产、SHA256 和 GitHub Release。
 
-发布流程会校验 Tag、`Directory.Build.props` 中的版本号和 `docs/releases/v<version>.md` 是否一致；任一不一致都会停止发布。
+发布流程以 Tag 为触发依据，不自动限制 Tag 来源分支；团队仍应在正式 `release/*` 分支准备版本。
+流程会校验 Tag、`Directory.Build.props` 中的版本号和 `docs/releases/v<version>.md` 是否一致；任一不一致都会停止发布。
 
 ## SDK 引用模式
 
@@ -103,6 +111,22 @@ dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj `
 `LlrpReaderPlatform.exe`。`ApplicationIcon` 只控制 EXE 图标，不控制文件名。
 本地只含 EXE 的便携 ZIP 不属于 GitHub Release 的额外资产，可按需从发布目录另行压缩。
 
+MAUI Blazor 的平台发布必须针对项目本身执行，不能对整个解决方案执行 `dotnet publish`：
+
+```powershell
+dotnet publish src/LlrpReaderManager/LlrpReaderManager.csproj `
+  -f net10.0-windows10.0.19041.0 -c Release -r win-x64 `
+  --self-contained true -p:WindowsPackageType=None -p:PublishReadyToRun=false `
+  -p:UseLocalLlrpSdk=false
+
+dotnet publish src/LlrpReaderManager/LlrpReaderManager.csproj `
+  -f net10.0-android -c Release --self-contained true `
+  -p:AndroidPackageFormat=apk -p:UseLocalLlrpSdk=false
+```
+
+Mac Catalyst 发布在 macOS runner 上分别使用 `maccatalyst-x64` 和 `maccatalyst-arm64`，
+生成未签名 `.app` 后压缩为对应资产；签名发布需要另行提供 Apple 证书和 provisioning profile。
+
 ## 正式发布步骤
 
 以 `1.0.0` 为例：
@@ -119,4 +143,4 @@ dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj `
 4. GitHub Actions 自动运行发布流程；成功后在 GitHub Release 下载 ZIP 和 SHA256 文件；
 5. 解压 ZIP，在现场 Windows 机器上启动应用并按[真机验收运行手册](hardware-validation-runbook.md)完成最后验收。
 
-也可以在 GitHub Actions 页面手动运行 `WPF Release`，输入与项目版本一致的 Tag。手动运行同样不会跳过构建、测试和版本说明校验。
+也可以在 GitHub Actions 页面手动运行 `Application Release`，输入与项目版本一致的 Tag。手动运行同样不会跳过构建、测试和版本说明校验。

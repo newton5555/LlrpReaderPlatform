@@ -1,4 +1,4 @@
-name: WPF Release
+name: Application Release
 
 on:
   push:
@@ -24,17 +24,20 @@ env:
   DOTNET_NOLOGO: 'true'
 
 jobs:
-  release:
-    name: Build, Test and Package WPF App
+  validate-release:
+    name: Validate release metadata
     runs-on: windows-latest
-
+    outputs:
+      tag: ${{ steps.release_metadata.outputs.tag }}
+      version: ${{ steps.release_metadata.outputs.version }}
+      release_doc: ${{ steps.release_metadata.outputs.release_doc }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Validate release version
+      - name: Validate release metadata
         id: release_metadata
         shell: pwsh
         env:
@@ -61,6 +64,14 @@ jobs:
           Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "version=$version"
           Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "release_doc=$releaseDoc"
 
+  build-and-test:
+    name: Build and Test
+    needs: validate-release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
@@ -75,24 +86,6 @@ jobs:
       - name: Run automated tests
         run: dotnet test LlrpReaderPlatform.slnx --no-build --no-restore --configuration Release -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false --logger "trx;LogFileName=platform-tests.trx"
 
-      - name: Publish WPF application
-        run: dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj --configuration Release --runtime win-x64 --self-contained true --no-restore -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ./artifacts/release/publish/win-x64
-
-      - name: Create Windows application archive
-        shell: pwsh
-        env:
-          RELEASE_TAG: ${{ steps.release_metadata.outputs.tag }}
-          RELEASE_DOC: ${{ steps.release_metadata.outputs.release_doc }}
-        run: |
-          $publishDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts/release/publish/win-x64'
-          Copy-Item -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'README.md') -Destination $publishDir
-          Copy-Item -LiteralPath (Join-Path $env:GITHUB_WORKSPACE $env:RELEASE_DOC) -Destination (Join-Path $publishDir 'RELEASE-NOTES.md')
-
-          $archive = Join-Path $env:GITHUB_WORKSPACE "artifacts/release/LlrpReaderPlatform-$($env:RELEASE_TAG)-win-x64.zip"
-          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $archive -Force
-          $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  $(Split-Path -Leaf $archive)" | Set-Content -LiteralPath "$archive.sha256" -NoNewline
-
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -101,17 +94,229 @@ jobs:
           path: '**/TestResults/*.trx'
           if-no-files-found: ignore
 
+  publish-windows:
+    name: Publish Windows applications
+    needs:
+      - validate-release
+      - build-and-test
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore solution in NuGet mode
+        run: dotnet restore LlrpReaderPlatform.slnx -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false
+
+      - name: Publish main WPF application
+        run: dotnet publish src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj --configuration Release --runtime win-x64 --self-contained true --no-restore -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ./artifacts/release/publish/llrp-reader-platform
+
+      - name: Publish virtual device WPF application
+        run: dotnet publish src/LlrpVirtualDevice.App.Wpf/LlrpVirtualDevice.App.Wpf.csproj --configuration Release --runtime win-x64 --self-contained true --no-restore -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ./artifacts/release/publish/virtual-device-manager
+
+      - name: Publish Windows MAUI Blazor application
+        run: dotnet publish src/LlrpReaderManager/LlrpReaderManager.csproj --framework net10.0-windows10.0.19041.0 --configuration Release --runtime win-x64 --self-contained true --no-restore -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false -p:WindowsPackageType=None -p:PublishReadyToRun=false -p:DebugType=None -p:DebugSymbols=false -p:ApplicationDisplayVersion=${{ needs.validate-release.outputs.version }} --output ./artifacts/release/publish/reader-manager-windows
+
+      - name: Add Windows release assets
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ needs.validate-release.outputs.tag }}
+          RELEASE_DOC: ${{ needs.validate-release.outputs.release_doc }}
+        run: |
+          $artifactRoot = Join-Path $env:GITHUB_WORKSPACE 'artifacts/release'
+          $publishRoot = Join-Path $artifactRoot 'publish'
+          $releaseDoc = Join-Path $env:GITHUB_WORKSPACE $env:RELEASE_DOC
+
+          $packages = @(
+            [pscustomobject]@{
+              PublishDirectory = 'llrp-reader-platform'
+              ArchiveName = "LlrpReaderPlatform-$($env:RELEASE_TAG)-win-x64.zip"
+            },
+            [pscustomobject]@{
+              PublishDirectory = 'virtual-device-manager'
+              ArchiveName = "LlrpVirtualDeviceManager-$($env:RELEASE_TAG)-win-x64.zip"
+            },
+            [pscustomobject]@{
+              PublishDirectory = 'reader-manager-windows'
+              ArchiveName = "LlrpReaderManager-$($env:RELEASE_TAG)-win-x64.zip"
+            }
+          )
+
+          foreach ($package in $packages) {
+            $publishDirectory = Join-Path $publishRoot $package.PublishDirectory
+            if (-not (Test-Path -LiteralPath $publishDirectory -PathType Container)) {
+              throw "Missing publish directory: $publishDirectory"
+            }
+
+            Copy-Item -LiteralPath (Join-Path $env:GITHUB_WORKSPACE 'README.md') -Destination $publishDirectory -Force
+            Copy-Item -LiteralPath $releaseDoc -Destination (Join-Path $publishDirectory 'RELEASE-NOTES.md') -Force
+
+            $archive = Join-Path $artifactRoot $package.ArchiveName
+            Compress-Archive -Path (Join-Path $publishDirectory '*') -DestinationPath $archive -Force
+            $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $(Split-Path -Leaf $archive)" | Set-Content -LiteralPath "$archive.sha256" -NoNewline
+          }
+
+      - name: Upload Windows release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-assets
+          path: artifacts/release/*.zip*
+          if-no-files-found: error
+
+  publish-android:
+    name: Publish Android application
+    needs:
+      - validate-release
+      - build-and-test
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore MAUI workloads
+        run: dotnet workload restore src/LlrpReaderManager/LlrpReaderManager.csproj
+
+      - name: Restore MAUI project in NuGet mode
+        run: dotnet restore src/LlrpReaderManager/LlrpReaderManager.csproj -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false
+
+      - name: Publish Android APK
+        run: dotnet publish src/LlrpReaderManager/LlrpReaderManager.csproj --framework net10.0-android --configuration Release --self-contained true --no-restore -p:AndroidPackageFormat=apk -p:UseLocalLlrpSdk=false -p:ApplicationDisplayVersion=${{ needs.validate-release.outputs.version }} --output ./artifacts/release/publish/reader-manager-android
+
+      - name: Prepare Android release asset
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ needs.validate-release.outputs.tag }}
+        run: |
+          $publishDirectory = Join-Path $env:GITHUB_WORKSPACE 'artifacts/release/publish/reader-manager-android'
+          if (-not (Test-Path -LiteralPath $publishDirectory -PathType Container)) {
+            throw "Missing Android publish directory: $publishDirectory"
+          }
+
+          $apkFiles = @(Get-ChildItem -LiteralPath $publishDirectory -Filter '*-Signed.apk' -File -Recurse)
+          if ($apkFiles.Count -ne 1) {
+            throw "Expected exactly one signed Android APK, found $($apkFiles.Count)."
+          }
+
+          $artifactRoot = Join-Path $env:GITHUB_WORKSPACE 'artifacts/release'
+          $apk = Join-Path $artifactRoot "LlrpReaderManager-$($env:RELEASE_TAG)-android.apk"
+          Copy-Item -LiteralPath $apkFiles[0].FullName -Destination $apk -Force
+          $hash = (Get-FileHash -LiteralPath $apk -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $(Split-Path -Leaf $apk)" | Set-Content -LiteralPath "$apk.sha256" -NoNewline
+
+      - name: Upload Android release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-android-assets
+          path: artifacts/release/*.apk*
+          if-no-files-found: error
+
+  publish-macos:
+    name: Publish macOS MAUI Blazor application (${{ matrix.arch }})
+    needs:
+      - validate-release
+      - build-and-test
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            rid: maccatalyst-x64
+          - arch: arm64
+            rid: maccatalyst-arm64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore MAUI workloads
+        run: dotnet workload restore src/LlrpReaderManager/LlrpReaderManager.csproj
+
+      - name: Restore MAUI project in NuGet mode
+        run: dotnet restore src/LlrpReaderManager/LlrpReaderManager.csproj -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false
+
+      - name: Publish unsigned Mac Catalyst application
+        run: dotnet publish src/LlrpReaderManager/LlrpReaderManager.csproj --framework net10.0-maccatalyst --runtime ${{ matrix.rid }} --configuration Release --self-contained true --no-restore -p:CreatePackage=false -p:EnableCodeSigning=false -p:UseLocalLlrpSdk=false -p:ApplicationDisplayVersion=${{ needs.validate-release.outputs.version }} --output ./artifacts/release/publish/reader-manager-macos-${{ matrix.arch }}
+
+      - name: Package macOS application
+        env:
+          RELEASE_TAG: ${{ needs.validate-release.outputs.tag }}
+          RELEASE_DOC: ${{ needs.validate-release.outputs.release_doc }}
+        run: |
+          set -euo pipefail
+
+          artifact_root="$GITHUB_WORKSPACE/artifacts/release"
+          publish_directory="$artifact_root/publish/reader-manager-macos-${{ matrix.arch }}"
+          app_path="$(find "$publish_directory" -type d -name '*.app' -print -quit)"
+          if [[ -z "$app_path" ]]; then
+            echo "No Mac Catalyst .app found under $publish_directory" >&2
+            exit 1
+          fi
+
+          staging_directory="$artifact_root/LlrpReaderManager-$RELEASE_TAG-macos-${{ matrix.arch }}"
+          rm -rf "$staging_directory"
+          mkdir -p "$staging_directory"
+          ditto "$app_path" "$staging_directory/LlrpReaderManager.app"
+          cp "$GITHUB_WORKSPACE/README.md" "$staging_directory/README.md"
+          cp "$GITHUB_WORKSPACE/$RELEASE_DOC" "$staging_directory/RELEASE-NOTES.md"
+
+          archive="$artifact_root/LlrpReaderManager-$RELEASE_TAG-macos-${{ matrix.arch }}.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$staging_directory" "$archive"
+          shasum -a 256 "$archive" | awk '{print tolower($1) "  " $2}' > "$archive.sha256"
+          rm -rf "$staging_directory"
+
+      - name: Upload macOS release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos-${{ matrix.arch }}-assets
+          path: artifacts/release/*.zip*
+          if-no-files-found: error
+
+  create-release:
+    name: Create GitHub Release
+    needs:
+      - validate-release
+      - publish-windows
+      - publish-android
+      - publish-macos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*-assets
+          path: artifacts/release
+          merge-multiple: true
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.release_metadata.outputs.tag }}
-          name: LlrpReaderPlatform ${{ steps.release_metadata.outputs.tag }}
+          tag_name: ${{ needs.validate-release.outputs.tag }}
+          name: LlrpReaderPlatform ${{ needs.validate-release.outputs.tag }}
           files: |
-            ./artifacts/release/LlrpReaderPlatform-*.zip
-            ./artifacts/release/LlrpReaderPlatform-*.zip.sha256
+            ./artifacts/release/*.zip
+            ./artifacts/release/*.apk
+            ./artifacts/release/*.sha256
           draft: false
           prerelease: false
-          body_path: ${{ steps.release_metadata.outputs.release_doc }}
+          body_path: ${{ needs.validate-release.outputs.release_doc }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

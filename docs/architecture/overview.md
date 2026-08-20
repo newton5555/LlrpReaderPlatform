@@ -66,7 +66,7 @@ LlrpReaderManager (MAUI Blazor composition root)
   └── VirtualReaderWidgetService ──> LlrpDevice.Virtual.Hosting (SDK)
 ```
 
-- `Contracts` 和 `Services` 使用 `net10.0`；`App.Wpf` 使用 `net10.0-windows`；`LlrpReaderManager` 使用 `net10.0-android` 与 `net10.0-windows10.0.19041.0`，并在项目目录关闭仓库的单目标默认值；
+- `Contracts` 和 `Services` 使用 `net10.0`；`App.Wpf` 使用 `net10.0-windows`；`LlrpReaderManager` 使用 `net10.0-android`、`net10.0-windows10.0.19041.0` 与 `net10.0-maccatalyst`，并在项目目录关闭仓库的单目标默认值；
 - `Contracts` 不引用任何 UI、SDK 或厂商程序集；
 - `Services` 不设置 `UseWPF`，只依赖 Contracts 和 SDK 适配项目；
 - Infrastructure 不把 SQLite、Zeroconf 或日志实现暴露给 Contracts；

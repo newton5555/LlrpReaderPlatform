@@ -48,3 +48,25 @@ jobs:
           name: test-results
           path: '**/TestResults/*.trx'
           if-no-files-found: ignore
+
+  build-maccatalyst:
+    name: Build Mac Catalyst
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore MAUI workloads
+        run: dotnet workload restore src/LlrpReaderManager/LlrpReaderManager.csproj
+
+      - name: Restore MAUI project in NuGet mode
+        run: dotnet restore src/LlrpReaderManager/LlrpReaderManager.csproj -p:EnableWindowsTargeting=true -p:UseLocalLlrpSdk=false
+
+      - name: Build Mac Catalyst project
+        run: dotnet build src/LlrpReaderManager/LlrpReaderManager.csproj --framework net10.0-maccatalyst --configuration Release --no-restore -p:UseLocalLlrpSdk=false

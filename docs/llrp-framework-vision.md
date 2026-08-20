@@ -3,7 +3,7 @@
 > 状态：持续维护计划（2026-08-19，真实 Reader 客户端、报文级 Virtual Device Manager UI 和 `LlrpReaderManager` 跨平台 Blazor 消费者首版已落地；平台级预设式 Data Source 作为长期规划保留）
 > 基线仓库：`LlrpReaderStudio` 将冻结，不作为新项目的 ProjectReference 或运行时依赖；仅作为已验证行为、迁移经验和测试样例的参考。
 > 目标：在新仓库中建设可被多个 UI 消费者复用的 LLRP 应用框架。主要交付对象是新的真实 Reader 客户端 `LlrpReaderPlatform.App.Wpf`；`LlrpReaderManager` 是共享服务的 MAUI Blazor 跨平台消费者，另有独立的 `LlrpVirtualDevice.App.Wpf` 报文级虚拟设备管理 UI。
-> 当前验证基线：现有项目已验证标准 LLRP 1.0.1 设备和 Impinj R420；新项目以此为回归基线，逐步扩展到更多 LLRP 设备和厂商能力。自动化测试当前为 382 项全绿（含 Virtual Reader 场景与生命周期测试）；Windows x64 交付采用 NuGet SDK、自包含单文件 `LlrpReaderPlatform.exe`。
+> 当前验证基线：现有项目已验证标准 LLRP 1.0.1 设备和 Impinj R420；新项目以此为回归基线，逐步扩展到更多 LLRP 设备和厂商能力。自动化测试当前为 385 项全绿（含 Virtual Reader 场景与生命周期测试）；Windows x64 交付采用 NuGet SDK、自包含单文件 `LlrpReaderPlatform.exe`。
 
 ## 0. 目标与定位
 
@@ -702,7 +702,8 @@ Virtual Reader 已作为独立开发替身接入：它复用同一 Session、Rea
 
 本节是长期架构方向，不属于当前发布、近期迭代或默认下一任务。现阶段继续使用已经实现的
 `LLRP_VIRTUAL_SCENARIO` 单场景平台替身；报文级 TCP Virtual Device Manager UI 首版已经在当前
-解决方案实现，2.0.0 起默认消费 SDK 的 Hosting 顶层 NuGet，不进入主客户端 Services，也不纳入当前正式发布资产。
+解决方案实现，2.0.0 起默认消费 SDK 的 Hosting 顶层 NuGet，不进入主客户端 Services；它与主客户端分开
+作为独立 Windows 资产发布。
 只有用户重新明确启动平台级 Data Source 工作包后，才按 VP1～VP6 执行。
 
 虚拟设备分成两个互不混合的产品边界：
@@ -773,12 +774,12 @@ LLRPCSharp 独立 Virtual Reader Manager
 | F4 | 盘存、有界 Channel 聚合、ReaderBusy、TagAccess/GPI | 完成 |
 | F5 | Impinj 扩展模块与两阶段匹配 | 完成 |
 | F6～F8 | 首个 WPF 消费者（设备/设置/寻卡三页） | 完成首版：旧布局、原生 ProgressBar、Tab1 旧项目分组设置、Tab2 四路 GPO/GPI 状态、动态设置编辑器、实时 TagObserved、Tag Memory、Tag Lists、Inventory Runs、App Settings、About 均已接入真实服务；频率表已支持能力驱动的多选编辑，少量 L4 细节仍待增强 |
-| F9 | 测试与真机验收 | 自动化测试 382 项全绿（含 Virtual Reader 场景/回放/Session/ReaderManager 链路、本轮日志模式、快照、WPF 操作日志、Zebra 扩展语义投影和架构边界回归）；真机已完成标准 Probe/Settings Query、Impinj 扩展连接、有界 Inventory Start/Stop/Disconnect、WPF Settings Apply、设备列表刷新期间设置查询不被取消、GPI/GPO、GPI 状态查询和 GPI debounce 回写、真实 TagReport 聚合、EPC/TID/User/Reserved 四个 Memory Bank 读取、User Bank 写入恢复，以及按固件/SDK 能力画像完成 FastID/Phase/Search/Low Duty/固定频率 Apply/回读、FastID/Phase 扩展 TagReport 和 Doppler 隐藏；代码级 Connection Faulted、ReaderException、匹配 GPI Stop 触发器收敛与重新 Start、Activate/Inventory/短操作取消后的 Session 清理与取消后重新 Probe 恢复、旧 Session 迟到故障/GPI/定时停止事件和 TagReport 队列跨 Run 隔离已自动化验证；GPI/GPO 无能力查询的 Unsupported 降级已自动化验证；GPI 物理事件/触发、多 Reader、断网/重启现场恢复及其它 Memory Bank 写入仍待现场验收 |
+| F9 | 测试与真机验收 | 自动化测试 385 项全绿（含 Virtual Reader 场景/回放/Session/ReaderManager 链路、本轮日志模式、快照、WPF 操作日志、Zebra 扩展语义投影和架构边界回归）；真机已完成标准 Probe/Settings Query、Impinj 扩展连接、有界 Inventory Start/Stop/Disconnect、WPF Settings Apply、设备列表刷新期间设置查询不被取消、GPI/GPO、GPI 状态查询和 GPI debounce 回写、真实 TagReport 聚合、EPC/TID/User/Reserved 四个 Memory Bank 读取、User Bank 写入恢复，以及按固件/SDK 能力画像完成 FastID/Phase/Search/Low Duty/固定频率 Apply/回读、FastID/Phase 扩展 TagReport 和 Doppler 隐藏；代码级 Connection Faulted、ReaderException、匹配 GPI Stop 触发器收敛与重新 Start、Activate/Inventory/短操作取消后的 Session 清理与取消后重新 Probe 恢复、旧 Session 迟到故障/GPI/定时停止事件和 TagReport 队列跨 Run 隔离已自动化验证；GPI/GPO 无能力查询的 Unsupported 降级已自动化验证；GPI 物理事件/触发、多 Reader、断网/重启现场恢复及其它 Memory Bank 写入仍待现场验收 |
 | F10 | EF SQLite、启动恢复与日志 | Reader Profile、Reader Settings JSON 快照、TagList、InventoryRun、AppSettings、基础 EF Migration、启动恢复和 CRUD 测试已完成；早期 schema 变化允许清空数据库重建，不承诺历史数据兼容；WPF 已分离 ui/platform/sdk 日志并过滤 EF SQL，盘存支持 Off/FinalSnapshot/RawReports |
-| F11～F14 | 完整设置、完整 Inventory、全应用迁移、多设备扩展 | 首版代码完成，自动化覆盖多 Reader 并行和设备异常生命周期；平台 Virtual Reader 已支持场景导入、确定性回放、跨 Session 状态和 WPF 显式开发模式；报文级 Virtual Device Manager UI 已完成首版；`LlrpReaderManager` MAUI Blazor 消费者已落地首版页面、响应式布局和 Virtual Device widget；硬件深度验收、更多标准/厂商设备、Android 打包与故障恢复证据持续补齐 |
+| F11～F14 | 完整设置、完整 Inventory、全应用迁移、多设备扩展 | 首版代码完成，自动化覆盖多 Reader 并行和设备异常生命周期；平台 Virtual Reader 已支持场景导入、确定性回放、跨 Session 状态和 WPF 显式开发模式；报文级 Virtual Device Manager UI 已完成首版并进入独立 Windows 发布资产；`LlrpReaderManager` MAUI Blazor 消费者已落地首版页面、响应式布局和 Virtual Device widget，项目目标覆盖 Windows、Mac Catalyst 和 Android；硬件深度验收、平台签名和各平台故障恢复证据持续补齐 |
 | F15 | 平台虚拟设备 Data Source 化 | 长期规划、未排期；已记录 ADR-0016 与 VP1～VP6，当前继续使用 `LLRP_VIRTUAL_SCENARIO` 单场景平台工厂模式；报文级管理 UI 不属于本阶段 |
 
-**测试基线**：既有平台/WPF 基线为 `dotnet test LlrpReaderPlatform.slnx --no-build` 382 项全绿（Contracts 5、Services 192、Infrastructure 10、App.Wpf 133、Architecture 9、Extensions.Impinj 17、Extensions.Zebra 6、VirtualReader 10）；本轮新增 `LlrpReaderManager` Windows TFM 已以 0 警告、0 错误编译，Architecture 9 项和 App.Wpf 134 项回归通过。MAUI Android 包还原受本机 NuGet 缓存/工作负载环境影响，尚未宣称 Android 构建通过。
+**测试基线**：既有平台/WPF 基线为 `dotnet test LlrpReaderPlatform.slnx --no-build` 385 项全绿（Contracts 5、Services 194、Infrastructure 10、App.Wpf 134、Architecture 9、Extensions.Impinj 17、Extensions.Zebra 6、VirtualReader 10）；`LlrpReaderManager` Windows/Android 目标已以 0 警告、0 错误编译，Mac Catalyst 目标由 macOS CI 单独构建验证，平台打包和真机验收仍按各自矩阵推进。
 
 本轮补充的运行时边界：退出清理由注册表 Gate 与释放闸门统一保护，关闭期间拒绝晚到 Add/Probe；已知能力下拒绝超范围 Inventory 天线；Tag Access 选择条件拒绝 LLRP `ushort` 长度溢出；GPO 端口 0 在 WPF Tab2 入口拦截；Impinj GPI debounce 按能力快照的 GPI 数量生成和回写，明确为 0 的设备不发送不存在的端口配置。
 Services/应用测试使用 `TestKit/FakeSession`，Infrastructure 测试使用内存 SQLite。
@@ -816,7 +817,7 @@ Tab2 状态投影补充：主窗口状态刷新会重复向 Diagnostics 投影�
 - 直接从寻卡页启动成功后，同一长连接会刷新身份、天线能力、CapabilityRevision 和 FeatureCatalog，再进入 `Inventorying`；因此“寻卡先于设置”不会留下能力陈旧的运行时快照。
 - Tag Memory、GPI/GPO 等短操作对启动恢复或故障后的陈旧 Session 也执行必要的标准 Probe、扩展匹配和能力捕获；页面不依赖用户先打开设置页，成功后仍按短租约断开并回到 `Disconnected`。
 
-> 2026-08-16 架构债务收口后，当前自动化基线以本文件 F9 表格为准：382 项全绿；新增
+> 2026-08-20 平台发布流水线收口后，当前自动化基线以本文件 F9 表格为准：385 项全绿；新增
 > `Extensions.Zebra.Tests` 6 项，Architecture.Tests 9 项。历史小节中的早期测试数字仅保留
 > 为阶段记录，不代表当前基线。厂商 Feature 归属和 WPF 语义投影见 [ADR-0014](decisions/ADR-0014-vendor-feature-ownership-and-ui-semantics.md)。
 
@@ -862,7 +863,7 @@ Tab2 状态投影补充：主窗口状态刷新会重复向 Diagnostics 投影�
 - **实时寻卡**：后台 TagObserved 不直接触碰 ObservableCollection，WPF 用 DispatcherTimer 分批投影；Start/Stop 为同一 Session 的完整连接生命周期。
 - **标准设置**：动态行覆盖 Antenna、Session、Population、Report Every、RF Mode、Tari、Tx Power、Rx Sensitivity，并通过原生 WPF 编辑控件渲染。
 - **SQLite 恢复**：应用启动调用 `IReaderManager.InitializeAsync` 从 EF SQLite 恢复 Profile，启用设备执行 Probe/激活，离线设备保留在列表。
-以上均为 WPF 消费者层实现，全部通过 Contracts/Services 接口消费，ViewModel 不直接碰 SDK 或厂商类型；能力目录已随 Reader 运行时快照和设置布局发布，扩展模块可贡献稳定厂商能力标识和 TagReport 字符串字段，并按固件能力画像隐藏未验证的 L4 设置；标准 Tag Access 以 ReaderCapabilities 明确能力为准，设备报告不支持时服务和 Tag Memory 页均降级为不可用；标准 GPIO 端口数量优先来自 General Device Capabilities，解析器同时覆盖 LLRP 1.0.1 与 1.1，明确为 0 的 GPI/GPO 不生成可编辑触发器或控件，部分端口设备只启用实际存在的 GPO；若设备能力响应未声明端口数量，成功的 GPI/GPO 状态查询会按返回端口补充当前运行时快照，未知能力仍不被误判为物理接线通过；GPI/GPO 状态查询在设备明确无对应能力时返回稳定 `Unsupported`，不把能力缺失误报为连接故障；Tab1 的旧固定分组和 Tab2 的 GPO/GPI 区域也按语义行、实际端口能力隐藏空控件；Inventory 的手动停止、GPI 触发、定时结束、设备断连和异常均通过平台 `LifecycleChanged` 事件统一收敛 WPF 状态，Inventory Runs 在选中 Reader 的运行记录完成落库后自动刷新，设备列表提供 Faulted Reader 的重新连接/能力刷新入口；Reader 探测/添加/激活、Settings、Tag Access、Inventory 失败状态由稳定的 `PlatformErrorCode` 投影为 WPF 文本，其中持久化失败、重复注册和平台注册失败可区分显示，不解析服务层错误字符串；SQLite 仅负责新平台自身数据，早期 schema 变化允许清空数据库重建；Settings Preset 的版本化语义 JSON 同时承载 Inventory 字段，不引入旧库导入；短连接查询若断开失败会把设置布局转为只读并要求重新激活；设置页在能力快照过期或 Reader 故障时禁用编辑和保存门禁；添加数据源页的 Host/Port 校验、发现记录归一化（重复端点、非法端口、IPv6 展示）、Probe/发现/提交互斥和发现条目输入门禁，离开页面会取消在途操作；WPF 全部页面的在途网络/数据库操作在窗口退出时由页面生命周期取消；应用设置页显示并持久化盘存数据记录模式和原始报告目录；Tag List 保存/删除会通过 WPF 变更事件即时刷新现有 Inventory 行的名称，不重启 Reader 生命周期；能力解析使用整数索引避免 `ushort` 能力上限回绕；Inventory 服务入口拒绝无效时长、重复天线和混合全部天线/指定天线参数；设备列表重建期间保持选中 Reader，避免取消在途设置查询；当前构建 0 警告 0 错误，自动化测试 382 项全绿。
+以上均为 WPF 消费者层实现，全部通过 Contracts/Services 接口消费，ViewModel 不直接碰 SDK 或厂商类型；能力目录已随 Reader 运行时快照和设置布局发布，扩展模块可贡献稳定厂商能力标识和 TagReport 字符串字段，并按固件能力画像隐藏未验证的 L4 设置；标准 Tag Access 以 ReaderCapabilities 明确能力为准，设备报告不支持时服务和 Tag Memory 页均降级为不可用；标准 GPIO 端口数量优先来自 General Device Capabilities，解析器同时覆盖 LLRP 1.0.1 与 1.1，明确为 0 的 GPI/GPO 不生成可编辑触发器或控件，部分端口设备只启用实际存在的 GPO；若设备能力响应未声明端口数量，成功的 GPI/GPO 状态查询会按返回端口补充当前运行时快照，未知能力仍不被误判为物理接线通过；GPI/GPO 状态查询在设备明确无对应能力时返回稳定 `Unsupported`，不把能力缺失误报为连接故障；Tab1 的旧固定分组和 Tab2 的 GPO/GPI 区域也按语义行、实际端口能力隐藏空控件；Inventory 的手动停止、GPI 触发、定时结束、设备断连和异常均通过平台 `LifecycleChanged` 事件统一收敛 WPF 状态，Inventory Runs 在选中 Reader 的运行记录完成落库后自动刷新，设备列表提供 Faulted Reader 的重新连接/能力刷新入口；Reader 探测/添加/激活、Settings、Tag Access、Inventory 失败状态由稳定的 `PlatformErrorCode` 投影为 WPF 文本，其中持久化失败、重复注册和平台注册失败可区分显示，不解析服务层错误字符串；SQLite 仅负责新平台自身数据，早期 schema 变化允许清空数据库重建；Settings Preset 的版本化语义 JSON 同时承载 Inventory 字段，不引入旧库导入；短连接查询若断开失败会把设置布局转为只读并要求重新激活；设置页在能力快照过期或 Reader 故障时禁用编辑和保存门禁；添加数据源页的 Host/Port 校验、发现记录归一化（重复端点、非法端口、IPv6 展示）、Probe/发现/提交互斥和发现条目输入门禁，离开页面会取消在途操作；WPF 全部页面的在途网络/数据库操作在窗口退出时由页面生命周期取消；应用设置页显示并持久化盘存数据记录模式和原始报告目录；Tag List 保存/删除会通过 WPF 变更事件即时刷新现有 Inventory 行的名称，不重启 Reader 生命周期；能力解析使用整数索引避免 `ushort` 能力上限回绕；Inventory 服务入口拒绝无效时长、重复天线和混合全部天线/指定天线参数；设备列表重建期间保持选中 Reader，避免取消在途设置查询；当前构建 0 警告 0 错误，自动化测试 385 项全绿。
 
 ## 10. 报文级虚拟设备管理 UI
 
@@ -899,4 +900,4 @@ Probe、Activate、Session Gate、短操作和 Inventory 生命周期。
 
 布局沿用归档 `LLRPReaderManagement` 的深色顶栏、侧边导航、卡片和绿色强调色，并通过 CSS media
 queries 在桌面双栏和手持设备窄屏之间切换。该消费者当前属于开发中的跨平台首版，Windows 目标已编译
-验证，Android/其他平台的打包和真机适配仍按单独验收矩阵推进。
+验证，Windows、Mac Catalyst 和 Android 已纳入独立发布流水线；签名、安装和真机适配仍按单独验收矩阵推进。

@@ -116,7 +116,7 @@ Settings draft、Tag Memory 表单/历史、Runs 筛选等属于页面状态，�
 
 ## 依赖、构建与启动
 
-开发机需要 .NET 10 SDK、MAUI Android/Windows workload。仓库默认通过中央包版本管理引用 SDK NuGet；
+开发机需要 .NET 10 SDK、MAUI Android/Windows/Mac Catalyst workload。仓库默认通过中央包版本管理引用 SDK NuGet；
 跨仓库联调可由被忽略的 `Directory.Build.local.props` 启用本地 `LLRPCSharp` 项目引用。
 
 Windows 开发验证：
@@ -129,6 +129,10 @@ dotnet run --project src/LlrpReaderManager/LlrpReaderManager.csproj -f net10.0-w
 
 Android 使用相同项目和 `net10.0-android` TFM。响应式 CSS 只改变布局，不分叉业务状态。
 
+macOS 使用 `net10.0-maccatalyst` TFM，在 macOS 和 Xcode 环境中发布；当前正式流水线按
+`maccatalyst-x64` 与 `maccatalyst-arm64` 生成未签名应用包。Windows、Mac Catalyst 和 Android
+的发布入口统一维护在 `.github/workflows/release.yml`，不对整个解决方案执行 MAUI 发布。
+
 ## 代码边界
 
 - `State/ReaderManagerState` 是 Blazor UI 状态投影，只持有平台接口，不持有 SDK Session；
@@ -136,5 +140,5 @@ Android 使用相同项目和 `net10.0-android` TFM。响应式 CSS 只改变布
 - `Components/Pages` 负责交互、表单和渲染，不编译 LLRP 配置；
 - 新增设备能力优先扩展 Contracts/Services，再由 WPF 和 Blazor 共同消费。
 
-该项目当前是跨平台消费者开发版，不作为独立正式发布包；Windows、Android 打包和移动端真机适配完成后，
-再补充独立兼容性与发布记录。
+该项目已经进入独立发布流水线，但 Windows、Mac Catalyst 和 Android 的安装、签名、真机兼容性
+仍需按平台分别验收；流水线的未签名 Mac Catalyst 包不等同于 App Store 或公证发布包。

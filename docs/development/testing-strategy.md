@@ -74,7 +74,7 @@
 
 ## 当前验证基线
 
-当前解决方案 Release 基线为构建 0 警告/0 错误、自动化测试 382 项全绿：Contracts 5、Services 192、
-Infrastructure 10、App.Wpf 133、Architecture 9、Extensions.Impinj 17、Extensions.Zebra 6、
+当前解决方案 Release 基线为构建 0 警告/0 错误、自动化测试 385 项全绿：Contracts 5、Services 194、
+Infrastructure 10、App.Wpf 134、Architecture 9、Extensions.Impinj 17、Extensions.Zebra 6、
 VirtualReader 10。`LlrpVirtualDevice.App.Wpf` 当前没有独立的 UI 测试项目，使用解决方案构建、SDK
 Virtual Device Hosting 测试和人工启动/连接/报文观察进行验证。

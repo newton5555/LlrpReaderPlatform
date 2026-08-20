@@ -19,3 +19,4 @@ ADR 用于记录会影响多个项目或未来 UI 消费者的架构决定。已
 - [ADR-0015：Virtual Reader 作为平台级开发替身](ADR-0015-virtual-reader-development-mode.md)
 - [ADR-0016：平台虚拟 Reader 作为预设式 Data Source](ADR-0016-platform-virtual-reader-data-sources.md)
 - [ADR-0017：Probe 到 Activate 的 Session 交接](ADR-0017-probe-activate-session-handoff.md)
+- [ADR-0018：MAUI Blazor 多平台发布资产](ADR-0018-maui-blazor-multi-platform-release-assets.md)

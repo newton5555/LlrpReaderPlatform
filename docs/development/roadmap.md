@@ -27,9 +27,9 @@
 - P8：软件链路已完成，硬件矩阵中的现场剩余项继续单独验收，不把自动化结果写成硬件通过；
 - M1：多版本/厂商扩展和块级 Tag Access 的代码与自动化阶段已完成，现场标定按设备矩阵执行；
 - M2：寻卡联动上报的 R1～R5 已完成，R6 物理事件/触发仍待现场；
-- 报文级 Virtual Device Manager UI：首版已完成，可创建实例、配置端点/Profile/协议、启停 Host、观察客户端/报文并维护 Tag Pool；2.0.0 起默认消费 SDK 的 `LlrpDevice.Virtual.Hosting` 顶层 NuGet，仍不纳入主客户端正式发布资产；
+- 报文级 Virtual Device Manager UI：首版已完成，可创建实例、配置端点/Profile/协议、启停 Host、观察客户端/报文并维护 Tag Pool；2.0.0 起默认消费 SDK 的 `LlrpDevice.Virtual.Hosting` 顶层 NuGet，并作为独立 Windows 资产发布，不打入主客户端 ZIP；
 - 平台级 Virtual Reader Data Source：仍为 ADR-0016 的长期未排期项；
-- 当前自动化基线：382 项全绿，构建 0 警告/0 错误。
+- 当前自动化基线：385 项全绿，构建 0 警告/0 错误。
 
 ## 历史阶段进度回填
 
