@@ -56,7 +56,7 @@ else
                     bool isSelected = selectedTagRef is not null &&
                                       ((selectionBank == TagMemoryBank.Epc && targetHex.Equals(item.Tag.Epc, StringComparison.OrdinalIgnoreCase)) ||
                                        (selectionBank == TagMemoryBank.Tid && !string.IsNullOrWhiteSpace(item.Tag.Tid) && targetHex.Equals(item.Tag.Tid, StringComparison.OrdinalIgnoreCase)));
-                    <button class="tag-list-item @(isSelected ? "selected" : string.Empty)"
+                    <button type="button" class="tag-list-item @(isSelected ? "selected" : string.Empty)"
                             @onclick="() => SelectTag(item)">
                         <div class="tag-list-item-epc">@item.Tag.Epc</div>
                         @if (!string.IsNullOrWhiteSpace(item.Tag.Tid))
@@ -77,7 +77,6 @@ else
         </div>
 
         <!-- Right: Operations Panel -->
-        <!-- Right: Operations Panel -->
         <div class="operations-panel">
             <!-- Target Tag Specification Card -->
             <div class="card selected-tag-card">
@@ -89,26 +88,11 @@ else
                     @if (EffectiveReader is not null)
                     {
                         <span class="status-badge @(EffectiveReader.IsEnabled ? "ok" : "warn")">
-                            Targeting: @EffectiveReader.Profile.Name
+                            Targeting: @EffectiveReader.Profile.Name (@EffectiveReader.Profile.Host:@EffectiveReader.Profile.Port)
                         </span>
                     }
                 </div>
                 <div class="card-pad stack" style="gap: var(--space-3);">
-                    <!-- Mobile Quick Tag Selector Dropdown -->
-                    @if (FilteredTags.Count > 0)
-                    {
-                        <div class="mobile-only form-group" style="margin-bottom: 2px;">
-                            <label class="form-label">Pick From Observed Tags (@FilteredTags.Count)</label>
-                            <select style="height: 32px; font-size: 11.5px;" value="@targetHex" @onchange="OnMobileTagSelected">
-                                <option value="">Select an observed tag...</option>
-                                @foreach (TagSourceItem item in FilteredTags)
-                                {
-                                    <option value="@item.Tag.Epc">@item.Tag.Epc (@(item.Tag.LastRssi?.ToString("0.0") ?? "—") dBm · Ant @(item.Tag.LastAntenna?.ToString() ?? "—"))</option>
-                                }
-                            </select>
-                        </div>
-                    }
-
                     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);">
                         <div class="form-group" style="min-width: 170px;">
                             <label class="form-label">Match Target Bank</label>
@@ -141,28 +125,8 @@ else
                 </div>
             </div>
 
-            <!-- Mobile Sub-Navigation Tabs (Read / Write / Memory Map / History) -->
-            <div class="mobile-only mobile-view-tabs" style="margin-bottom: var(--space-2);">
-                <button type="button" class="mobile-view-tab @(mobileOpTab == "read" ? "active" : string.Empty)" @onclick='() => mobileOpTab = "read"'>
-                    <AppIcon Name="read" Size="12" />
-                    <span>Read</span>
-                </button>
-                <button type="button" class="mobile-view-tab @(mobileOpTab == "write" ? "active" : string.Empty)" @onclick='() => mobileOpTab = "write"'>
-                    <AppIcon Name="write" Size="12" />
-                    <span>Write</span>
-                </button>
-                <button type="button" class="mobile-view-tab @(mobileOpTab == "map" ? "active" : string.Empty)" @onclick='() => mobileOpTab = "map"'>
-                    <AppIcon Name="microchip" Size="12" />
-                    <span>Map</span>
-                </button>
-                <button type="button" class="mobile-view-tab @(mobileOpTab == "history" ? "active" : string.Empty)" @onclick='() => mobileOpTab = "history"'>
-                    <AppIcon Name="history" Size="12" />
-                    <span>Log (@history.Count)</span>
-                </button>
-            </div>
-
             <!-- Read Memory Card -->
-            <div class="op-card @(mobileOpTab != "read" ? "desktop-only" : string.Empty)">
+            <div class="op-card">
                 <div class="op-card-header">
                     <span class="op-card-title">
                         <AppIcon Name="read" Size="15" />
@@ -176,10 +140,10 @@ else
                 <div class="op-card-body">
                     <div class="form-group">
                         <label class="form-label">Memory Bank</label>
-                        <div class="bank-tabs" style="display: grid; grid-template-columns: repeat(4, 1fr); width: 100%;">
+                        <div class="bank-tabs">
                             @foreach (TagMemoryBank bank in BankOptions)
                             {
-                                <button class="bank-tab @(readBank == bank ? "active" : string.Empty)"
+                                <button type="button" class="bank-tab @(readBank == bank ? "active" : string.Empty)"
                                         @onclick="() => SetReadBank(bank)"
                                         disabled="@pageBusy">
                                     @bank
@@ -212,7 +176,7 @@ else
             </div>
 
             <!-- Write Memory Card -->
-            <div class="op-card @(mobileOpTab != "write" ? "desktop-only" : string.Empty)">
+            <div class="op-card">
                 <div class="op-card-header">
                     <span class="op-card-title">
                         <AppIcon Name="write" Size="15" />
@@ -226,10 +190,10 @@ else
                 <div class="op-card-body">
                     <div class="form-group">
                         <label class="form-label">Memory Bank</label>
-                        <div class="bank-tabs" style="display: grid; grid-template-columns: repeat(4, 1fr); width: 100%;">
+                        <div class="bank-tabs">
                             @foreach (TagMemoryBank bank in BankOptions)
                             {
-                                <button class="bank-tab @(writeBank == bank ? "active" : string.Empty)"
+                                <button type="button" class="bank-tab @(writeBank == bank ? "active" : string.Empty)"
                                         @onclick="() => SetWriteBank(bank)"
                                         disabled="@pageBusy">
                                     @bank
@@ -262,7 +226,7 @@ else
             </div>
 
             <!-- Visual Memory Map -->
-            <div class="card memory-map-card @(mobileOpTab != "map" ? "desktop-only" : string.Empty)">
+            <div class="card memory-map-card">
                 <div class="card-header">
                     <span class="card-title">
                         <AppIcon Name="microchip" Size="14" />
@@ -274,14 +238,17 @@ else
                     <div class="memory-view">
                         @for (int i = 0; i < 16; i++)
                         {
-                            <div class="memory-cell header">@i.ToString("X2")</div>
+                            <div class="memory-cell header">@($"{i:X2}")</div>
                         }
                         @for (int i = 0; i < 16; i++)
                         {
                             int wordIndex = i;
                             string wordHex = GetWordHex(wordIndex);
                             bool isHighlighted = IsWordHighlighted(wordIndex);
-                            <div class="memory-cell @(isHighlighted ? "highlight" : string.Empty)" title="Word @wordIndex: @wordHex">
+                            <div class="memory-cell @(isHighlighted ? "highlight" : string.Empty)"
+                                 style="cursor: pointer; user-select: none;"
+                                 @onclick="() => SelectMemoryWord(wordIndex)"
+                                 title="@($"Word 0x{wordIndex:X2} ({wordHex}) - Click to set Word Pointer")">
                                 @wordHex
                             </div>
                         }
@@ -292,7 +259,7 @@ else
             <!-- Diagnostics & Session History -->
             @if (history.Count > 0)
             {
-                <div class="card @(mobileOpTab != "history" ? "desktop-only" : string.Empty)">
+                <div class="card">
                     <div class="card-header">
                         <span class="card-title">
                             <AppIcon Name="history" Size="14" />
@@ -328,26 +295,10 @@ else
 @code {
     private static readonly TagMemoryBank[] BankOptions = [TagMemoryBank.Reserved, TagMemoryBank.Epc, TagMemoryBank.Tid, TagMemoryBank.User];
 
-    private string mobileOpTab = "read";
     private readonly List<TagAccessRecord> history = [];
     private string? selectedReaderText;
     private string searchText = string.Empty;
     private bool autoSelectReader = true;
-
-    private void OnMobileTagSelected(ChangeEventArgs e)
-    {
-        if (e.Value is string epc && !string.IsNullOrWhiteSpace(epc))
-        {
-            if (FilteredTags.FirstOrDefault(t => t.Tag.Epc == epc) is { } item)
-            {
-                SelectTag(item);
-            }
-            else
-            {
-                targetHex = epc;
-            }
-        }
-    }
 
     // Target Selection
     private string targetHex = string.Empty;
@@ -393,12 +344,31 @@ else
 
     private bool CanOperate => EffectiveReader is not null && !pageBusy;
 
-    private sealed record TagSourceItem(TagObservation Tag, Guid ReaderId, string ReaderName);
+    public sealed record TagSourceItem(TagObservation Tag, Guid ReaderId, string ReaderName);
 
-    private IReadOnlyList<TagSourceItem> AvailableTags => State.Readers
-        .SelectMany(r => State.GetTags(r.ReaderId).Select(t => new TagSourceItem(t, r.ReaderId, r.Profile.Name)))
-        .OrderByDescending(item => item.Tag.LastSeen)
-        .ToList();
+    private IReadOnlyList<TagSourceItem> AvailableTags
+    {
+        get
+        {
+            if (autoSelectReader)
+            {
+                return State.Readers
+                    .SelectMany(r => State.GetTags(r.ReaderId).Select(t => new TagSourceItem(t, r.ReaderId, r.Profile.Name)))
+                    .OrderByDescending(item => item.Tag.LastSeen)
+                    .ToList();
+            }
+
+            if (EffectiveReader is { } reader)
+            {
+                return State.GetTags(reader.ReaderId)
+                    .Select(t => new TagSourceItem(t, reader.ReaderId, reader.Profile.Name))
+                    .OrderByDescending(item => item.Tag.LastSeen)
+                    .ToList();
+            }
+
+            return [];
+        }
+    }
 
     private IReadOnlyList<TagSourceItem> FilteredTags => AvailableTags
         .Where(item => string.IsNullOrWhiteSpace(searchText) ||
@@ -445,6 +415,7 @@ else
             targetHex = item.Tag.Epc;
             selectionBank = TagMemoryBank.Epc;
         }
+        readStatusText = $"Selected target {item.Tag.Epc}. Ready to execute.";
     }
 
     private void OnTargetHexInput(ChangeEventArgs args)
@@ -688,6 +659,12 @@ else
         return wordIndex >= activeHighlightStart && wordIndex < (activeHighlightStart + activeHighlightLength);
     }
 
+    private void SelectMemoryWord(int wordIndex)
+    {
+        readPointer = (ushort)wordIndex;
+        writePointer = (ushort)wordIndex;
+    }
+
     private static string NormalizeHex(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
@@ -719,7 +696,7 @@ else
 
     public void Dispose() => State.Changed -= OnChanged;
 
-    private sealed record TagAccessRecord(
+    public sealed record TagAccessRecord(
         string Kind,
         string TargetReader,
         string Target,

@@ -27,7 +27,8 @@
     </div>
 }
 
-<div class="split">
+<!-- Desktop Layout -->
+<div class="desktop-only split">
     <section class="stack">
         <!-- Physical Reader Quick Add Form -->
         <div class="card">
@@ -110,25 +111,6 @@
                             }
                         </tbody>
                     </table>
-                </div>
-
-                <!-- Handheld / Mobile Discovered Cards -->
-                <div class="mobile-only stack" style="gap: var(--space-2); padding: var(--space-3);">
-                    @foreach (DiscoveredReader discovered in State.DiscoveredReaders)
-                    {
-                        <div class="card card-pad" style="margin: 0; background: var(--surface-raised);">
-                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                                <div>
-                                    <strong style="font-size: 13px;">@discovered.DisplayName</strong>
-                                    <div class="mono muted" style="font-size: 11px; margin-top: 2px;">@discovered.IpAddress:@discovered.Port</div>
-                                </div>
-                                <button class="btn btn-sm btn-primary" @onclick="() => AddDiscoveredAsync(discovered)" disabled="@State.IsBusy">
-                                    <AppIcon Name="plus" Size="11" />
-                                    <span>Add</span>
-                                </button>
-                            </div>
-                        </div>
-                    }
                 </div>
             </div>
         }
@@ -259,13 +241,13 @@
 
                     <button class="btn btn-danger" style="width: 100%;" @onclick="() => StopVirtualAsync(instance.ReaderId)" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">
                         <AppIcon Name="stop" Size="13" />
-                        <span>Stop Virtual Device</span>
+                        <span>Stop Virtual Target</span>
                     </button>
                 }
                 else
                 {
                     <div class="form-group">
-                        <label class="form-label">Capability Profile</label>
+                        <label class="form-label">Emulation Profile</label>
                         <select @bind="virtualProfileId" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">
                             @foreach (VirtualDeviceProfileInfo profile in VirtualDeviceProfiles.All)
                             {
@@ -287,6 +269,235 @@
             </div>
         </section>
     </aside>
+</div>
+
+<!-- Handheld / Mobile Dedicated Flow -->
+<div class="mobile-only stack" style="gap: var(--space-2);">
+    <!-- Mode Sub-Tabs (Unified Platform Pill Design) -->
+    <div class="mobile-view-tabs" style="width: 100%; display: grid; grid-template-columns: repeat(@(State.DiscoveredReaders.Count > 0 ? 4 : 3), 1fr); gap: 4px; margin-bottom: 2px;">
+        <button type="button" class="mobile-view-tab @(mobileReadersTab == "readers" ? "active" : string.Empty)" @onclick='() => mobileReadersTab = "readers"'>
+            <AppIcon Name="readers" Size="12" />
+            <span>Endpoints (@State.Readers.Count)</span>
+        </button>
+        <button type="button" class="mobile-view-tab @(mobileReadersTab == "add" ? "active" : string.Empty)" @onclick='() => mobileReadersTab = "add"'>
+            <AppIcon Name="plus" Size="12" />
+            <span>Add</span>
+        </button>
+        <button type="button" class="mobile-view-tab @(mobileReadersTab == "virtual" ? "active" : string.Empty)" @onclick='() => mobileReadersTab = "virtual"'>
+            <AppIcon Name="cube" Size="12" />
+            <span>Virtual @(VirtualDevices.IsRunning ? "●" : "")</span>
+        </button>
+        @if (State.DiscoveredReaders.Count > 0)
+        {
+            <button type="button" class="mobile-view-tab @(mobileReadersTab == "discovered" ? "active" : string.Empty)" @onclick='() => mobileReadersTab = "discovered"'>
+                <AppIcon Name="search" Size="12" />
+                <span>Found (@State.DiscoveredReaders.Count)</span>
+            </button>
+        }
+    </div>
+
+    @if (mobileReadersTab == "readers")
+    {
+        @if (State.Readers.Count == 0)
+        {
+            <div class="card empty-state" style="padding: var(--space-4);">
+                <AppIcon Name="readers" Size="36" />
+                <h3 style="font-size: 15px; margin-top: 8px;">No Readers Configured</h3>
+                <p style="font-size: 11.5px;">Add a physical reader or launch a virtual test device.</p>
+                <div style="display: flex; gap: 8px; margin-top: var(--space-2);">
+                    <button class="btn btn-primary" @onclick='() => mobileReadersTab = "add"'>
+                        <AppIcon Name="plus" Size="12" />
+                        <span>Add Reader</span>
+                    </button>
+                    <button class="btn" @onclick='() => mobileReadersTab = "virtual"'>
+                        <AppIcon Name="cube" Size="12" />
+                        <span>Virtual Device</span>
+                    </button>
+                </div>
+            </div>
+        }
+        else
+        {
+            @foreach (ReaderRuntimeSnapshot reader in State.Readers)
+            {
+                <div class="card card-pad stack" style="gap: 6px; margin-bottom: 0;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                        <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                            <div class="reader-icon @(IsVirtual(reader.ReaderId) ? "virtual" : string.Empty)" style="width: 28px; height: 28px; border-radius: var(--radius-sm); flex-shrink: 0;">
+                                <AppIcon Name="@(IsVirtual(reader.ReaderId) ? "cube" : "satellite-dish")" Size="14" />
+                            </div>
+                            <div style="min-width: 0;">
+                                <strong style="font-size: 13px; word-break: break-all; color: var(--fg);">@reader.Profile.Name</strong>
+                                <div class="mono muted" style="font-size: 11px;">@reader.Profile.Host:@reader.Profile.Port</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0;">
+                            <span class="status-badge @StatusClass(reader.State)" style="font-size: 10px;">@reader.State</span>
+                            <span class="status-badge @(reader.IsEnabled ? "ok" : "neutral")" style="font-size: 9.5px; padding: 0 4px;">@(reader.IsEnabled ? "Enabled" : "Disabled")</span>
+                        </div>
+                    </div>
+
+                    <!-- Specs Strip -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--surface-sunken); padding: 4px 6px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); font-size: 10.5px;">
+                        <div><span class="muted">Model:</span> <strong>@(reader.Model ?? "Standard")</strong></div>
+                        <div><span class="muted">Antennas:</span> <strong>@(reader.Antennas.Count > 0 ? $"{reader.Antennas.Count} ports" : "—")</strong></div>
+                    </div>
+
+                    <!-- 2-Column Action Grid -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 2px;">
+                        <button class="btn btn-sm" style="height: 30px; justify-content: center;" @onclick="() => ToggleReaderAsync(reader)" disabled="@State.IsBusy">
+                            @(reader.IsEnabled ? "Disable" : "Enable")
+                        </button>
+                        <a class="btn btn-sm" style="height: 30px; justify-content: center;" href="/inventory">
+                            <AppIcon Name="search" Size="11" />
+                            <span>Inventory</span>
+                        </a>
+                        <a class="btn btn-sm" style="height: 30px; justify-content: center;" href="/tag-memory">
+                            <AppIcon Name="microchip" Size="11" />
+                            <span>Tag Ops</span>
+                        </a>
+                        <a class="btn btn-sm" style="height: 30px; justify-content: center;" href="/settings">
+                            <AppIcon Name="gear" Size="11" />
+                            <span>Settings</span>
+                        </a>
+                        @if (!IsVirtual(reader.ReaderId))
+                        {
+                            <button class="btn btn-sm" style="height: 30px; justify-content: center;" @onclick="() => OpenPropertiesModal(reader.Profile)">
+                                <AppIcon Name="sliders" Size="11" />
+                                <span>Properties</span>
+                            </button>
+                            <button class="btn btn-sm btn-danger" style="height: 30px; justify-content: center;" @onclick="() => RemoveReaderAsync(reader.ReaderId)" disabled="@State.IsBusy">
+                                <AppIcon Name="trash" Size="11" />
+                                <span>Remove</span>
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-sm btn-danger" style="grid-column: 1 / -1; height: 30px; justify-content: center;" @onclick="() => StopVirtualAsync(reader.ReaderId)" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">
+                                <AppIcon Name="stop" Size="11" />
+                                <span>Stop Virtual Target</span>
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    }
+    else if (mobileReadersTab == "add")
+    {
+        <div class="card card-pad stack" style="gap: 8px; margin-bottom: 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <strong style="font-size: 13px;">Quick Add Physical Reader</strong>
+                <span class="status-badge neutral" style="font-size: 10px;">TCP Client</span>
+            </div>
+            <div class="form-group">
+                <label class="form-label" style="font-size: 11px;">Reader Name</label>
+                <input type="text" @bind="physicalName" placeholder="e.g. Reader-01" style="height: 34px; font-size: 12px;" />
+            </div>
+            <div class="form-group">
+                <label class="form-label" style="font-size: 11px;">Host / IP Address</label>
+                <input type="text" @bind="physicalHost" placeholder="192.168.1.100" class="mono" style="height: 34px; font-size: 12px;" />
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                <div class="form-group">
+                    <label class="form-label" style="font-size: 11px;">Port</label>
+                    <input type="number" @bind="physicalPort" min="1" max="65535" class="mono" style="height: 34px; font-size: 12px;" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="font-size: 11px;">Protocol</label>
+                    <select @bind="physicalVersion" style="height: 34px; font-size: 11.5px;">
+                        <option value="@LlrpProtocolVersionOption.Auto">Auto Probe</option>
+                        <option value="@LlrpProtocolVersionOption.Force101">LLRP 1.0.1</option>
+                        <option value="@LlrpProtocolVersionOption.Force11">LLRP 1.1</option>
+                        <option value="@LlrpProtocolVersionOption.Force20">LLRP 2.0</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; gap: 6px; margin-top: 4px;">
+                <button class="btn btn-primary" style="flex: 1; height: 38px; font-weight: 700;" @onclick="AddPhysicalAsync" disabled="@(State.IsBusy || VirtualDevices.IsBusy || string.IsNullOrWhiteSpace(physicalHost))">
+                    <AppIcon Name="plus" Size="13" />
+                    <span>Add & Connect Reader</span>
+                </button>
+                <button class="btn" style="height: 38px; padding: 0 12px;" @onclick="() => OpenPropertiesModal(new ReaderProfile { Id = Guid.NewGuid(), Name = physicalName, Host = physicalHost, Port = physicalPort, LlrpVersion = physicalVersion })" title="Advanced Connection Properties">
+                    <AppIcon Name="sliders" Size="13" />
+                </button>
+            </div>
+        </div>
+    }
+    else if (mobileReadersTab == "virtual")
+    {
+        <div class="card card-pad stack" style="gap: 8px; margin-bottom: 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <strong style="font-size: 13px;">Virtual Device Test Target</strong>
+                <span class="status-badge @(VirtualDevices.IsRunning ? "ok" : "neutral")" style="font-size: 10px;">
+                    @(VirtualDevices.IsRunning ? "Running" : "Stopped")
+                </span>
+            </div>
+
+            @if (VirtualDevices.IsRunning && VirtualDevices.CurrentInstance is { } mobileInstance)
+            {
+                <div class="notice ok" style="padding: 8px 10px;">
+                    <strong style="font-size: 12.5px;">@mobileInstance.Name</strong>
+                    <div class="mono" style="margin-top: 2px; font-size: 11px;">Listening on 127.0.0.1:@mobileInstance.Port</div>
+                    <div class="form-hint" style="margin-top: 2px; font-size: 10px;">Connected Clients: @mobileInstance.ConnectedClientCount</div>
+                </div>
+
+                <button class="btn btn-danger" style="width: 100%; height: 38px; font-weight: 700;" @onclick="() => StopVirtualAsync(mobileInstance.ReaderId)" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">
+                    <AppIcon Name="stop" Size="13" />
+                    <span>Stop Virtual Target</span>
+                </button>
+            }
+            else
+            {
+                <div class="form-group">
+                    <label class="form-label" style="font-size: 11px;">Emulation Profile</label>
+                    <select @bind="virtualProfileId" style="height: 34px; font-size: 11.5px;" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">
+                        @foreach (VirtualDeviceProfileInfo profile in VirtualDeviceProfiles.All)
+                        {
+                            <option value="@profile.Id">@profile.Name (@profile.ProtocolVersion)</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="font-size: 11px;">TCP Port (0 = auto-assign)</label>
+                    <input type="number" min="0" max="65535" @bind="virtualPort" class="mono" style="height: 34px; font-size: 12px;" disabled="@(State.IsBusy || VirtualDevices.IsBusy)" />
+                </div>
+
+                <button class="btn btn-primary" style="width: 100%; height: 38px; font-weight: 700;" @onclick="StartVirtualAsync" disabled="@(State.IsBusy || VirtualDevices.IsBusy)">
+                    <AppIcon Name="play" Size="13" />
+                    <span>Start Virtual Device</span>
+                </button>
+            }
+        </div>
+    }
+    else if (mobileReadersTab == "discovered")
+    {
+        <div class="card card-pad stack" style="gap: 6px; margin-bottom: 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <strong style="font-size: 13px;">Discovered Readers (@State.DiscoveredReaders.Count)</strong>
+                <button class="btn btn-sm" style="height: 26px; padding: 0 6px; font-size: 10.5px;" @onclick="DiscoverAsync" disabled="@State.IsBusy">
+                    <AppIcon Name="rotate" Size="10" />
+                    <span>Rescan</span>
+                </button>
+            </div>
+            @foreach (DiscoveredReader discovered in State.DiscoveredReaders)
+            {
+                <div class="card card-pad" style="margin: 0; padding: 8px 10px; background: var(--surface-raised); border: 1px solid var(--border);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                        <div style="min-width: 0;">
+                            <strong style="font-size: 12.5px; word-break: break-all; color: var(--fg);">@discovered.DisplayName</strong>
+                            <div class="mono muted" style="font-size: 10.5px; margin-top: 1px;">@discovered.IpAddress:@discovered.Port</div>
+                        </div>
+                        <button class="btn btn-sm btn-primary" style="height: 28px; padding: 0 10px; font-weight: 700; white-space: nowrap;" @onclick="() => AddDiscoveredAsync(discovered)" disabled="@State.IsBusy">
+                            <AppIcon Name="plus" Size="11" />
+                            <span>Add</span>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
 </div>
 
 <!-- Reader Properties Modal Dialog -->
@@ -360,6 +571,7 @@
 }
 
 @code {
+    private string mobileReadersTab = "readers";
     private string physicalName = string.Empty;
     private string physicalHost = string.Empty;
     private int physicalPort = 5084;

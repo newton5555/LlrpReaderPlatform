@@ -58,7 +58,6 @@ public sealed class ReaderManagerState : IAsyncDisposable
     {
         if (IsInitialized)
         {
-            Refresh();
             return;
         }
 
@@ -94,6 +93,11 @@ public sealed class ReaderManagerState : IAsyncDisposable
 
     public void Select(Guid? readerId)
     {
+        if (SelectedReaderId == readerId)
+        {
+            return;
+        }
+
         if (readerId is { } id && Readers.All(reader => reader.ReaderId != id))
         {
             return;

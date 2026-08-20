@@ -3,7 +3,7 @@
 @inject ReaderManagerState State
 @inject ITagListStore TagListsStore
 
-<div class="section-header">
+<div class="section-header desktop-only">
     <div>
         <h1 class="section-title">Tag Inventory</h1>
         <p class="section-subtitle">Start and monitor real-time RFID inventory runs with live aggregation, TOI classification, and RF metrics.</p>
@@ -496,53 +496,67 @@ else
                 else if (mobileTagViewMode == "radar")
                 {
                     <!-- Locate Radar (Geiger Counter / Proximity Finder) -->
-                    @if (FilteredTags.FirstOrDefault() is { } topTagItem)
+                    @if (ActiveLocateTag is { } topTagItem)
                     {
                         TagObservation topTag = topTagItem.Tag;
                         ToiMatchResult? toi = GetToiMatch(topTag.Epc);
                         int rssiPct = RssiPercent(topTag.LastRssi);
                         string rssiCol = RssiColor(topTag.LastRssi);
-                        string proximityText = rssiPct > 70 ? "HOT · TARGET IN CLOSE PROXIMITY" : rssiPct > 40 ? "APPROACHING TARGET" : "SEARCHING / FAR AWAY";
+                        string proximityText = rssiPct > 70 ? "HOT · TARGET IN PROXIMITY" : rssiPct > 40 ? "APPROACHING" : "SEARCHING / WEAK";
 
-                        <div class="card card-pad stack" style="border: 2px solid @rssiCol; background: var(--surface-raised); align-items: center; text-align: center; padding: var(--space-4);">
-                            <div class="status-badge ok" style="margin-bottom: var(--space-2); font-size: 10.5px;">
-                                RFID PROXIMITY RADAR
+                        <div class="card card-pad stack @(SelectedReader?.State == ReaderState.Inventorying ? "radar-card-active" : string.Empty)" style="border: 2px solid @rssiCol; background: var(--surface-raised); align-items: center; text-align: center; padding: 10px; margin-bottom: 0;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 6px;">
+                                <span class="status-badge ok" style="font-size: 9.5px; padding: 1px 5px;">PROXIMITY RADAR</span>
+                                @if (FilteredTags.Count > 1)
+                                {
+                                    <select style="height: 26px; font-size: 11px; max-width: 180px;" value="@locateTargetEpc" @onchange="e => locateTargetEpc = e.Value?.ToString()">
+                                        @foreach (TagRowItem opt in FilteredTags)
+                                        {
+                                            <option value="@opt.Tag.Epc">@opt.Tag.Epc (@(opt.Tag.LastRssi?.ToString("0") ?? "—") dBm)</option>
+                                        }
+                                    </select>
+                                }
                             </div>
-                            <div class="mono" style="font-size: 15px; font-weight: 800; word-break: break-all; color: var(--fg);">
+
+                            <div class="mono" style="font-size: 14px; font-weight: 800; word-break: break-all; color: var(--fg); margin-top: 4px;">
                                 @topTag.Epc
                             </div>
                             @if (toi is not null)
                             {
-                                <span class="color-pill-tag" style="border-color: @toi.ColorHex; margin-top: 4px;">
+                                <span class="color-pill-tag" style="border-color: @toi.ColorHex; margin-top: 2px; font-size: 10px;">
                                     <span class="color-indicator" style="background-color: @toi.ColorHex;"></span>
                                     <span>@toi.DisplayName</span>
                                 </span>
                             }
 
                             <!-- Radar Meter Bar -->
-                            <div style="width: 100%; max-width: 320px; margin-top: var(--space-3);">
-                                <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; margin-bottom: 4px;">
+                            <div style="width: 100%; margin-top: 6px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 10.5px; font-weight: 700; margin-bottom: 3px;">
                                     <span style="color: @rssiCol;">@proximityText</span>
                                     <span class="mono" style="color: @rssiCol;">@(topTag.LastRssi?.ToString("0.0") ?? "—") dBm</span>
                                 </div>
-                                <div class="rssi-meter-track" style="height: 10px; border-radius: 5px;">
-                                    <div class="rssi-meter-fill" style="width: @(rssiPct)%; background: @rssiCol; border-radius: 5px;"></div>
+                                <div class="rssi-meter-track" style="height: 8px; border-radius: 4px;">
+                                    <div class="rssi-meter-fill" style="width: @(rssiPct)%; background: @rssiCol; border-radius: 4px;"></div>
                                 </div>
                             </div>
 
-                            <div class="card-grid" style="width: 100%; margin-top: var(--space-3); grid-template-columns: 1fr 1fr; gap: 8px;">
-                                <div class="card card-pad" style="padding: 6px 10px; margin: 0;">
-                                    <div class="stat-label">Total Reads</div>
-                                    <div class="stat-value mono" style="font-size: 18px;">@topTag.ReadCount</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; width: 100%; margin-top: 6px;">
+                                <div class="card card-pad" style="padding: 4px 6px; margin: 0; background: var(--surface);">
+                                    <div class="stat-label" style="font-size: 8.5px;">Reads</div>
+                                    <div class="stat-value mono" style="font-size: 13px;">@topTag.ReadCount</div>
                                 </div>
-                                <div class="card card-pad" style="padding: 6px 10px; margin: 0;">
-                                    <div class="stat-label">Antenna Port</div>
-                                    <div class="stat-value mono" style="font-size: 18px;">Ant @(topTag.LastAntenna?.ToString() ?? "—")</div>
+                                <div class="card card-pad" style="padding: 4px 6px; margin: 0; background: var(--surface);">
+                                    <div class="stat-label" style="font-size: 8.5px;">Antenna</div>
+                                    <div class="stat-value mono" style="font-size: 13px;">Ant @(topTag.LastAntenna?.ToString() ?? "—")</div>
+                                </div>
+                                <div class="card card-pad" style="padding: 4px 6px; margin: 0; background: var(--surface);">
+                                    <div class="stat-label" style="font-size: 8.5px;">Last Seen</div>
+                                    <div class="stat-value mono" style="font-size: 11px; line-height: 18px;">@topTag.LastSeen.ToLocalTime().ToString("HH:mm:ss")</div>
                                 </div>
                             </div>
 
-                            <a class="btn btn-primary" href="/tag-memory" style="width: 100%; margin-top: var(--space-3); min-height: 42px;">
-                                <AppIcon Name="microchip" Size="14" />
+                            <a class="btn btn-primary" href="/tag-memory" style="width: 100%; margin-top: 6px; min-height: 34px; font-size: 11.5px; font-weight: 700;">
+                                <AppIcon Name="microchip" Size="12" />
                                 <span>Read / Write Memory for this Tag</span>
                             </a>
                         </div>
@@ -634,6 +648,11 @@ else
     private string tableSearch = string.Empty;
     private bool onlyShowToi;
     private bool showAllReaders = true;
+    private string? locateTargetEpc;
+
+    private TagRowItem? ActiveLocateTag =>
+        (!string.IsNullOrWhiteSpace(locateTargetEpc) ? FilteredTags.FirstOrDefault(t => t.Tag.Epc == locateTargetEpc) : null)
+        ?? FilteredTags.OrderByDescending(t => t.Tag.LastRssi ?? -999).FirstOrDefault();
 
     private static int RssiPercent(double? rssi)
     {
@@ -976,11 +995,7 @@ else
         messageIsError = error;
     }
 
-    private async void OnChanged(object? sender, EventArgs args)
-    {
-        await ReloadTagListsAsync();
-        await InvokeAsync(StateHasChanged);
-    }
+    private void OnChanged(object? sender, EventArgs args) => InvokeAsync(StateHasChanged);
 
     public void Dispose() => State.Changed -= OnChanged;
 }

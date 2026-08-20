@@ -7,6 +7,8 @@ namespace LlrpReaderManager;
 [Activity(
     Theme = "@style/Maui.SplashTheme",
     MainLauncher = true,
+    Icon = "@mipmap/appicon",
+    RoundIcon = "@mipmap/appicon_round",
     ConfigurationChanges = ConfigChanges.ScreenSize
         | ConfigChanges.Orientation
         | ConfigChanges.UiMode

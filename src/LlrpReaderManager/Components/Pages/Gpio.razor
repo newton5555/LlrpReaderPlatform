@@ -7,16 +7,15 @@
         <h1 class="section-title">GPI / GPO Control</h1>
         <p class="section-subtitle">Read live digital input status and trigger standard LLRP output ports through platform services.</p>
     </div>
-    <div class="toolbar">
-        <label class="form-label" for="gpio-reader">Reader</label>
-        <select id="gpio-reader" style="width: min(280px, 50vw);" value="@SelectedReaderText" @onchange="SelectReader">
+    <div class="toolbar" style="width: 100%; display: flex; align-items: center; gap: 6px;">
+        <select id="gpio-reader" style="flex: 1; height: 34px; font-size: 12px;" value="@SelectedReaderText" @onchange="SelectReader">
             <option value="">Choose Reader</option>
             @foreach (ReaderRuntimeSnapshot reader in State.Readers)
             {
                 <option value="@reader.ReaderId">@reader.Profile.Name (@reader.Profile.Host:@reader.Profile.Port)</option>
             }
         </select>
-        <button class="btn btn-sm" @onclick="LoadAsync" disabled="@(pageBusy || SelectedReader is null)">
+        <button class="btn btn-sm" style="height: 34px; padding: 0 10px;" @onclick="LoadAsync" disabled="@(pageBusy || SelectedReader is null)">
             <AppIcon Name="rotate" Size="13" />
             <span>Refresh</span>
         </button>

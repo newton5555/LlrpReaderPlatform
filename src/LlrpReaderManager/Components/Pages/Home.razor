@@ -8,7 +8,7 @@
         <h1 class="section-title">Operations Dashboard</h1>
         <p class="section-subtitle">Real-time telemetry, connected RFID readers, active inventory sessions, and system overview.</p>
     </div>
-    <div class="toolbar">
+    <div class="toolbar desktop-only">
         <a class="btn btn-primary" href="/inventory">
             <AppIcon Name="search" Size="13" />
             <span>Tag Inventory</span>
@@ -78,6 +78,36 @@
         <div class="stat-note">
             @(VirtualDevices.IsRunning ? $"127.0.0.1:{VirtualDevices.CurrentInstance?.Port}" : "Local hardware emulation")
         </div>
+    </div>
+</div>
+
+<!-- Handheld Quick Tools Strip -->
+<div class="mobile-only" style="margin-bottom: var(--space-3);">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+        <span style="font-size: 10.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;">
+            Quick Features
+        </span>
+        <span class="status-badge neutral" style="font-size: 9.5px; padding: 1px 5px;">Shortcuts</span>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+        <a class="quick-feature-card" href="/runs" title="Open Inventory Runs Log">
+            <div class="quick-feature-icon">
+                <AppIcon Name="history" Size="15" />
+            </div>
+            <span class="quick-feature-label">Runs Log</span>
+        </a>
+        <a class="quick-feature-card" href="/gpio" title="Open GPI/GPO Controls">
+            <div class="quick-feature-icon">
+                <AppIcon Name="bolt" Size="15" />
+            </div>
+            <span class="quick-feature-label">GPI / GPO</span>
+        </a>
+        <a class="quick-feature-card" href="/tag-lists" title="Open TOI Tag Classifications">
+            <div class="quick-feature-icon">
+                <AppIcon Name="tags" Size="15" />
+            </div>
+            <span class="quick-feature-label">TOI Lists</span>
+        </a>
     </div>
 </div>
 

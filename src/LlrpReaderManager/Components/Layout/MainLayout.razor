@@ -7,71 +7,115 @@
 {
     <!-- Simulated Handheld Device Stage for Desktop -->
     <div class="handheld-stage">
+        <!-- Stage Top Control Strip (Single Row Layout) -->
         <div class="handheld-stage-header">
-            <div class="handheld-stage-title">
-                <AppIcon Name="mobile" Size="16" />
-                <span>Handheld / Mobile Device Preview (390 × 844)</span>
+            <div class="handheld-stage-title" style="white-space: nowrap;">
+                <AppIcon Name="mobile" Size="15" />
+                <span>Simulator</span>
+                <span class="status-badge ok" style="font-size: 9.5px; padding: 1px 5px; margin-left: 2px;">@deviceWidth×@deviceHeight</span>
             </div>
-            <button class="btn btn-sm btn-primary" @onclick="ToggleHandheldPreview">
-                <AppIcon Name="desktop" Size="13" />
-                <span>Exit Handheld Preview</span>
+
+            <div class="stage-divider"></div>
+
+            <!-- Device Preset Selector -->
+            <div class="handheld-preset-tabs" title="Select simulated device screen profile">
+                <button type="button" class="handheld-preset-btn @(devicePreset == "phone" ? "active" : string.Empty)" @onclick='() => SetDevicePreset("phone")'>
+                    <span>📱 Phone (390×844)</span>
+                </button>
+                <button type="button" class="handheld-preset-btn @(devicePreset == "pda" ? "active" : string.Empty)" @onclick='() => SetDevicePreset("pda")'>
+                    <span>📟 PDA (412×890)</span>
+                </button>
+                <button type="button" class="handheld-preset-btn @(devicePreset == "compact" ? "active" : string.Empty)" @onclick='() => SetDevicePreset("compact")'>
+                    <span>📱 Compact (360×740)</span>
+                </button>
+            </div>
+
+            <!-- Scale Zoom Selector -->
+            <div class="handheld-preset-tabs" title="Adjust display zoom factor">
+                <button type="button" class="handheld-preset-btn @(deviceScale == 1.0 ? "active" : string.Empty)" @onclick="() => SetDeviceScale(1.0)">
+                    <span>100%</span>
+                </button>
+                <button type="button" class="handheld-preset-btn @(deviceScale == 0.88 ? "active" : string.Empty)" @onclick="() => SetDeviceScale(0.88)">
+                    <span>88%</span>
+                </button>
+                <button type="button" class="handheld-preset-btn @(deviceScale == 0.78 ? "active" : string.Empty)" @onclick="() => SetDeviceScale(0.78)">
+                    <span>78%</span>
+                </button>
+            </div>
+
+            <div class="stage-divider"></div>
+
+            <!-- Return to Desktop Button -->
+            <button class="btn btn-sm btn-primary" style="height: 28px; padding: 0 12px; font-weight: 700; font-size: 11.5px; border-radius: var(--radius-pill); gap: 5px; white-space: nowrap;" @onclick="ToggleHandheldPreview">
+                <AppIcon Name="desktop" Size="12" />
+                <span>Return to Desktop</span>
             </button>
         </div>
 
-        <div class="handheld-device-bezel">
-            <!-- Simulated Hardware Speaker & Camera Notch -->
-            <div class="handheld-device-notch">
-                <div class="handheld-speaker"></div>
-                <div class="handheld-camera"></div>
-            </div>
+        <!-- Outer Physical Hardware Chassis Window -->
+        <div class="handheld-device-chassis-wrapper" style="transform: scale(@deviceScale); transform-origin: top center;">
+            <div class="handheld-device-chassis" style="width: @(deviceWidth + 24)px; height: @(deviceHeight + 36)px;">
+                <!-- Physical Hardware Buttons on Frame -->
+                <div class="chassis-btn volume-up" title="Hardware Volume Up"></div>
+                <div class="chassis-btn volume-down" title="Hardware Volume Down"></div>
+                <div class="chassis-btn power" title="Hardware Power Key"></div>
+                <div class="chassis-btn rfid-trigger" title="Industrial RFID Scan Trigger (黄键寻卡触发)"></div>
 
-            <!-- Handheld Screen Viewport -->
-            <div class="handheld-screen">
-                <div class="app-shell handheld-mode">
-                    <header class="app-topbar handheld-topbar">
-                        <div style="display: flex; align-items: center; gap: var(--space-2);">
-                            <img src="img/appicon.png" alt="LLRP" class="brand-logo-img" style="width: 20px; height: 20px;" />
-                            <span style="font-weight: 700; font-size: 13px;">LLRP Mobile</span>
-                        </div>
-                        <div class="topbar-meta">
-                            <span class="topbar-badge" style="font-size: 10px; padding: 2px 6px;">@ProtocolBadgeText</span>
-                        </div>
-                    </header>
+                <!-- Inner Screen Viewport with Bezel & Notch -->
+                <div class="handheld-screen-inner" style="width: @(deviceWidth)px; height: @(deviceHeight)px;">
+                    <!-- Simulated Hardware Speaker & Camera Notch -->
+                    <div class="handheld-device-notch">
+                        <div class="handheld-speaker"></div>
+                        <div class="handheld-camera"></div>
+                    </div>
 
-                    <main class="app-content handheld-content">
-                        @Body
-                    </main>
+                    <!-- Handheld Application Shell Viewport -->
+                    <div class="app-shell handheld-mode" style="height: calc(100% - 24px); overflow-y: auto;">
+                        <header class="app-topbar handheld-topbar">
+                            <div style="display: flex; align-items: center; gap: var(--space-2);">
+                                <img src="img/appicon.png" alt="LLRP" class="brand-logo-img" style="width: 20px; height: 20px;" />
+                                <span style="font-weight: 700; font-size: 13px;">LLRP Mobile</span>
+                            </div>
+                            <div class="topbar-meta">
+                                <span class="topbar-badge" style="font-size: 10px; padding: 2px 6px;">@ProtocolBadgeText</span>
+                            </div>
+                        </header>
 
-                    <nav class="mobile-bottom-nav" aria-label="Handheld Navigation">
-                        <NavLink href="/" Match="NavLinkMatch.All" class="mobile-nav-item" title="Dashboard">
-                            <AppIcon Name="dashboard" Size="18" />
-                            <span>Home</span>
-                        </NavLink>
-                        <NavLink href="/inventory" class="mobile-nav-item" title="Tag Inventory">
-                            <AppIcon Name="search" Size="18" />
-                            <span>Inventory</span>
-                        </NavLink>
-                        <NavLink href="/tag-memory" class="mobile-nav-item" title="Tag Operations">
-                            <AppIcon Name="microchip" Size="18" />
-                            <span>Tag Ops</span>
-                        </NavLink>
-                        <NavLink href="/readers" class="mobile-nav-item" title="Readers">
-                            <AppIcon Name="readers" Size="18" />
-                            <span>Readers</span>
-                        </NavLink>
-                        <NavLink href="/settings" class="mobile-nav-item" title="Settings">
-                            <AppIcon Name="gear" Size="18" />
-                            <span>Settings</span>
-                        </NavLink>
-                    </nav>
+                        <main class="app-content handheld-content">
+                            @Body
+                        </main>
 
-                    @if (State.IsBusy || VirtualDevices.IsBusy)
-                    {
-                        <div class="busy-strip" style="font-size: 11px;">
-                            <AppIcon Name="rotate" Size="12" Class="animate-spin" />
-                            <span>Working with Reader…</span>
-                        </div>
-                    }
+                        <nav class="mobile-bottom-nav" aria-label="Handheld Navigation">
+                            <NavLink href="/" Match="NavLinkMatch.All" class="mobile-nav-item" title="Dashboard">
+                                <AppIcon Name="dashboard" Size="18" />
+                                <span>Home</span>
+                            </NavLink>
+                            <NavLink href="/inventory" class="mobile-nav-item" title="Tag Inventory">
+                                <AppIcon Name="search" Size="18" />
+                                <span>Inventory</span>
+                            </NavLink>
+                            <NavLink href="/tag-memory" class="mobile-nav-item" title="Tag Operations">
+                                <AppIcon Name="microchip" Size="18" />
+                                <span>Tag Ops</span>
+                            </NavLink>
+                            <NavLink href="/readers" class="mobile-nav-item" title="Readers">
+                                <AppIcon Name="readers" Size="18" />
+                                <span>Readers</span>
+                            </NavLink>
+                            <NavLink href="/settings" class="mobile-nav-item" title="Settings">
+                                <AppIcon Name="gear" Size="18" />
+                                <span>Settings</span>
+                            </NavLink>
+                        </nav>
+
+                        @if (State.IsBusy || VirtualDevices.IsBusy)
+                        {
+                            <div class="busy-strip" style="font-size: 11px;">
+                                <AppIcon Name="rotate" Size="12" Class="animate-spin" />
+                                <span>Working with Reader…</span>
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
         </div>
@@ -92,13 +136,13 @@ else
                 </div>
             </div>
             <div class="topbar-meta">
-                <!-- One-click Handheld Mode Preview Toggle for Windows Desktop -->
-                <button class="btn btn-sm btn-ghost handheld-toggle-btn"
+                <!-- High-End Interactive Handheld Mode Preview Pill Button for Desktop -->
+                <button class="device-switch-pill"
                         @onclick="ToggleHandheldPreview"
-                        title="Simulate Handheld / Mobile Device on Windows"
-                        style="gap: 5px; height: 26px; padding: 0 9px; font-size: 11.5px; border-color: var(--border-strong);">
-                    <AppIcon Name="mobile" Size="13" />
-                    <span>Handheld Mode</span>
+                        title="Simulate Handheld / Mobile Device on Windows (一键切换手持端仿真预览)">
+                    <span class="switch-pill-icon"><AppIcon Name="mobile" Size="13" /></span>
+                    <span class="switch-pill-text">Handheld Mode</span>
+                    <span class="switch-pill-badge">@deviceWidth×@deviceHeight</span>
                 </button>
 
                 <span class="topbar-separator">|</span>
@@ -198,8 +242,38 @@ else
 @code {
     private bool navigationCollapsed;
     private bool handheldPreviewMode;
+    private string devicePreset = "phone";
+    private int deviceWidth = 390;
+    private int deviceHeight = 844;
+    private double deviceScale = 1.0;
     private string currentTime = DateTime.Now.ToString("HH:mm:ss");
     private System.Threading.Timer? clockTimer;
+
+    private void SetDevicePreset(string preset)
+    {
+        devicePreset = preset;
+        switch (preset)
+        {
+            case "pda":
+                deviceWidth = 412;
+                deviceHeight = 890;
+                break;
+            case "compact":
+                deviceWidth = 360;
+                deviceHeight = 740;
+                break;
+            default:
+                devicePreset = "phone";
+                deviceWidth = 390;
+                deviceHeight = 844;
+                break;
+        }
+    }
+
+    private void SetDeviceScale(double scale)
+    {
+        deviceScale = scale;
+    }
 
     private string ProtocolBadgeText
     {

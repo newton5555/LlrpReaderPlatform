@@ -2,7 +2,8 @@
 @implements IDisposable
 @inject ReaderManagerState State
 
-<div class="section-header">
+<!-- Desktop Section Header & Toolbar -->
+<div class="section-header desktop-only">
     <div>
         <h1 class="section-title">Reader Settings</h1>
         <p class="section-subtitle">Capability-driven configuration synchronized directly with the reader hardware.</p>
@@ -19,7 +20,7 @@
     </div>
 </div>
 
-<div class="toolbar" style="margin-bottom: var(--space-4); flex-wrap: wrap; gap: var(--space-2);">
+<div class="toolbar desktop-only" style="margin-bottom: var(--space-4); flex-wrap: wrap; gap: var(--space-2);">
     <button class="btn btn-sm" @onclick="() => LoadAsync(false)" disabled="@(pageBusy || SelectedReader is null)">
         <AppIcon Name="rotate" Size="13" />
         <span>Refresh from Reader</span>
@@ -35,9 +36,40 @@
     </button>
 </div>
 
+<!-- Handheld / Mobile Dedicated Control Bar -->
+<div class="card mobile-only" style="margin-bottom: var(--space-2); padding: 8px 10px;">
+    <div class="stack" style="gap: 6px; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+            <select style="flex: 1; height: 34px; font-size: 12px;" value="@SelectedReaderText" @onchange="SelectReader">
+                <option value="">Choose Reader</option>
+                @foreach (ReaderRuntimeSnapshot reader in State.Readers)
+                {
+                    <option value="@reader.ReaderId">@reader.Profile.Name (@reader.Profile.Host:@reader.Profile.Port)</option>
+                }
+            </select>
+            <button class="btn btn-primary" style="height: 34px; padding: 0 12px; font-weight: 700; white-space: nowrap;" @onclick="SaveAsync" disabled="@(pageBusy || SettingsModel is null)">
+                <AppIcon Name="check" Size="13" />
+                <span>Save</span>
+            </button>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <button class="btn btn-sm" style="height: 30px; justify-content: center;" @onclick="() => LoadAsync(false)" disabled="@(pageBusy || SelectedReader is null)">
+                <AppIcon Name="rotate" Size="12" />
+                <span>Refresh</span>
+            </button>
+            <button class="btn btn-sm" style="height: 30px; justify-content: center;" @onclick="() => LoadAsync(true)" disabled="@(pageBusy || SelectedReader is null)">
+                <AppIcon Name="history" Size="12" />
+                <span>SDK Defaults</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 @if (!string.IsNullOrWhiteSpace(message))
 {
-    <div class="notice @(messageIsError ? "error" : "info")" style="margin-bottom: var(--space-4);">@message</div>
+    <div class="notice @(messageIsError ? "error" : "info")" style="margin-bottom: var(--space-2); padding: 6px 10px; font-size: 11.5px;">
+        @message
+    </div>
 }
 
 @if (SettingsModel is null)
@@ -50,8 +82,8 @@
 }
 else
 {
-    <!-- Category Navigation Tabs & Search -->
-    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-3);">
+    <!-- Desktop Category Navigation Tabs & Search -->
+    <div class="desktop-only" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-3);">
         <nav class="settings-nav-tabs" style="margin-bottom: 0;">
             <button type="button"
                     class="settings-nav-tab @(activeCategory == "rf" ? "active" : string.Empty)"
@@ -98,6 +130,37 @@ else
                    @bind:event="oninput"
                    style="height: 32px; font-size: 12px;" />
         </div>
+    </div>
+
+    <!-- Handheld / Mobile Category Navigation & Search -->
+    <div class="mobile-only stack" style="gap: 6px; margin-bottom: var(--space-2);">
+        <nav class="settings-nav-tabs" style="margin-bottom: 0; width: 100%;">
+            <button type="button" class="settings-nav-tab @(activeCategory == "rf" ? "active" : string.Empty)" @onclick='() => activeCategory = "rf"'>
+                <AppIcon Name="bolt" Size="12" />
+                <span>RF / Antennas</span>
+            </button>
+            <button type="button" class="settings-nav-tab @(activeCategory == "protocol" ? "active" : string.Empty)" @onclick='() => activeCategory = "protocol"'>
+                <AppIcon Name="search" Size="12" />
+                <span>Protocol</span>
+            </button>
+            <button type="button" class="settings-nav-tab @(activeCategory == "filters" ? "active" : string.Empty)" @onclick='() => activeCategory = "filters"'>
+                <AppIcon Name="filter" Size="12" />
+                <span>Filters</span>
+            </button>
+            <button type="button" class="settings-nav-tab @(activeCategory == "triggers" ? "active" : string.Empty)" @onclick='() => activeCategory = "triggers"'>
+                <AppIcon Name="zap" Size="12" />
+                <span>Triggers</span>
+            </button>
+            <button type="button" class="settings-nav-tab @(activeCategory == "reports" ? "active" : string.Empty)" @onclick='() => activeCategory = "reports"'>
+                <AppIcon Name="tags" Size="12" />
+                <span>Reports</span>
+            </button>
+            <button type="button" class="settings-nav-tab @(activeCategory == "all" ? "active" : string.Empty)" @onclick='() => activeCategory = "all"'>
+                <AppIcon Name="grid" Size="12" />
+                <span>All</span>
+            </button>
+        </nav>
+        <input type="text" placeholder="Search settings (e.g. power, session)..." @bind="searchTerm" @bind:event="oninput" style="height: 32px; font-size: 11.5px;" />
     </div>
 
     <section class="settings-card-grid">
@@ -182,9 +245,11 @@ else
                                 }
                                 else if (entry.EditorKind == EditorKind.Boolean)
                                 {
-                                    <label class="check-line">
-                                        <input type="checkbox" checked="@ReadBoolean(entry)" @onchange="args => ChangeValue(entry, args)" />
-                                        <span>@(entry.Key == SettingsKeys.IndividualAntennaSettings ? "Configure RF Per Antenna (展开每个天线独立功率)" : "Enabled")</span>
+                                    <label class="check-line" style="display: flex; align-items: center; justify-content: space-between; width: 100%; cursor: pointer; min-height: 32px;">
+                                        <span style="font-weight: 600; font-size: 12px; color: var(--fg);">
+                                            @(entry.Key == SettingsKeys.IndividualAntennaSettings ? "Configure RF Per Antenna (展开每个天线独立功率)" : (ReadBoolean(entry) ? "Enabled (已启用)" : "Disabled (未启用)"))
+                                        </span>
+                                        <input type="checkbox" style="width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer;" checked="@ReadBoolean(entry)" @onchange="args => ChangeValue(entry, args)" />
                                     </label>
                                 }
                                 else if (entry.EditorKind == EditorKind.Choice)
@@ -215,6 +280,24 @@ else
             </article>
         }
     </section>
+
+    <!-- Floating Save Bar for Mobile/Handheld -->
+    @if (hasUnsavedChanges && !pageBusy)
+    {
+        <div class="floating-save-bar mobile-only">
+            <div style="font-size: 11.5px; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 5px;">
+                <AppIcon Name="sliders" Size="13" />
+                <span>Unsaved Changes</span>
+            </div>
+            <div style="display: flex; gap: 6px;">
+                <button class="btn btn-sm" style="height: 30px; font-size: 11px;" @onclick="() => LoadAsync(false)">Discard</button>
+                <button class="btn btn-sm btn-primary" style="height: 30px; font-size: 11px; font-weight: 700;" @onclick="SaveAsync">
+                    <AppIcon Name="check" Size="11" />
+                    <span>Save</span>
+                </button>
+            </div>
+        </div>
+    }
 }
 
 @code {
@@ -225,6 +308,7 @@ else
     private string? message;
     private bool messageIsError;
     private bool pageBusy;
+    private bool hasUnsavedChanges;
 
     private string activeCategory = "rf";
     private string searchTerm = string.Empty;
@@ -286,6 +370,7 @@ else
             values = SettingsModel.Snapshot.Values.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
             message = defaults ? "SDK defaults loaded." : "Reader settings refreshed.";
             messageIsError = false;
+            hasUnsavedChanges = false;
         }
         catch (Exception exception)
         {
@@ -335,6 +420,7 @@ else
             messageIsError = !result.Succeeded;
             if (result.Succeeded)
             {
+                hasUnsavedChanges = false;
                 await LoadAsync(false);
             }
         }
@@ -353,6 +439,7 @@ else
     {
         object? value = ParseValue(entry, args.Value);
         values[entry.Key] = value;
+        hasUnsavedChanges = true;
     }
 
     private bool ReadBoolean(SettingsEntry entry) => ReadBooleanByKey(entry.Key);
@@ -563,6 +650,7 @@ else
             parts.Add(idStr);
         }
         values[entry.Key] = string.Join(", ", parts.OrderBy(p => ushort.TryParse(p, out ushort u) ? u : 0));
+        hasUnsavedChanges = true;
     }
 
     private bool IsAllAntennasSelected(SettingsEntry entry) =>
@@ -578,6 +666,7 @@ else
         {
             values[entry.Key] = string.Join(", ", AvailableAntennas);
         }
+        hasUnsavedChanges = true;
     }
 
     private bool IsChannelSelected(SettingsEntry entry, string channel)
@@ -600,6 +689,7 @@ else
             parts.Add(channel);
         }
         values[entry.Key] = string.Join(", ", parts);
+        hasUnsavedChanges = true;
     }
 
     private static string GetCustomTitle(SettingsEntry entry)

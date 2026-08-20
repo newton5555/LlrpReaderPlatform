@@ -7,16 +7,15 @@
         <h1 class="section-title">Inventory Runs</h1>
         <p class="section-subtitle">Historical inventory session summaries, tag snapshots, and run logs persisted in SQLite.</p>
     </div>
-    <div class="toolbar">
-        <label class="form-label" for="runs-reader">Reader</label>
-        <select id="runs-reader" style="width: min(280px, 50vw);" value="@selectedReaderText" @onchange="SelectReader">
+    <div class="toolbar" style="width: 100%; display: flex; align-items: center; gap: 6px;">
+        <select id="runs-reader" style="flex: 1; height: 34px; font-size: 12px;" value="@selectedReaderText" @onchange="SelectReader">
             <option value="">Choose Reader</option>
             @foreach (ReaderRuntimeSnapshot reader in State.Readers)
             {
                 <option value="@reader.ReaderId">@reader.Profile.Name (@reader.Profile.Host:@reader.Profile.Port)</option>
             }
         </select>
-        <button class="btn btn-sm" @onclick="LoadAsync" disabled="@pageBusy">
+        <button class="btn btn-sm" style="height: 34px; padding: 0 10px;" @onclick="LoadAsync" disabled="@pageBusy">
             <AppIcon Name="rotate" Size="13" />
             <span>Refresh</span>
         </button>
