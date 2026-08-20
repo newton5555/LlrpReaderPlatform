@@ -6,117 +6,93 @@
 
 @if (handheldPreviewMode)
 {
-    <!-- Simulated Handheld Device Stage for Desktop -->
+    <!-- High-End Handheld Device Simulator with Realistic Phone Chassis -->
     <div class="handheld-stage">
-        <!-- Stage Top Control Strip (Single Row Layout) -->
-        <div class="handheld-stage-header">
-            <div class="handheld-stage-title" style="white-space: nowrap;">
-                <AppIcon Name="mobile" Size="15" />
-                <span>Simulator</span>
-                <span class="status-badge ok" style="font-size: 9.5px; padding: 1px 5px; margin-left: 2px;">@deviceWidth×@deviceHeight</span>
-            </div>
-
-            <div class="stage-divider"></div>
-
+        <!-- Compact Simulator Top Control Bar -->
+        <div class="handheld-sim-controlbar">
             <!-- Device Preset Selector -->
-            <div class="handheld-preset-tabs" title="Select simulated device screen profile">
-                <button type="button" class="handheld-preset-btn @(devicePreset == "phone" ? "active" : string.Empty)" @onclick='() => SetDevicePreset("phone")'>
-                    <span>📱 Phone (390×844)</span>
+            <div class="handheld-sim-presets">
+                <button type="button" class="sim-preset-btn @(devicePreset == "compact" ? "active" : string.Empty)" @onclick='() => SetDevicePreset("compact")' title="Compact (360×740)">
+                    <span>360×740</span>
                 </button>
-                <button type="button" class="handheld-preset-btn @(devicePreset == "pda" ? "active" : string.Empty)" @onclick='() => SetDevicePreset("pda")'>
-                    <span>📟 PDA (412×890)</span>
+                <button type="button" class="sim-preset-btn @(devicePreset == "phone" ? "active" : string.Empty)" @onclick='() => SetDevicePreset("phone")' title="Phone (390×844)">
+                    <span>390×844</span>
                 </button>
-                <button type="button" class="handheld-preset-btn @(devicePreset == "compact" ? "active" : string.Empty)" @onclick='() => SetDevicePreset("compact")'>
-                    <span>📱 Compact (360×740)</span>
-                </button>
-            </div>
-
-            <!-- Scale Zoom Selector -->
-            <div class="handheld-preset-tabs" title="Adjust display zoom factor">
-                <button type="button" class="handheld-preset-btn @(deviceScale == 1.0 ? "active" : string.Empty)" @onclick="() => SetDeviceScale(1.0)">
-                    <span>100%</span>
-                </button>
-                <button type="button" class="handheld-preset-btn @(deviceScale == 0.88 ? "active" : string.Empty)" @onclick="() => SetDeviceScale(0.88)">
-                    <span>88%</span>
-                </button>
-                <button type="button" class="handheld-preset-btn @(deviceScale == 0.78 ? "active" : string.Empty)" @onclick="() => SetDeviceScale(0.78)">
-                    <span>78%</span>
+                <button type="button" class="sim-preset-btn @(devicePreset == "pda" ? "active" : string.Empty)" @onclick='() => SetDevicePreset("pda")' title="PDA (412×890)">
+                    <span>412×890</span>
                 </button>
             </div>
 
-            <div class="stage-divider"></div>
-
-            <!-- Return to Desktop Button -->
-            <button class="btn btn-sm btn-primary" style="height: 28px; padding: 0 12px; font-weight: 700; font-size: 11.5px; border-radius: var(--radius-pill); gap: 5px; white-space: nowrap;" @onclick="ToggleHandheldPreview">
-                <AppIcon Name="desktop" Size="12" />
-                <span>Return to Desktop</span>
-            </button>
+            <div class="sim-control-actions">
+                <!-- Return to Desktop Button -->
+                <button type="button" class="btn btn-sm btn-ghost sim-action-btn" @onclick="ToggleHandheldPreview" title="Return to Desktop Mode">
+                    <AppIcon Name="desktop" Size="12" />
+                    <span>Desktop</span>
+                </button>
+                <!-- Exit Application Button -->
+                <button type="button" class="btn btn-sm btn-danger sim-action-btn" @onclick="ExitApp" title="Exit / Close Application">
+                    <AppIcon Name="times" Size="12" />
+                    <span>Close</span>
+                </button>
+            </div>
         </div>
 
-        <!-- Outer Physical Hardware Chassis Window -->
-        <div class="handheld-device-chassis-wrapper" style="transform: scale(@deviceScale); transform-origin: top center;">
-            <div class="handheld-device-chassis" style="width: @(deviceWidth + 24)px; height: @(deviceHeight + 36)px;">
-                <!-- Physical Hardware Buttons on Frame -->
-                <div class="chassis-btn volume-up" title="Hardware Volume Up"></div>
-                <div class="chassis-btn volume-down" title="Hardware Volume Down"></div>
-                <div class="chassis-btn power" title="Hardware Power Key"></div>
-                <div class="chassis-btn rfid-trigger" title="Industrial RFID Scan Trigger (黄键寻卡触发)"></div>
+        <!-- Realistic Handheld Phone Device Chassis Frame -->
+        <div class="handheld-device-chassis" style="width: @(deviceWidth + 24)px; height: calc(100% - 46px); max-height: @(deviceHeight + 36)px;">
+            <!-- Simulated Hardware Speaker & Camera Island/Notch -->
+            <div class="handheld-device-notch">
+                <div class="handheld-speaker"></div>
+                <div class="handheld-camera"></div>
+            </div>
 
-                <!-- Inner Screen Viewport with Bezel & Notch -->
-                <div class="handheld-screen-inner" style="width: @(deviceWidth)px; height: @(deviceHeight)px;">
-                    <!-- Simulated Hardware Speaker & Camera Notch -->
-                    <div class="handheld-device-notch">
-                        <div class="handheld-speaker"></div>
-                        <div class="handheld-camera"></div>
-                    </div>
+            <!-- Inner Screen Viewport with Smooth Bezel -->
+            <div class="handheld-screen-inner">
+                <!-- Handheld Application Shell Viewport -->
+                <div class="app-shell handheld-mode" style="height: 100%; overflow: hidden; display: flex; flex-direction: column;">
+                    <header class="app-topbar handheld-topbar">
+                        <div style="display: flex; align-items: center; gap: var(--space-2); min-width: 0;">
+                            <img src="img/appicon.png" alt="LLRP" class="brand-logo-img" style="width: 20px; height: 20px; flex-shrink: 0;" />
+                            <span style="font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">LLRP Mobile</span>
+                        </div>
+                        <div class="topbar-meta" style="flex-shrink: 0;">
+                            <span class="topbar-badge" style="font-size: 10px; padding: 2px 6px;">@ProtocolBadgeText</span>
+                        </div>
+                    </header>
 
-                    <!-- Handheld Application Shell Viewport -->
-                    <div class="app-shell handheld-mode" style="height: calc(100% - 24px); overflow-y: auto;">
-                        <header class="app-topbar handheld-topbar">
-                            <div style="display: flex; align-items: center; gap: var(--space-2);">
-                                <img src="img/appicon.png" alt="LLRP" class="brand-logo-img" style="width: 20px; height: 20px;" />
-                                <span style="font-weight: 700; font-size: 13px;">LLRP Mobile</span>
-                            </div>
-                            <div class="topbar-meta">
-                                <span class="topbar-badge" style="font-size: 10px; padding: 2px 6px;">@ProtocolBadgeText</span>
-                            </div>
-                        </header>
+                    <main class="app-content handheld-content" style="flex: 1; overflow-y: auto;">
+                        @Body
+                    </main>
 
-                        <main class="app-content handheld-content">
-                            @Body
-                        </main>
+                    <nav class="mobile-bottom-nav" aria-label="Handheld Navigation">
+                        <NavLink href="/" Match="NavLinkMatch.All" class="mobile-nav-item" title="Dashboard">
+                            <AppIcon Name="dashboard" Size="18" />
+                            <span>Home</span>
+                        </NavLink>
+                        <NavLink href="/inventory" class="mobile-nav-item" title="Tag Inventory">
+                            <AppIcon Name="search" Size="18" />
+                            <span>Inventory</span>
+                        </NavLink>
+                        <NavLink href="/tag-memory" class="mobile-nav-item" title="Tag Operations">
+                            <AppIcon Name="microchip" Size="18" />
+                            <span>Tag Ops</span>
+                        </NavLink>
+                        <NavLink href="/readers" class="mobile-nav-item" title="Readers">
+                            <AppIcon Name="readers" Size="18" />
+                            <span>Readers</span>
+                        </NavLink>
+                        <NavLink href="/settings" class="mobile-nav-item" title="Settings">
+                            <AppIcon Name="gear" Size="18" />
+                            <span>Settings</span>
+                        </NavLink>
+                    </nav>
 
-                        <nav class="mobile-bottom-nav" aria-label="Handheld Navigation">
-                            <NavLink href="/" Match="NavLinkMatch.All" class="mobile-nav-item" title="Dashboard">
-                                <AppIcon Name="dashboard" Size="18" />
-                                <span>Home</span>
-                            </NavLink>
-                            <NavLink href="/inventory" class="mobile-nav-item" title="Tag Inventory">
-                                <AppIcon Name="search" Size="18" />
-                                <span>Inventory</span>
-                            </NavLink>
-                            <NavLink href="/tag-memory" class="mobile-nav-item" title="Tag Operations">
-                                <AppIcon Name="microchip" Size="18" />
-                                <span>Tag Ops</span>
-                            </NavLink>
-                            <NavLink href="/readers" class="mobile-nav-item" title="Readers">
-                                <AppIcon Name="readers" Size="18" />
-                                <span>Readers</span>
-                            </NavLink>
-                            <NavLink href="/settings" class="mobile-nav-item" title="Settings">
-                                <AppIcon Name="gear" Size="18" />
-                                <span>Settings</span>
-                            </NavLink>
-                        </nav>
-
-                        @if (State.IsBusy || VirtualDevices.IsBusy)
-                        {
-                            <div class="busy-strip" style="font-size: 11px;">
-                                <AppIcon Name="rotate" Size="12" Class="animate-spin" />
-                                <span>Working with Reader…</span>
-                            </div>
-                        }
-                    </div>
+                    @if (State.IsBusy || VirtualDevices.IsBusy)
+                    {
+                        <div class="busy-strip" style="font-size: 11px;">
+                            <AppIcon Name="rotate" Size="12" Class="animate-spin" />
+                            <span>Working with Reader…</span>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -137,21 +113,24 @@ else
                 </div>
             </div>
             <div class="topbar-meta">
-                <!-- High-End Interactive Handheld Mode Preview Pill Button for Desktop -->
-                <button class="device-switch-pill"
-                        @onclick="ToggleHandheldPreview"
-                        title="Simulate Handheld / Mobile Device on Windows (一键切换手持端仿真预览)">
-                    <span class="switch-pill-icon"><AppIcon Name="mobile" Size="13" /></span>
-                    <span class="switch-pill-text">Handheld Mode</span>
-                    <span class="switch-pill-badge">@deviceWidth×@deviceHeight</span>
-                </button>
+                @if (IsDesktopPlatform)
+                {
+                    <!-- High-End Interactive Handheld Mode Preview Pill Button for Desktop -->
+                    <button class="device-switch-pill desktop-only"
+                            @onclick="ToggleHandheldPreview"
+                            title="Simulate Handheld / Mobile Device on Windows (一键切换手持端仿真预览)">
+                        <span class="switch-pill-icon"><AppIcon Name="mobile" Size="13" /></span>
+                        <span class="switch-pill-text">Handheld Mode</span>
+                        <span class="switch-pill-badge">@deviceWidth×@deviceHeight</span>
+                    </button>
+                    <span class="topbar-separator desktop-only">|</span>
+                }
 
-                <span class="topbar-separator">|</span>
                 <span class="topbar-badge">@ProtocolBadgeText</span>
-                <span class="topbar-separator">|</span>
-                <span>@State.Readers.Count Reader(s)</span>
-                <span class="topbar-separator">|</span>
-                <span class="topbar-time">@currentTime</span>
+                <span class="topbar-separator desktop-only">|</span>
+                <span class="desktop-only">@State.Readers.Count Reader(s)</span>
+                <span class="topbar-separator desktop-only">|</span>
+                <span class="topbar-time desktop-only">@currentTime</span>
             </div>
         </header>
 
@@ -241,12 +220,12 @@ else
 }
 
 @code {
+    private static bool IsDesktopPlatform => !OperatingSystem.IsAndroid() && !OperatingSystem.IsIOS();
     private bool navigationCollapsed;
     private bool handheldPreviewMode;
     private string devicePreset = "phone";
     private int deviceWidth = 390;
     private int deviceHeight = 844;
-    private double deviceScale = 1.0;
     private string currentTime = DateTime.Now.ToString("HH:mm:ss");
     private System.Threading.Timer? clockTimer;
 
@@ -255,13 +234,13 @@ else
         devicePreset = preset;
         switch (preset)
         {
-            case "pda":
-                deviceWidth = 412;
-                deviceHeight = 890;
-                break;
             case "compact":
                 deviceWidth = 360;
                 deviceHeight = 740;
+                break;
+            case "pda":
+                deviceWidth = 412;
+                deviceHeight = 890;
                 break;
             default:
                 devicePreset = "phone";
@@ -271,13 +250,8 @@ else
         }
         if (handheldPreviewMode)
         {
-            WindowService.ResizeToMobile(deviceWidth, deviceHeight);
+            WindowService.EnterHandheldSimulator(deviceWidth + 48, deviceHeight + 84, 38);
         }
-    }
-
-    private void SetDeviceScale(double scale)
-    {
-        deviceScale = scale;
     }
 
     private void ToggleHandheldPreview()
@@ -285,12 +259,17 @@ else
         handheldPreviewMode = !handheldPreviewMode;
         if (handheldPreviewMode)
         {
-            WindowService.ResizeToMobile(deviceWidth, deviceHeight);
+            WindowService.EnterHandheldSimulator(deviceWidth + 48, deviceHeight + 84, 38);
         }
         else
         {
-            WindowService.RestoreToDesktop();
+            WindowService.RestoreDesktop();
         }
+    }
+
+    private void ExitApp()
+    {
+        WindowService.ExitApplication();
     }
 
     private string ProtocolBadgeText

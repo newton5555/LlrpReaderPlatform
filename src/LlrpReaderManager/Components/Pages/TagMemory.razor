@@ -120,8 +120,8 @@ else
                     </div>
                     @if (EffectiveReader is not null)
                     {
-                        <span class="status-badge @(EffectiveReader.IsEnabled ? "ok" : "warn")">
-                            Targeting: @EffectiveReader.Profile.Name (@EffectiveReader.Profile.Host:@EffectiveReader.Profile.Port)
+                        <span class="status-badge @(EffectiveReader.IsEnabled ? "ok" : "warn")" style="max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            Targeting: @EffectiveReader.Profile.Name
                         </span>
                     }
                 </div>
@@ -320,32 +320,38 @@ else
             @if (history.Count > 0)
             {
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header" style="cursor: pointer; user-select: none;" @onclick="() => historyExpanded = !historyExpanded">
                         <span class="card-title">
                             <AppIcon Name="history" Size="14" />
                             <span>Session History & Diagnostics</span>
                         </span>
-                        <span class="status-badge neutral">@history.Count record(s)</span>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span class="status-badge neutral">@history.Count record(s)</span>
+                            <span style="font-size: 10px; color: var(--muted);">@(historyExpanded ? "▲" : "▼")</span>
+                        </div>
                     </div>
-                    <div class="operation-history">
-                        @foreach (TagAccessRecord record in history)
-                        {
-                            <div class="operation-history-row @(record.Succeeded ? string.Empty : "error")">
-                                <span class="status-dot @(record.Succeeded ? "online" : string.Empty)"></span>
-                                <div>
-                                    <strong>@record.Kind · @record.MemoryBank (word @record.WordPointer, @record.WordCount word(s))</strong>
-                                    <small>@record.StartedAt.ToLocalTime().ToString("HH:mm:ss.fff") · @FormatDuration(record.Duration) · @record.Target</small>
+                    @if (historyExpanded)
+                    {
+                        <div class="operation-history">
+                            @foreach (TagAccessRecord record in history)
+                            {
+                                <div class="operation-history-row @(record.Succeeded ? string.Empty : "error")">
+                                    <span class="status-dot @(record.Succeeded ? "online" : string.Empty)"></span>
+                                    <div style="min-width: 0; flex: 1;">
+                                        <div style="font-weight: 700; font-size: 12px; word-break: break-all;">@record.Kind · @record.MemoryBank (word @record.WordPointer, @record.WordCount word(s))</div>
+                                        <small class="muted" style="font-size: 10.5px; word-break: break-all;">@record.StartedAt.ToLocalTime().ToString("HH:mm:ss.fff") · @FormatDuration(record.Duration) · @record.Target</small>
+                                    </div>
+                                    <div style="text-align: right; flex-shrink: 0;">
+                                        <span class="status-badge @(record.Succeeded ? "ok" : "danger")">@(record.Succeeded ? "OK" : record.ErrorCode)</span>
+                                        @if (!string.IsNullOrWhiteSpace(record.DataHex))
+                                        {
+                                            <div class="mono muted" style="font-size: 10.5px; margin-top: 2px; word-break: break-all;">@record.DataHex</div>
+                                        }
+                                    </div>
                                 </div>
-                                <div style="text-align: right;">
-                                    <span class="status-badge @(record.Succeeded ? "ok" : "danger")">@(record.Succeeded ? "OK" : record.ErrorCode)</span>
-                                    @if (!string.IsNullOrWhiteSpace(record.DataHex))
-                                    {
-                                        <div class="mono muted" style="font-size: 10.5px; margin-top: 2px;">@record.DataHex</div>
-                                    }
-                                </div>
-                            </div>
-                        }
-                    </div>
+                            }
+                        </div>
+                    }
                 </div>
             }
         </div>
@@ -360,6 +366,7 @@ else
     private string searchText = string.Empty;
     private bool autoSelectReader = true;
     private string mobileTab = "tags"; // "tags" or "ops" on mobile
+    private bool historyExpanded = false;
 
     // Target Selection
     private string targetHex = string.Empty;

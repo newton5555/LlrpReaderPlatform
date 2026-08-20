@@ -326,9 +326,9 @@
                             <div class="reader-icon @(IsVirtual(reader.ReaderId) ? "virtual" : string.Empty)" style="width: 28px; height: 28px; border-radius: var(--radius-sm); flex-shrink: 0;">
                                 <AppIcon Name="@(IsVirtual(reader.ReaderId) ? "cube" : "satellite-dish")" Size="14" />
                             </div>
-                            <div style="min-width: 0;">
-                                <strong style="font-size: 13px; word-break: break-all; color: var(--fg);">@reader.Profile.Name</strong>
-                                <div class="mono muted" style="font-size: 11px;">@reader.Profile.Host:@reader.Profile.Port</div>
+                            <div style="min-width: 0; flex: 1;">
+                                <strong style="font-size: 13px; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 190px;">@reader.Profile.Name</strong>
+                                <div class="mono muted" style="font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@reader.Profile.Host:@reader.Profile.Port</div>
                             </div>
                         </div>
                         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0;">

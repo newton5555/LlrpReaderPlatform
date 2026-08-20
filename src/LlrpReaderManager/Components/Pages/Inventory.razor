@@ -3,13 +3,13 @@
 @inject ReaderManagerState State
 @inject ITagListStore TagListsStore
 
-<div class="section-header desktop-only">
+<div class="section-header">
     <div>
         <h1 class="section-title">Tag Inventory</h1>
         <p class="section-subtitle">Start and monitor real-time RFID inventory runs with live aggregation, TOI classification, and RF metrics.</p>
     </div>
     <div class="toolbar">
-        <label class="form-label" for="inventory-reader">Selected Reader</label>
+        <label class="form-label" for="inventory-reader" style="margin-left: var(--space-2);">Reader</label>
         <select id="inventory-reader" style="width: min(280px, 50vw);" value="@SelectedReaderText" @onchange="SelectReader">
             <option value="">Choose Reader</option>
             @foreach (ReaderRuntimeSnapshot reader in State.Readers)
@@ -31,81 +31,48 @@
 }
 else
 {
-    <!-- Desktop Inventory Control Toolbar Card -->
-    <div class="card desktop-only" style="margin-bottom: var(--space-4);">
+    <!-- Unified Inventory Control Toolbar Card -->
+    <div class="card" style="margin-bottom: var(--space-3);">
         <div class="card-pad">
-            <div class="toolbar" style="align-items: center; flex-wrap: wrap; gap: var(--space-3);">
-                <div>
-                    <div class="field-label">Active Endpoint</div>
-                    <div class="mono" style="font-weight: 600;">
-                        @(SelectedReader is not null ? $"{SelectedReader.Profile.Name} · {SelectedReader.Profile.Host}:{SelectedReader.Profile.Port}" : "No reader selected")
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2);">
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                    <span class="status-dot @(SelectedReader?.State == ReaderState.Inventorying ? "online animate-pulse" : string.Empty)"></span>
+                    <span style="font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        @(SelectedReader is not null ? $"{SelectedReader.Profile.Name} ({SelectedReader.Profile.Host}:{SelectedReader.Profile.Port})" : "No reader selected")
+                    </span>
+                    <span class="status-badge @(SelectedReader?.State == ReaderState.Inventorying ? "ok" : "neutral")" style="font-size: 9.5px; padding: 1px 5px;">
+                        @(SelectedReader?.State.ToString().ToUpperInvariant() ?? "OFFLINE")
+                    </span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <div class="duration-input-group desktop-only">
+                        <label class="form-label" style="margin-bottom: 0; white-space: nowrap; font-size: 11.5px;">Duration (s):</label>
+                        <input type="number" min="0" @bind="durationText" placeholder="0 (Manual)" class="mono" style="width: 80px; height: 30px; font-size: 11.5px;" />
                     </div>
-                </div>
-                <div class="toolbar-spacer"></div>
-                <div class="duration-input-group">
-                    <label class="form-label" style="margin-bottom: 0; white-space: nowrap;">Duration (s):</label>
-                    <input type="number" min="0" @bind="durationText" placeholder="0 (Manual)" class="mono" style="width: 90px;" />
-                </div>
-                @if (SelectedReader?.State == ReaderState.Inventorying)
-                {
-                    <button class="btn btn-danger" @onclick="StopAsync" disabled="@State.IsBusy">
-                        <AppIcon Name="stop" Size="13" />
-                        <span>Stop Inventory</span>
-                    </button>
-                }
-                else
-                {
-                    <button class="btn btn-primary" @onclick="StartAsync" disabled="@(State.IsBusy || SelectedReader is null || !SelectedReader.IsEnabled)">
-                        <AppIcon Name="search" Size="13" />
-                        <span>Start Inventory</span>
-                    </button>
-                }
-                <button class="btn" @onclick="StartAllAsync" disabled="@State.IsBusy">
-                    <AppIcon Name="search" Size="12" />
-                    <span>Start All Enabled</span>
-                </button>
-                <button class="btn" @onclick="StopAllAsync" disabled="@State.IsBusy">
-                    <AppIcon Name="stop" Size="12" />
-                    <span>Stop All</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Handheld / Mobile Dedicated Control Bar -->
-    <div class="card mobile-only" style="margin-bottom: var(--space-2); padding: 8px 10px;">
-        <div class="stack" style="gap: 6px; width: 100%;">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
-                <select style="flex: 1; height: 32px; font-size: 11.5px;" value="@SelectedReaderText" @onchange="SelectReader">
-                    <option value="">Choose Reader</option>
-                    @foreach (ReaderRuntimeSnapshot reader in State.Readers)
+                    @if (SelectedReader?.State == ReaderState.Inventorying)
                     {
-                        <option value="@reader.ReaderId">@reader.Profile.Name (@(reader.IsEnabled ? "Online" : "Off"))</option>
+                        <button class="btn btn-danger" style="height: 32px; padding: 0 14px; font-weight: 700;" @onclick="StopAsync" disabled="@State.IsBusy">
+                            <AppIcon Name="stop" Size="12" />
+                            <span>Stop</span>
+                        </button>
                     }
-                </select>
-                <span class="status-badge @(SelectedReader?.State == ReaderState.Inventorying ? "ok" : "neutral")" style="font-size: 10px; padding: 2px 6px;">
-                    @(SelectedReader?.State == ReaderState.Inventorying ? "STREAMING" : "IDLE")
-                </span>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr auto; gap: 6px;">
-                @if (SelectedReader?.State == ReaderState.Inventorying)
-                {
-                    <button class="btn btn-danger" style="min-height: 40px; font-weight: 700;" @onclick="StopAsync" disabled="@State.IsBusy">
-                        <AppIcon Name="stop" Size="14" />
-                        <span>Stop Inventory</span>
+                    else
+                    {
+                        <button class="btn btn-primary" style="height: 32px; padding: 0 14px; font-weight: 700;" @onclick="StartAsync" disabled="@(State.IsBusy || SelectedReader is null || !SelectedReader.IsEnabled)">
+                            <AppIcon Name="play" Size="12" />
+                            <span>Start Inventory</span>
+                        </button>
+                    }
+                    <button class="btn btn-sm desktop-only" @onclick="StartAllAsync" disabled="@State.IsBusy" title="Start all enabled readers">
+                        <AppIcon Name="search" Size="11" />
+                        <span>Start All</span>
                     </button>
-                }
-                else
-                {
-                    <button class="btn btn-primary" style="min-height: 40px; font-weight: 700;" @onclick="StartAsync" disabled="@(State.IsBusy || SelectedReader is null || !SelectedReader.IsEnabled)">
-                        <AppIcon Name="search" Size="14" />
-                        <span>Start Inventory</span>
+                    <button class="btn btn-sm desktop-only" @onclick="StopAllAsync" disabled="@State.IsBusy" title="Stop all readers">
+                        <AppIcon Name="stop" Size="11" />
+                        <span>Stop All</span>
                     </button>
-                }
-                <button class="btn" style="min-height: 40px; padding: 0 10px;" @onclick="StartAllAsync" disabled="@State.IsBusy" title="Start All Readers">
-                    <AppIcon Name="satellite-dish" Size="14" />
-                </button>
+                </div>
             </div>
         </div>
     </div>

@@ -113,17 +113,22 @@ else
             }
 
             <article class="card settings-card" style="min-width: 0;">
-                <div class="card-header">
-                    <div>
+                <div class="card-header" style="cursor: pointer; user-select: none;" @onclick="() => ToggleGroup(group.Key)">
+                    <div style="min-width: 0; flex: 1;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <AppIcon Name="@GetGroupIcon(group.Key)" Size="14" />
-                            <h2 class="card-title" style="margin-bottom: 0;">@group.Title</h2>
+                            <h2 class="card-title" style="margin-bottom: 0; font-size: 13px;">@group.Title</h2>
                         </div>
                         <div class="form-hint settings-card-description" style="margin-top: 2px;">@group.Description</div>
                     </div>
-                    <span class="status-badge neutral">@visibleEntries.Count</span>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                        <span class="status-badge neutral">@visibleEntries.Count</span>
+                        <span style="font-size: 10px; color: var(--muted);">@(IsGroupExpanded(group.Key) ? "▲" : "▼")</span>
+                    </div>
                 </div>
-                <div class="settings-card-body">
+                @if (IsGroupExpanded(group.Key))
+                {
+                    <div class="settings-card-body">
                     @foreach (SettingsEntry entry in visibleEntries)
                     {
                         bool isDependent = IsEntryDependent(entry);
@@ -217,6 +222,7 @@ else
                         </div>
                     }
                 </div>
+                }
             </article>
         }
     </section>
@@ -224,7 +230,7 @@ else
     <!-- Floating Save Bar for Mobile/Handheld -->
     @if (hasUnsavedChanges && !pageBusy)
     {
-        <div class="floating-save-bar mobile-only">
+        <div class="floating-save-bar">
             <div style="font-size: 11.5px; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 5px;">
                 <AppIcon Name="sliders" Size="13" />
                 <span>Unsaved Changes</span>
@@ -252,6 +258,22 @@ else
 
     private string activeCategory = "rf";
     private string searchTerm = string.Empty;
+    private readonly HashSet<string> expandedGroups = new(StringComparer.OrdinalIgnoreCase) { "rf" };
+
+    private bool IsGroupExpanded(string key) =>
+        !string.IsNullOrWhiteSpace(searchTerm) || activeCategory != "all" || expandedGroups.Contains(key);
+
+    private void ToggleGroup(string key)
+    {
+        if (expandedGroups.Contains(key))
+        {
+            expandedGroups.Remove(key);
+        }
+        else
+        {
+            expandedGroups.Add(key);
+        }
+    }
 
     private string SelectedReaderText => selectedReaderText ?? State.SelectedReaderId?.ToString() ?? string.Empty;
     private ReaderRuntimeSnapshot? SelectedReader => State.Find(ParseReaderId(SelectedReaderText));
