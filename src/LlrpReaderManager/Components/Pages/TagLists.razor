@@ -4,9 +4,8 @@
 <div class="section-header">
     <div>
         <h1 class="section-title">Tags of Interest (TOI)</h1>
-        <p class="section-subtitle">Maintain the EPC, TOI name and display color used by Inventory.</p>
+        <p class="section-subtitle">Define tag classifications, custom display names, and highlight colors for real-time Inventory.</p>
     </div>
-    <button class="btn btn-primary" @onclick="CreateAsync" disabled="@pageBusy">Add tag list</button>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(error))
@@ -14,11 +13,29 @@
     <div class="notice error" style="margin-bottom: var(--space-4);">@error</div>
 }
 
+<!-- TOI Metrics Bar -->
+<div class="card-grid" style="margin-bottom: var(--space-4);">
+    <div class="card card-pad">
+        <div class="stat-label">Active Classification Lists</div>
+        <div class="stat-value">@lists.Count(l => l.IsEnabled)</div>
+        <div class="stat-note">@lists.Count configured list(s)</div>
+    </div>
+    <div class="card card-pad">
+        <div class="stat-label">Explicit Tag Entries</div>
+        <div class="stat-value">@TotalEntriesCount</div>
+        <div class="stat-note">Exact / prefix matched EPC rules</div>
+    </div>
+</div>
+
 <div class="split">
     <section class="stack">
         @if (lists.Count == 0)
         {
-            <div class="card empty-state"><h2>No tag lists</h2><p>Create one to give a group of tags a name and color.</p></div>
+            <div class="card empty-state">
+                <AppIcon Name="tags" Size="36" />
+                <h2>No Tag Lists Configured</h2>
+                <p>Create a tag list on the right to categorize tags and highlight them with custom colors.</p>
+            </div>
         }
         else
         {
@@ -26,30 +43,103 @@
             {
                 <div class="card">
                     <div class="card-header">
-                        <div style="display: flex; align-items: center; gap: 10px;"><span style="width: 14px; height: 14px; border-radius: 50%; background: @list.ColorHex;"></span><h2 class="card-title" style="color: var(--fg);">@list.Name</h2></div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="color-indicator" style="background-color: @list.ColorHex; border: 1px solid var(--border-strong); width: 14px; height: 14px;"></span>
+                            <span class="card-title" style="color: var(--fg); font-size: 13.5px; text-transform: none;">@list.Name</span>
+                        </div>
                         <span class="status-badge @(list.IsEnabled ? "ok" : "neutral")">@(list.IsEnabled ? "Enabled" : "Disabled")</span>
                     </div>
                     <div class="card-pad">
-                        <div class="toolbar" style="margin-bottom: var(--space-3);"><span class="muted">@list.Entries.Count tag entries</span><span class="toolbar-spacer"></span><button class="btn btn-sm" @onclick="() => ToggleAsync(list)">@(list.IsEnabled ? "Disable" : "Enable")</button><button class="btn btn-sm btn-danger" @onclick="() => DeleteAsync(list.Id)">Delete</button></div>
+                        <div class="toolbar" style="margin-bottom: var(--space-3);">
+                            <span class="muted" style="font-size: 12px;">@list.Entries.Count tag entry(ies)</span>
+                            <span class="toolbar-spacer"></span>
+                            <button class="btn btn-sm" @onclick="() => ToggleAsync(list)">
+                                @(list.IsEnabled ? "Disable" : "Enable")
+                            </button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteAsync(list.Id)">
+                                <AppIcon Name="trash" Size="11" />
+                                <span>Delete</span>
+                            </button>
+                        </div>
                         @if (list.Entries.Count > 0)
                         {
-                            <div class="table-wrap"><table style="min-width: 0;"><thead><tr><th>Name</th><th>EPC</th><th>Color</th></tr></thead><tbody>@foreach (TagListEntry entry in list.Entries) { <tr><td>@entry.DisplayName</td><td class="mono">@entry.EpcHex</td><td><span class="tag-pill">@(entry.ColorHex ?? list.ColorHex)</span></td></tr> }</tbody></table></div>
-                        }
-                        else
-                        {
-                            <div class="form-hint">No explicit entries. The list color can still be used as a tag-table classification.</div>
-                        }
-                        @if (selectedListId == list.Id)
-                        {
-                            <div class="inline-form" style="margin-top: var(--space-4); grid-template-columns: 1fr 1.5fr auto;">
-                                <div class="form-group"><label class="form-label">Entry name</label><input type="text" @bind="entryName" placeholder="Dock tag" /></div>
-                                <div class="form-group"><label class="form-label">EPC</label><input type="text" @bind="entryEpc" placeholder="E200..." /></div>
-                                <button class="btn btn-sm btn-primary" @onclick="() => AddEntryAsync(list)">Add tag</button>
+                            <!-- Desktop Tag Entries Table -->
+                            <div class="table-wrap desktop-table-view">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Display Name</th>
+                                            <th>EPC Pattern</th>
+                                            <th style="min-width: 140px;">Color</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (TagListEntry entry in list.Entries)
+                                        {
+                                            string displayColor = entry.ColorHex ?? list.ColorHex;
+                                            <tr>
+                                                <td><strong>@entry.DisplayName</strong></td>
+                                                <td class="mono">@entry.EpcHex</td>
+                                                <td>
+                                                    <span class="color-pill-tag">
+                                                        <span class="color-indicator" style="background-color: @displayColor;"></span>
+                                                        <span>@displayColor</span>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Handheld / Mobile Tag Entries Chips -->
+                            <div class="mobile-tag-entries-view stack" style="gap: var(--space-2);">
+                                @foreach (TagListEntry entry in list.Entries)
+                                {
+                                    string displayColor = entry.ColorHex ?? list.ColorHex;
+                                    <div class="card card-pad" style="margin: 0; padding: 8px 10px; background: var(--surface-raised); border-left: 3px solid @displayColor;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                            <strong style="font-size: 12.5px;">@entry.DisplayName</strong>
+                                            <span class="color-pill-tag" style="font-size: 10.5px; padding: 1px 6px;">
+                                                <span class="color-indicator" style="background-color: @displayColor;"></span>
+                                                <span>@displayColor</span>
+                                            </span>
+                                        </div>
+                                        <div class="mono muted" style="font-size: 11.5px; margin-top: 4px; word-break: break-all;">
+                                            @entry.EpcHex
+                                        </div>
+                                    </div>
+                                }
                             </div>
                         }
                         else
                         {
-                            <button class="btn btn-sm" style="margin-top: var(--space-3);" @onclick="() => BeginEntry(list.Id)">Add tag entry</button>
+                            <div class="form-hint">No explicit tag entries yet. The list color is applied to all matching tags.</div>
+                        }
+
+                        @if (selectedListId == list.Id)
+                        {
+                            <div class="inline-form tag-list-entry-form" style="margin-top: var(--space-3);">
+                                <div class="form-group">
+                                    <label class="form-label">Entry Name</label>
+                                    <input type="text" @bind="entryName" placeholder="Palette item A" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">EPC (Hex)</label>
+                                    <input type="text" @bind="entryEpc" placeholder="E280..." class="mono" />
+                                </div>
+                                <button class="btn btn-sm btn-primary" @onclick="() => AddEntryAsync(list)">
+                                    <AppIcon Name="plus" Size="11" />
+                                    <span>Add Tag</span>
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <button class="btn btn-sm" style="margin-top: var(--space-3);" @onclick="() => BeginEntry(list.Id)">
+                                <AppIcon Name="plus" Size="11" />
+                                <span>Add Tag Entry</span>
+                            </button>
                         }
                     </div>
                 </div>
@@ -57,77 +147,209 @@
         }
     </section>
 
-    <aside class="card action-panel">
-        <div class="card-header"><h2 class="card-title">New list</h2></div>
+    <aside class="card">
+        <div class="card-header">
+            <span class="card-title">
+                <AppIcon Name="plus" Size="14" />
+                <span>Create Tag List</span>
+            </span>
+        </div>
         <div class="card-pad stack">
-            <div class="form-group"><label class="form-label">Name</label><input type="text" @bind="newName" placeholder="Shipping tags" /></div>
-            <div class="form-group"><label class="form-label">Color</label><input type="color" @bind="newColor" title="Choose TOI color" /></div>
-            <button class="btn btn-primary" @onclick="CreateAsync" disabled="@pageBusy">Save tag list</button>
+            <div class="form-group">
+                <label class="form-label">List Name</label>
+                <input type="text" @bind="newName" placeholder="e.g. High Priority Items" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Highlight Color</label>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="color" @bind="newColor" style="width: 36px; height: 32px; padding: 0; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer;" />
+                    <input type="text" @bind="newColor" class="mono" style="width: 100px; height: 32px;" />
+                </div>
+                <div class="color-palette-bar">
+                    @foreach (string preset in PresetColors)
+                    {
+                        <button type="button"
+                                class="color-dot-btn @(newColor.Equals(preset, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)"
+                                style="background-color: @preset;"
+                                title="@preset"
+                                @onclick="() => newColor = preset"></button>
+                    }
+                </div>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; margin-top: var(--space-2);" @onclick="CreateAsync" disabled="@(pageBusy || string.IsNullOrWhiteSpace(newName))">
+                <AppIcon Name="plus" Size="13" />
+                <span>Save Tag List</span>
+            </button>
         </div>
     </aside>
 </div>
 
 @code {
+    private static readonly string[] PresetColors =
+    [
+        "#14B8A6", // Teal
+        "#10B981", // Emerald
+        "#3B82F6", // Blue
+        "#6366F1", // Indigo
+        "#8B5CF6", // Purple
+        "#EC4899", // Pink
+        "#F59E0B", // Amber
+        "#EF4444", // Red
+    ];
+
     private List<TagListDefinition> lists = [];
     private string newName = string.Empty;
-    private string newColor = "#5EEAD4";
+    private string newColor = "#14B8A6";
     private Guid? selectedListId;
     private string entryName = string.Empty;
     private string entryEpc = string.Empty;
     private string? error;
     private bool pageBusy;
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    private int TotalEntriesCount => lists.Sum(l => l.Entries.Count);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
         pageBusy = true;
         error = null;
-        try { lists = (await TagListsStore.GetAllAsync()).ToList(); }
-        catch (Exception exception) { error = exception.Message; }
-        finally { pageBusy = false; }
+        try
+        {
+            lists = (await TagListsStore.GetAllAsync()).ToList();
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+        }
+        finally
+        {
+            pageBusy = false;
+        }
     }
 
     private async Task CreateAsync()
     {
-        if (string.IsNullOrWhiteSpace(newName)) { error = "Tag list name is required."; return; }
-        await TagListsStore.SaveAsync(new TagListDefinition { Id = Guid.NewGuid(), Name = newName.Trim(), ColorHex = string.IsNullOrWhiteSpace(newColor) ? "#5EEAD4" : newColor.Trim(), IsEnabled = true });
-        newName = string.Empty;
-        await LoadAsync();
+        if (string.IsNullOrWhiteSpace(newName) || pageBusy)
+        {
+            return;
+        }
+
+        pageBusy = true;
+        error = null;
+        try
+        {
+            var def = new TagListDefinition
+            {
+                Id = Guid.NewGuid(),
+                Name = newName.Trim(),
+                ColorHex = string.IsNullOrWhiteSpace(newColor) ? "#14B8A6" : newColor.Trim(),
+                IsEnabled = true,
+                Entries = [],
+            };
+            await TagListsStore.SaveAsync(def);
+            newName = string.Empty;
+            await LoadAsync();
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+        }
+        finally
+        {
+            pageBusy = false;
+        }
     }
 
     private async Task ToggleAsync(TagListDefinition list)
     {
-        await TagListsStore.SaveAsync(list with { IsEnabled = !list.IsEnabled });
-        await LoadAsync();
+        if (pageBusy) return;
+        pageBusy = true;
+        error = null;
+        try
+        {
+            var updated = list with { IsEnabled = !list.IsEnabled };
+            await TagListsStore.SaveAsync(updated);
+            await LoadAsync();
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+        }
+        finally
+        {
+            pageBusy = false;
+        }
     }
 
     private async Task DeleteAsync(Guid id)
     {
-        await TagListsStore.DeleteAsync(id);
-        if (selectedListId == id) selectedListId = null;
-        await LoadAsync();
+        if (pageBusy) return;
+        pageBusy = true;
+        error = null;
+        try
+        {
+            await TagListsStore.DeleteAsync(id);
+            await LoadAsync();
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+        }
+        finally
+        {
+            pageBusy = false;
+        }
     }
 
-    private void BeginEntry(Guid listId) => selectedListId = listId;
+    private void BeginEntry(Guid listId)
+    {
+        selectedListId = listId;
+        entryName = string.Empty;
+        entryEpc = string.Empty;
+    }
 
     private async Task AddEntryAsync(TagListDefinition list)
     {
-        if (string.IsNullOrWhiteSpace(entryEpc)) { error = "EPC is required."; return; }
+        if (string.IsNullOrWhiteSpace(entryEpc) || pageBusy)
+        {
+            return;
+        }
+
+        pageBusy = true;
+        error = null;
         try
         {
-            string epc = entryEpc.Trim().Replace(" ", string.Empty, StringComparison.Ordinal).ToUpperInvariant();
-            if (!epc.All(Uri.IsHexDigit) || epc.Length == 0) { error = "EPC must be hexadecimal."; return; }
-            if (list.Entries.Any(entry => entry.EpcHex.Equals(epc, StringComparison.OrdinalIgnoreCase))) { error = "The EPC is already in this list."; return; }
-            await TagListsStore.SaveAsync(list with
+            var cleanEpc = entryEpc.Trim().Replace(" ", string.Empty).ToUpperInvariant();
+            var entry = new TagListEntry
             {
-                Entries = list.Entries.Append(new TagListEntry { Id = Guid.NewGuid(), TagListId = list.Id, EpcHex = epc, DisplayName = string.IsNullOrWhiteSpace(entryName) ? epc : entryName.Trim() }).ToArray(),
-            });
+                Id = Guid.NewGuid(),
+                TagListId = list.Id,
+                DisplayName = string.IsNullOrWhiteSpace(entryName) ? cleanEpc : entryName.Trim(),
+                EpcHex = cleanEpc,
+                ColorHex = list.ColorHex,
+            };
+            var entries = list.Entries.ToList();
+            entries.Add(entry);
+            var updated = list with { Entries = entries };
+            await TagListsStore.SaveAsync(updated);
+            selectedListId = null;
             entryName = string.Empty;
             entryEpc = string.Empty;
-            selectedListId = null;
             await LoadAsync();
         }
-        catch (Exception exception) { error = exception.Message; }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+        }
+        finally
+        {
+            pageBusy = false;
+        }
     }
 }

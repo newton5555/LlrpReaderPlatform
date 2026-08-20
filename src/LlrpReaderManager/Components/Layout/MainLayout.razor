@@ -2,58 +2,328 @@
 @implements IDisposable
 @inject ReaderManagerState State
 @inject VirtualReaderWidgetService VirtualDevices
+@inject LlrpReaderManager.Services.IAppWindowService WindowService
 
-<div class="app-shell">
-    <header class="app-topbar">
-        <button class="brand-button" @onclick="ToggleNavigation" aria-label="Toggle navigation">
-            <span class="brand-mark" aria-hidden="true">RF</span>
-            <span>LLRP Reader Manager</span>
-        </button>
-        <div class="topbar-meta">
-            <span>SDK managed</span>
-            <span class="topbar-separator">|</span>
-            <span>@State.Readers.Count Reader(s)</span>
-            <span class="topbar-time">@DateTime.Now.ToString("HH:mm:ss")</span>
+@if (handheldPreviewMode)
+{
+    <!-- Handheld simulator with the platform's normal outer window chrome. -->
+    <div class="handheld-stage">
+        <!-- Simulator controls live inside the normal platform window. -->
+        <div class="handheld-sim-controlbar">
+            <!-- Device Preset Selector -->
+            <div class="handheld-sim-presets">
+                <span class="sim-control-label">Resolution</span>
+                <div class="sim-preset-buttons">
+                    <button type="button" class="sim-preset-btn @(devicePreset == "compact" ? "active" : string.Empty)" aria-pressed="@(devicePreset == "compact")" @onclick='() => SetDevicePreset("compact")' title="Compact (360×740)">
+                        <span>360×740</span>
+                    </button>
+                    <button type="button" class="sim-preset-btn @(devicePreset == "phone" ? "active" : string.Empty)" aria-pressed="@(devicePreset == "phone")" @onclick='() => SetDevicePreset("phone")' title="Phone (390×844)">
+                        <span>390×844</span>
+                    </button>
+                    <button type="button" class="sim-preset-btn @(devicePreset == "pda" ? "active" : string.Empty)" aria-pressed="@(devicePreset == "pda")" @onclick='() => SetDevicePreset("pda")' title="PDA (412×890)">
+                        <span>412×890</span>
+                    </button>
+                </div>
+                <div class="sim-control-actions">
+                    <!-- Return to Desktop Button -->
+                    <button type="button" class="btn btn-sm btn-ghost sim-action-btn" @onclick="ToggleHandheldPreview" title="Return to Desktop Mode">
+                        <AppIcon Name="desktop" Size="12" />
+                        <span>Desktop</span>
+                    </button>
+                </div>
+            </div>
         </div>
-    </header>
 
-    <aside class="app-sidebar @(navigationCollapsed ? "collapsed" : string.Empty)">
-        <nav aria-label="Primary navigation">
-            <div class="nav-section">Overview</div>
-            <NavLink href="/" Match="NavLinkMatch.All"><span class="nav-icon">⌂</span><span>Dashboard</span></NavLink>
-            <NavLink href="/readers"><span class="nav-icon">▣</span><span>Readers</span></NavLink>
-            <div class="nav-section">Operations</div>
-            <NavLink href="/inventory"><span class="nav-icon">◈</span><span>Tag Inventory</span></NavLink>
-            <NavLink href="/tag-memory"><span class="nav-icon">▤</span><span>Tag Memory</span></NavLink>
-            <NavLink href="/runs"><span class="nav-icon">◷</span><span>Inventory Runs</span></NavLink>
-            <div class="nav-section">Configuration</div>
-            <NavLink href="/settings"><span class="nav-icon">⚙</span><span>Reader Settings</span></NavLink>
-            <NavLink href="/gpio"><span class="nav-icon">⌁</span><span>GPI / GPO</span></NavLink>
-            <NavLink href="/tag-lists"><span class="nav-icon">●</span><span>TOI</span></NavLink>
+        <!-- Realistic Handheld Phone Device Chassis Frame -->
+        <div class="handheld-device-chassis" style="@HandheldChassisStyle">
+            <!-- Simulated Hardware Speaker & Camera Island/Notch -->
+            <div class="handheld-device-notch">
+                <div class="handheld-speaker"></div>
+                <div class="handheld-camera"></div>
+            </div>
+
+            <!-- Inner Screen Viewport with Smooth Bezel -->
+            <div class="handheld-screen-inner">
+                <!-- Handheld Application Shell Viewport -->
+                <div class="app-shell handheld-mode" style="height: 100%; overflow: hidden; display: flex; flex-direction: column;">
+                    <header class="app-topbar handheld-topbar">
+                        <div style="display: flex; align-items: center; gap: var(--space-2); min-width: 0;">
+                            <img src="img/appicon.png" alt="LLRP" class="brand-logo-img" style="width: 20px; height: 20px; flex-shrink: 0;" />
+                            <span style="font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">LLRP Mobile</span>
+                        </div>
+                        <div class="topbar-meta" style="flex-shrink: 0;">
+                            <span class="topbar-badge" style="font-size: 10px; padding: 2px 6px;">@ProtocolBadgeText</span>
+                        </div>
+                    </header>
+
+                    <main class="app-content handheld-content" style="flex: 1; overflow-y: auto;">
+                        @Body
+                    </main>
+
+                    <nav class="mobile-bottom-nav" aria-label="Handheld Navigation">
+                        <NavLink href="/" Match="NavLinkMatch.All" class="mobile-nav-item" title="Dashboard">
+                            <AppIcon Name="dashboard" Size="18" />
+                            <span>Home</span>
+                        </NavLink>
+                        <NavLink href="/inventory" class="mobile-nav-item" title="Tag Inventory">
+                            <AppIcon Name="search" Size="18" />
+                            <span>Inventory</span>
+                        </NavLink>
+                        <NavLink href="/tag-memory" class="mobile-nav-item" title="Tag Operations">
+                            <AppIcon Name="microchip" Size="18" />
+                            <span>Tag Ops</span>
+                        </NavLink>
+                        <NavLink href="/readers" class="mobile-nav-item" title="Readers">
+                            <AppIcon Name="readers" Size="18" />
+                            <span>Readers</span>
+                        </NavLink>
+                        <NavLink href="/settings" class="mobile-nav-item" title="Settings">
+                            <AppIcon Name="gear" Size="18" />
+                            <span>Settings</span>
+                        </NavLink>
+                    </nav>
+
+                    @if (State.IsBusy || VirtualDevices.IsBusy)
+                    {
+                        <div class="busy-strip" style="font-size: 11px;">
+                            <AppIcon Name="rotate" Size="12" Class="animate-spin" />
+                            <span>Working with Reader…</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <!-- Standard Responsive Desktop / Mobile Layout (Automatically adapts to viewport) -->
+    <div class="app-shell @(navigationCollapsed ? "sidebar-collapsed" : string.Empty)">
+        <header class="app-topbar">
+            <div style="display: flex; align-items: center; gap: var(--space-3);">
+                <button class="topbar-toggle-btn" @onclick="ToggleNavigation" aria-label="Toggle navigation" title="@(navigationCollapsed ? "展开侧边栏" : "折叠侧边栏")">
+                    <AppIcon Name="bars" Size="16" />
+                </button>
+                <div class="brand-button" style="cursor: pointer;" @onclick="ToggleNavigation">
+                    <img src="img/appicon.png" alt="LLRP" class="brand-logo-img" />
+                    <span>LLRP RFID Platform</span>
+                </div>
+            </div>
+            <div class="topbar-meta">
+                @if (IsDesktopPlatform)
+                {
+                    <!-- High-End Interactive Handheld Mode Preview Pill Button for Desktop -->
+                    <button class="device-switch-pill desktop-only"
+                            @onclick="ToggleHandheldPreview"
+                            title="Simulate Handheld / Mobile Device on Windows (一键切换手持端仿真预览)">
+                        <span class="switch-pill-icon"><AppIcon Name="mobile" Size="13" /></span>
+                        <span class="switch-pill-text">Handheld Mode</span>
+                        <span class="switch-pill-badge">@deviceWidth×@deviceHeight</span>
+                    </button>
+                    <span class="topbar-separator desktop-only">|</span>
+                }
+
+                <span class="topbar-badge">@ProtocolBadgeText</span>
+                <span class="topbar-separator desktop-only">|</span>
+                <span class="desktop-only">@State.Readers.Count Reader(s)</span>
+                <span class="topbar-separator desktop-only">|</span>
+                <span class="topbar-time desktop-only">@currentTime</span>
+            </div>
+        </header>
+
+        <aside class="app-sidebar @(navigationCollapsed ? "collapsed" : string.Empty)">
+            <nav aria-label="Primary navigation">
+                <div class="nav-section">Overview</div>
+                <NavLink href="/" Match="NavLinkMatch.All" title="Dashboard">
+                    <span class="app-icon-wrapper"><AppIcon Name="dashboard" Size="16" /></span>
+                    <span>Dashboard</span>
+                </NavLink>
+                <NavLink href="/readers" title="Readers">
+                    <span class="app-icon-wrapper"><AppIcon Name="readers" Size="16" /></span>
+                    <span>Readers</span>
+                </NavLink>
+
+                <div class="nav-section">Operations</div>
+                <NavLink href="/inventory" title="Tag Inventory">
+                    <span class="app-icon-wrapper"><AppIcon Name="search" Size="16" /></span>
+                    <span>Tag Inventory</span>
+                </NavLink>
+                <NavLink href="/tag-memory" title="Tag Operations">
+                    <span class="app-icon-wrapper"><AppIcon Name="microchip" Size="16" /></span>
+                    <span>Tag Operations</span>
+                </NavLink>
+                <NavLink href="/runs" title="Inventory Runs">
+                    <span class="app-icon-wrapper"><AppIcon Name="history" Size="16" /></span>
+                    <span>Inventory Runs</span>
+                </NavLink>
+
+                <div class="nav-section">Configuration</div>
+                <NavLink href="/settings" title="Reader Settings">
+                    <span class="app-icon-wrapper"><AppIcon Name="gear" Size="16" /></span>
+                    <span>Reader Settings</span>
+                </NavLink>
+                <NavLink href="/gpio" title="GPI / GPO">
+                    <span class="app-icon-wrapper"><AppIcon Name="bolt" Size="16" /></span>
+                    <span>GPI / GPO</span>
+                </NavLink>
+                <NavLink href="/tag-lists" title="Tags of Interest (TOI)">
+                    <span class="app-icon-wrapper"><AppIcon Name="tags" Size="16" /></span>
+                    <span>TOI</span>
+                </NavLink>
+            </nav>
+
+            <div class="sidebar-footer" title="@(State.IsInitialized ? "Platform ready" : "Loading platform")">
+                <span class="status-dot @(State.IsInitialized ? "online" : "pending")"></span>
+                <span>@(State.IsInitialized ? "Platform ready" : "Loading platform")</span>
+            </div>
+        </aside>
+
+        <main class="app-content">
+            @Body
+        </main>
+
+        <!-- Native Mobile Bottom Bar (Active on real mobile screens <= 768px) -->
+        <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+            <NavLink href="/" Match="NavLinkMatch.All" class="mobile-nav-item" title="Dashboard">
+                <AppIcon Name="dashboard" Size="18" />
+                <span>Home</span>
+            </NavLink>
+            <NavLink href="/inventory" class="mobile-nav-item" title="Tag Inventory">
+                <AppIcon Name="search" Size="18" />
+                <span>Inventory</span>
+            </NavLink>
+            <NavLink href="/tag-memory" class="mobile-nav-item" title="Tag Operations">
+                <AppIcon Name="microchip" Size="18" />
+                <span>Tag Ops</span>
+            </NavLink>
+            <NavLink href="/readers" class="mobile-nav-item" title="Readers">
+                <AppIcon Name="readers" Size="18" />
+                <span>Readers</span>
+            </NavLink>
+            <NavLink href="/settings" class="mobile-nav-item" title="Settings">
+                <AppIcon Name="gear" Size="18" />
+                <span>Settings</span>
+            </NavLink>
         </nav>
-        <div class="sidebar-footer">
-            <span class="status-dot @(State.IsInitialized ? "online" : "pending")"></span>
-            <span>@(State.IsInitialized ? "Platform ready" : "Loading platform")</span>
-        </div>
-    </aside>
 
-    <main class="app-content">
-        @Body
-    </main>
-
-    @if (State.IsBusy || VirtualDevices.IsBusy)
-    {
-        <div class="busy-strip">Working with Reader services…</div>
-    }
-</div>
+        @if (State.IsBusy || VirtualDevices.IsBusy)
+        {
+            <div class="busy-strip">
+                <AppIcon Name="rotate" Size="14" Class="animate-spin" />
+                <span>Working with Reader services…</span>
+            </div>
+        }
+    </div>
+}
 
 @code {
+    private static bool IsDesktopPlatform => !OperatingSystem.IsAndroid() && !OperatingSystem.IsIOS();
     private bool navigationCollapsed;
+    private bool handheldPreviewMode;
+    private string devicePreset = "phone";
+    private int deviceWidth = 390;
+    private int deviceHeight = 844;
+    private string currentTime = DateTime.Now.ToString("HH:mm:ss");
+    private System.Threading.Timer? clockTimer;
+
+    private void SetDevicePreset(string preset)
+    {
+        devicePreset = preset;
+        switch (preset)
+        {
+            case "compact":
+                deviceWidth = 360;
+                deviceHeight = 740;
+                break;
+            case "pda":
+                deviceWidth = 412;
+                deviceHeight = 890;
+                break;
+            default:
+                devicePreset = "phone";
+                deviceWidth = 390;
+                deviceHeight = 844;
+                break;
+        }
+        if (handheldPreviewMode)
+        {
+            ResizeHandheldSimulator();
+        }
+    }
+
+    private void ToggleHandheldPreview()
+    {
+        handheldPreviewMode = !handheldPreviewMode;
+        if (handheldPreviewMode)
+        {
+            ResizeHandheldSimulator();
+        }
+        else
+        {
+            WindowService.RestoreDesktop();
+        }
+    }
+
+    private const int SimulatorControlBarHeight = 38;
+    private const int SimulatorChassisBorder = 20;
+    private const int SimulatorSidePadding = 16;
+
+    private int HandheldSimulatorWindowWidth =>
+        deviceWidth + SimulatorChassisBorder + (SimulatorSidePadding * 2);
+
+    private int HandheldSimulatorWindowHeight =>
+        deviceHeight + SimulatorChassisBorder + SimulatorControlBarHeight;
+
+    private string HandheldChassisStyle =>
+        $"width: {deviceWidth + SimulatorChassisBorder}px; " +
+        $"height: {deviceHeight + SimulatorChassisBorder}px; " +
+        $"max-height: calc(100% - {SimulatorControlBarHeight}px);";
+
+    private void ResizeHandheldSimulator() =>
+        WindowService.EnterHandheldSimulator(
+            HandheldSimulatorWindowWidth,
+            HandheldSimulatorWindowHeight - SimulatorControlBarHeight,
+            SimulatorControlBarHeight);
+
+    private string ProtocolBadgeText
+    {
+        get
+        {
+            if (State.SelectedReaderId is { } id && State.Find(id) is { } reader)
+            {
+                if (reader.NegotiatedProtocolVersion is not null)
+                {
+                    return reader.NegotiatedProtocolVersion switch
+                    {
+                        LlrpProtocolVersion.Version101 => "LLRP 1.0.1",
+                        LlrpProtocolVersion.Version11 => "LLRP 1.1",
+                        LlrpProtocolVersion.Version20 => "LLRP 2.0",
+                        _ => $"LLRP {reader.NegotiatedProtocolVersion}",
+                    };
+                }
+
+                return reader.Profile.LlrpVersion switch
+                {
+                    LlrpProtocolVersionOption.Auto => "LLRP Auto (2.0 / 1.1 / 1.0.1)",
+                    LlrpProtocolVersionOption.Force101 => "LLRP 1.0.1 (Force)",
+                    LlrpProtocolVersionOption.Force11 => "LLRP 1.1 (Force)",
+                    LlrpProtocolVersionOption.Force20 => "LLRP 2.0 (Force)",
+                    _ => "LLRP 1.0.1 / 1.1 / 2.0",
+                };
+            }
+            return "LLRP 1.0.1 / 1.1 / 2.0";
+        }
+    }
 
     protected override void OnInitialized()
     {
         State.Changed += OnChanged;
         VirtualDevices.Changed += OnChanged;
+        clockTimer = new System.Threading.Timer(_ =>
+        {
+            currentTime = DateTime.Now.ToString("HH:mm:ss");
+            _ = InvokeAsync(StateHasChanged);
+        }, null, 1000, 1000);
     }
 
     private void ToggleNavigation() => navigationCollapsed = !navigationCollapsed;
@@ -62,6 +332,7 @@
 
     public void Dispose()
     {
+        clockTimer?.Dispose();
         State.Changed -= OnChanged;
         VirtualDevices.Changed -= OnChanged;
     }

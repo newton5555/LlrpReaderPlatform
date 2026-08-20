@@ -1,0 +1,215 @@
+@namespace LlrpReaderManager.Components.Shared
+
+<svg class="app-icon @Class"
+     width="@Size"
+     height="@Size"
+     viewBox="0 0 24 24"
+     fill="none"
+     stroke="currentColor"
+     stroke-width="@StrokeWidth"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     aria-hidden="true">
+    @switch (NormalizedName)
+    {
+        case "bars" or "menu" or "sidebar":
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+            break;
+
+        case "dashboard" or "gauge" or "grid":
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+            break;
+
+        case "readers" or "server" or "device":
+            <rect x="2" y="4" width="20" height="8" rx="2" />
+            <rect x="2" y="14" width="20" height="6" rx="2" />
+            <line x1="6" y1="8" x2="6.01" y2="8" stroke-width="2.5" />
+            <line x1="10" y1="8" x2="10.01" y2="8" stroke-width="2.5" />
+            <line x1="6" y1="17" x2="6.01" y2="17" stroke-width="2.5" />
+            break;
+
+        case "satellite-dish" or "inventory" or "rfid" or "antenna":
+            <path d="M4 10a7.5 7.5 0 0 0 10 0" />
+            <path d="M1.5 7.5a11 11 0 0 0 15 0" />
+            <path d="M6.5 12.5a4 4 0 0 0 5 0" />
+            <path d="M9 15v6" />
+            <path d="M6 21h6" />
+            <circle cx="9" cy="9" r="1.5" fill="currentColor" />
+            break;
+
+        case "microchip" or "tag-memory" or "memory" or "chip" or "access":
+            <rect x="4" y="4" width="16" height="16" rx="2" />
+            <rect x="8.5" y="8.5" width="7" height="7" rx="1" />
+            <path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3" />
+            break;
+
+        case "tags" or "tag" or "toi":
+            <path d="m3 12 7.5-7.5a2 2 0 0 1 1.414-.586H19a2 2 0 0 1 2 2v7.086a2 2 0 0 1-.586 1.414L13 21.8a2 2 0 0 1-2.83 0L3 14.83A2 2 0 0 1 2.414 13.414V12.6A2 2 0 0 1 3 12Z" />
+            <circle cx="16.5" cy="7.5" r="1.5" fill="currentColor" />
+            break;
+
+        case "history" or "clock" or "runs":
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+            break;
+
+        case "gear" or "settings" or "config":
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+            break;
+
+        case "bolt" or "gpio" or "zap":
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            break;
+
+        case "plus" or "add":
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+            break;
+
+        case "trash" or "delete" or "remove":
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            <line x1="10" y1="11" x2="10" y2="17" />
+            <line x1="14" y1="11" x2="14" y2="17" />
+            break;
+
+        case "rotate" or "arrows-rotate" or "refresh":
+            <path d="M21.5 2v6h-6M2.5 22v-6h6" />
+            <path d="M21.5 8a9 9 0 0 0-16.7-2.6L2.5 8M2.5 16a9 9 0 0 0 16.7 2.6L21.5 16" />
+            break;
+
+        case "play" or "start":
+            <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" />
+            break;
+
+        case "stop":
+            <rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor" />
+            break;
+
+        case "search":
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            break;
+
+        case "lock":
+            <rect x="3" y="11" width="18" height="11" rx="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            break;
+
+        case "unlock":
+            <rect x="3" y="11" width="18" height="11" rx="2" />
+            <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+            break;
+
+        case "kill" or "skull" or "danger" or "warning" or "alert":
+            <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+            break;
+
+        case "check" or "success":
+            <polyline points="20 6 9 17 4 12" />
+            break;
+
+        case "xmark" or "close":
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+            break;
+
+        case "info":
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" stroke-width="2.5" />
+            break;
+
+        case "read" or "book-open":
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+            break;
+
+        case "write" or "edit" or "pen":
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            break;
+
+        case "copy":
+            <rect x="9" y="9" width="13" height="13" rx="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            break;
+
+        case "cube" or "virtual" or "box":
+            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+            <path d="m3.3 7 8.7 5 8.7-5" />
+            <path d="M12 22V12" />
+            break;
+
+        case "folder-open" or "folder":
+            <path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2" />
+            break;
+
+        case "file" or "file-text":
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+            break;
+
+        case "chevron-down":
+            <polyline points="6 9 12 15 18 9" />
+            break;
+
+        case "chevron-right":
+            <polyline points="9 18 15 12 9 6" />
+            break;
+
+        case "mobile" or "smartphone" or "phone" or "handheld":
+            <rect x="5" y="2" width="14" height="20" rx="2" />
+            <line x1="12" y1="18" x2="12.01" y2="18" stroke-width="2.5" />
+            break;
+
+        case "desktop" or "monitor" or "display":
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
+            break;
+
+        case "sliders" or "filter":
+            <line x1="4" y1="21" x2="4" y2="14" />
+            <line x1="4" y1="10" x2="4" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12" y2="3" />
+            <line x1="20" y1="21" x2="20" y2="16" />
+            <line x1="20" y1="12" x2="20" y2="3" />
+            <line x1="1" y1="14" x2="7" y2="14" />
+            <line x1="9" y1="8" x2="15" y2="8" />
+            <line x1="17" y1="16" x2="23" y2="16" />
+            break;
+
+        default:
+            <circle cx="12" cy="12" r="10" />
+            break;
+    }
+</svg>
+
+@code {
+    [Parameter]
+    public string Name { get; set; } = "circle";
+
+    [Parameter]
+    public int Size { get; set; } = 16;
+
+    [Parameter]
+    public string Class { get; set; } = string.Empty;
+
+    [Parameter]
+    public double StrokeWidth { get; set; } = 2;
+
+    private string NormalizedName => Name.Trim().ToLowerInvariant();
+}

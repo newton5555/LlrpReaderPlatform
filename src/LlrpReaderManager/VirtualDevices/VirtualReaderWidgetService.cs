@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.Net;
 using LlrpDevice.Virtual.Hosting;
 using LlrpReaderManager.State;
@@ -40,16 +39,15 @@ public sealed class VirtualReaderInstance
 }
 
 /// <summary>
-/// Consumer-owned virtual reader widget manager. The SDK host is deliberately kept here,
-/// outside the platform Services layer; once started, its loopback endpoint follows the
-/// same ReaderManager add/activate path as a physical reader.
+/// Consumer-owned virtual reader widget manager for UI Client testing.
+/// Manages a single configurable virtual device instance.
 /// </summary>
 public sealed class VirtualReaderWidgetService : IAsyncDisposable
 {
     private readonly IReaderManager readerManager;
     private readonly ReaderManagerState state;
-    private readonly Dictionary<Guid, VirtualReaderInstance> instances = [];
     private readonly SemaphoreSlim gate = new(1, 1);
+    private VirtualReaderInstance? currentInstance;
     private int disposed;
 
     public VirtualReaderWidgetService(IReaderManager readerManager, ReaderManagerState state)
@@ -60,15 +58,19 @@ public sealed class VirtualReaderWidgetService : IAsyncDisposable
 
     public event EventHandler? Changed;
 
+    public VirtualReaderInstance? CurrentInstance => currentInstance;
+
+    public bool IsRunning => currentInstance is not null;
+
     public IReadOnlyList<VirtualReaderInstance> Instances =>
-        new ReadOnlyCollection<VirtualReaderInstance>(instances.Values.ToArray());
+        currentInstance is not null ? [currentInstance] : [];
 
     public bool IsBusy { get; private set; }
 
     public async Task<VirtualReaderStartResult> StartAsync(
-        string profileId,
-        string? name,
-        int port,
+        string profileId = VirtualDeviceProfiles.Standard101Id,
+        string? name = null,
+        int port = 0,
         CancellationToken cancellationToken = default)
     {
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -78,6 +80,12 @@ public sealed class VirtualReaderWidgetService : IAsyncDisposable
         IVirtualDeviceHost? host = null;
         try
         {
+            // If already running, stop previous instance first
+            if (currentInstance is not null)
+            {
+                await StopInternalAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             VirtualDeviceProfileInfo profile = VirtualDeviceProfiles.Get(profileId);
             string readerName = string.IsNullOrWhiteSpace(name)
                 ? $"Virtual · {profile.Name}"
@@ -120,7 +128,7 @@ public sealed class VirtualReaderWidgetService : IAsyncDisposable
             }
 
             var instance = new VirtualReaderInstance(readerId, readerName, profile.Id, boundPort, host);
-            instances[readerId] = instance;
+            currentInstance = instance;
             host = null;
             state.Refresh();
             NotifyChanged();
@@ -145,27 +153,54 @@ public sealed class VirtualReaderWidgetService : IAsyncDisposable
         }
     }
 
-    public async Task StopAsync(Guid readerId, CancellationToken cancellationToken = default)
+    public async Task StopAsync(CancellationToken cancellationToken = default)
     {
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         IsBusy = true;
         NotifyChanged();
         try
         {
-            if (!instances.Remove(readerId, out VirtualReaderInstance? instance))
-            {
-                return;
-            }
+            await StopInternalAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            IsBusy = false;
+            gate.Release();
+            NotifyChanged();
+        }
+    }
 
+    public Task StopAsync(Guid readerId, CancellationToken cancellationToken = default)
+    {
+        if (currentInstance?.ReaderId == readerId)
+        {
+            return StopAsync(cancellationToken);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task StopInternalAsync(CancellationToken cancellationToken)
+    {
+        if (currentInstance is null)
+        {
+            return;
+        }
+
+        VirtualReaderInstance instance = currentInstance;
+        currentInstance = null;
+
+        try
+        {
             try
             {
-                await readerManager.SetEnabledAsync(readerId, false, cancellationToken).ConfigureAwait(false);
+                await readerManager.SetEnabledAsync(instance.ReaderId, false, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
                 try
                 {
-                    await readerManager.RemoveAsync(readerId, cancellationToken).ConfigureAwait(false);
+                    await readerManager.RemoveAsync(instance.ReaderId, cancellationToken).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -174,14 +209,10 @@ public sealed class VirtualReaderWidgetService : IAsyncDisposable
                     await instance.Host.DisposeAsync().ConfigureAwait(false);
                 }
             }
-
-            state.Refresh();
-            NotifyChanged();
         }
         finally
         {
-            IsBusy = false;
-            gate.Release();
+            state.Refresh();
             NotifyChanged();
         }
     }
@@ -193,10 +224,10 @@ public sealed class VirtualReaderWidgetService : IAsyncDisposable
             return;
         }
 
-        VirtualReaderInstance[] current = instances.Values.ToArray();
-        instances.Clear();
-        foreach (VirtualReaderInstance instance in current)
+        if (currentInstance is not null)
         {
+            VirtualReaderInstance instance = currentInstance;
+            currentInstance = null;
             try
             {
                 await readerManager.SetEnabledAsync(instance.ReaderId, false).ConfigureAwait(false);
@@ -204,7 +235,7 @@ public sealed class VirtualReaderWidgetService : IAsyncDisposable
             }
             catch
             {
-                // Application shutdown is best effort; the host must still be disposed.
+                // Application shutdown is best effort
             }
 
             instance.Host.LifecycleChanged -= OnHostLifecycleChanged;
@@ -227,3 +258,4 @@ public sealed class VirtualReaderWidgetService : IAsyncDisposable
         }
     }
 }
+

@@ -23,6 +23,7 @@ public static class MauiProgram
         builder.Services.AddZebraExtension();
         builder.Services.AddSingleton<ReaderManagerState>();
         builder.Services.AddSingleton<VirtualReaderWidgetService>();
+        builder.Services.AddSingleton<LlrpReaderManager.Services.IAppWindowService, LlrpReaderManager.Services.AppWindowService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

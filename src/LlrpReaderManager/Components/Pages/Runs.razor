@@ -5,18 +5,20 @@
 <div class="section-header">
     <div>
         <h1 class="section-title">Inventory Runs</h1>
-        <p class="section-subtitle">Completed run summaries are loaded from the shared SQLite store; live tags remain on the inventory page.</p>
+        <p class="section-subtitle">Historical inventory session summaries, tag snapshots, and run logs persisted in SQLite.</p>
     </div>
-    <div class="toolbar">
-        <label class="form-label">Reader</label>
-        <select style="width: min(280px, 55vw);" value="@selectedReaderText" @onchange="SelectReader">
+    <div class="toolbar" style="width: 100%; display: flex; align-items: center; gap: 6px;">
+        <select id="runs-reader" style="flex: 1; height: 34px; font-size: 12px;" value="@selectedReaderText" @onchange="SelectReader">
             <option value="">Choose Reader</option>
             @foreach (ReaderRuntimeSnapshot reader in State.Readers)
             {
-                <option value="@reader.ReaderId">@reader.Profile.Name · @reader.Profile.Host</option>
+                <option value="@reader.ReaderId">@reader.Profile.Name (@reader.Profile.Host:@reader.Profile.Port)</option>
             }
         </select>
-        <button class="btn btn-sm" @onclick="LoadAsync" disabled="@pageBusy">Refresh</button>
+        <button class="btn btn-sm" style="height: 34px; padding: 0 10px;" @onclick="LoadAsync" disabled="@pageBusy">
+            <AppIcon Name="rotate" Size="13" />
+            <span>Refresh</span>
+        </button>
     </div>
 </div>
 
@@ -24,32 +26,162 @@
 {
     <div class="notice error" style="margin-bottom: var(--space-4);">@error</div>
 }
+@if (!string.IsNullOrWhiteSpace(statusMessage))
+{
+    <div class="notice ok" style="margin-bottom: var(--space-4);">@statusMessage</div>
+}
+
+<!-- Run Summary Metrics Grid -->
+<div class="card-grid" style="margin-bottom: var(--space-4);">
+    <div class="card card-pad">
+        <div class="stat-label">Total Runs</div>
+        <div class="stat-value">@runs.Count</div>
+        <div class="stat-note">Completed inventory sessions</div>
+    </div>
+    <div class="card card-pad">
+        <div class="stat-label">Cumulative Reads</div>
+        <div class="stat-value">@TotalReadsCount</div>
+        <div class="stat-note">Sum of all tag reads</div>
+    </div>
+    <div class="card card-pad">
+        <div class="stat-label">Peak Unique Tags</div>
+        <div class="stat-value">@MaxUniqueTags</div>
+        <div class="stat-note">Max tags in a single run</div>
+    </div>
+    <div class="card card-pad">
+        <div class="stat-label">Latest Session</div>
+        <div class="stat-value" style="font-size: 18px; line-height: 34px;">
+            @(runs.FirstOrDefault()?.StartedAtUtc.ToLocalTime().ToString("MM-dd HH:mm") ?? "—")
+        </div>
+        <div class="stat-note">Most recent recorded run</div>
+    </div>
+</div>
 
 <section class="card">
-    <div class="card-header"><h2 class="card-title">Run history</h2><span class="status-badge neutral">@runs.Count records</span></div>
+    <div class="card-header" style="flex-wrap: wrap; gap: var(--space-3);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <AppIcon Name="history" Size="14" />
+            <span class="card-title" style="margin-bottom: 0;">Run History & Snapshots</span>
+            <span class="status-badge neutral">@runs.Count record(s)</span>
+        </div>
+        @if (runs.Count > 0)
+        {
+            <div style="width: min(220px, 40vw); margin-left: auto;">
+                <input type="text"
+                       placeholder="Filter by stop reason..."
+                       @bind="searchFilter"
+                       @bind:event="oninput"
+                       style="height: 28px; font-size: 11.5px;" />
+            </div>
+        }
+    </div>
     @if (runs.Count == 0)
     {
-        <div class="empty-state"><h2>No completed runs</h2><p>Start inventory on a Reader first. This page intentionally shows summaries, not the live tag table.</p></div>
+        <div class="empty-state">
+            <AppIcon Name="history" Size="36" />
+            <h2>No Completed Runs</h2>
+            <p>Start and stop inventory on a Reader to generate historical run records and snapshot files.</p>
+        </div>
     }
     else
     {
-        <div class="table-wrap">
+        <!-- Desktop Runs Table View -->
+        <div class="table-wrap desktop-table-view">
             <table>
-                <thead><tr><th>Started</th><th>Ended</th><th>Reason</th><th>Total reads</th><th>Unique tags</th><th>Snapshot</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>Started At</th>
+                        <th>Ended At</th>
+                        <th>Duration</th>
+                        <th>Stop Reason</th>
+                        <th>Total Reads</th>
+                        <th>Unique Tags</th>
+                        <th>Snapshot File</th>
+                    </tr>
+                </thead>
                 <tbody>
-                    @foreach (InventoryRunRecord run in runs)
+                    @foreach (InventoryRunRecord run in FilteredRuns)
                     {
+                        TimeSpan? duration = run.EndedAtUtc.HasValue ? run.EndedAtUtc.Value - run.StartedAtUtc : null;
                         <tr>
                             <td class="mono">@run.StartedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</td>
-                            <td class="mono">@(run.EndedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "Running")</td>
-                            <td><span class="tag-pill">@run.StopReason</span></td>
-                            <td class="mono">@run.TotalReadCount</td>
-                            <td class="mono">@run.UniqueTagCount</td>
-                            <td class="mono">@(string.IsNullOrWhiteSpace(run.SnapshotFilePath) ? "—" : run.SnapshotFilePath)</td>
+                            <td class="mono">@(run.EndedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "In Progress")</td>
+                            <td class="mono">@(duration.HasValue ? FormatDuration(duration.Value) : "—")</td>
+                            <td>
+                                <span class="status-badge @(run.StopReason == "Manual" ? "ok" : "neutral")">
+                                    @run.StopReason
+                                </span>
+                            </td>
+                            <td class="mono">@run.TotalReadCount.ToString("N0")</td>
+                            <td class="mono" style="font-weight: 600;">@run.UniqueTagCount.ToString("N0")</td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(run.SnapshotFilePath))
+                                {
+                                    <button class="btn btn-sm"
+                                            style="padding: 2px 8px; font-size: 11px; gap: 5px;"
+                                            @onclick="() => OpenSnapshotFileAsync(run.SnapshotFilePath)"
+                                            title="Click to open @run.SnapshotFilePath in local file viewer">
+                                        <AppIcon Name="folder-open" Size="12" />
+                                        <span class="mono" style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                            @System.IO.Path.GetFileName(run.SnapshotFilePath)
+                                        </span>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="muted mono" style="font-size: 11px;">—</span>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>
             </table>
+        </div>
+
+        <!-- Handheld / Mobile Runs Card Stream -->
+        <div class="mobile-runs-cards-view stack" style="gap: var(--space-2); padding: var(--space-3);">
+            @foreach (InventoryRunRecord run in FilteredRuns)
+            {
+                TimeSpan? duration = run.EndedAtUtc.HasValue ? run.EndedAtUtc.Value - run.StartedAtUtc : null;
+                <div class="card card-pad" style="margin-bottom: 0;">
+                    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px;">
+                        <div>
+                            <div class="mono" style="font-size: 12.5px; font-weight: 700;">
+                                @run.StartedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                            </div>
+                            <div class="form-hint" style="margin-top: 2px;">
+                                Duration: @(duration.HasValue ? FormatDuration(duration.Value) : "In Progress")
+                            </div>
+                        </div>
+                        <span class="status-badge @(run.StopReason == "Manual" ? "ok" : "neutral")" style="font-size: 10px;">
+                            @run.StopReason
+                        </span>
+                    </div>
+
+                    <div class="mobile-tag-stats-grid" style="margin-top: var(--space-2);">
+                        <div class="mobile-stat-box">
+                            <span class="mobile-stat-k">Total Reads</span>
+                            <span class="mobile-stat-v mono" style="color: var(--accent);">@run.TotalReadCount.ToString("N0")</span>
+                        </div>
+                        <div class="mobile-stat-box">
+                            <span class="mobile-stat-k">Unique Tags</span>
+                            <span class="mobile-stat-v mono" style="color: var(--fg); font-weight: 700;">@run.UniqueTagCount.ToString("N0")</span>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(run.SnapshotFilePath))
+                    {
+                        <div style="margin-top: 8px; display: flex; justify-content: flex-end;">
+                            <button class="btn btn-sm"
+                                    style="padding: 2px 8px; font-size: 11px; gap: 5px;"
+                                    @onclick="() => OpenSnapshotFileAsync(run.SnapshotFilePath)">
+                                <AppIcon Name="folder-open" Size="11" />
+                                <span>Open Snapshot JSON</span>
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
         </div>
     }
 </section>
@@ -58,7 +190,18 @@
     private string? selectedReaderText;
     private List<InventoryRunRecord> runs = [];
     private string? error;
+    private string? statusMessage;
+    private string searchFilter = string.Empty;
     private bool pageBusy;
+
+    private long TotalReadsCount => runs.Sum(r => r.TotalReadCount);
+    private int MaxUniqueTags => runs.Count > 0 ? runs.Max(r => r.UniqueTagCount) : 0;
+
+    private IReadOnlyList<InventoryRunRecord> FilteredRuns => runs
+        .Where(r => string.IsNullOrWhiteSpace(searchFilter) ||
+                    r.StopReason.Contains(searchFilter, StringComparison.OrdinalIgnoreCase) ||
+                    (r.SnapshotFilePath is not null && r.SnapshotFilePath.Contains(searchFilter, StringComparison.OrdinalIgnoreCase)))
+        .ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -77,13 +220,57 @@
     private async Task LoadAsync()
     {
         Guid? readerId = ParseReaderId(selectedReaderText);
-        if (readerId is null || pageBusy) { runs = []; return; }
+        if (readerId is null || pageBusy)
+        {
+            runs = [];
+            return;
+        }
+
         pageBusy = true;
         error = null;
-        try { runs = (await RunsStore.GetForReaderAsync(readerId.Value)).ToList(); }
-        catch (Exception exception) { error = exception.Message; }
-        finally { pageBusy = false; }
+        statusMessage = null;
+        try
+        {
+            runs = (await RunsStore.GetForReaderAsync(readerId.Value)).ToList();
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+        }
+        finally
+        {
+            pageBusy = false;
+        }
     }
+
+    private void OpenSnapshotFileAsync(string filePath)
+    {
+        try
+        {
+            if (!System.IO.File.Exists(filePath))
+            {
+                error = $"File not found: {filePath}";
+                return;
+            }
+
+            var processStartInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = filePath,
+                UseShellExecute = true,
+            };
+            System.Diagnostics.Process.Start(processStartInfo);
+            statusMessage = $"Opened snapshot: {System.IO.Path.GetFileName(filePath)}";
+        }
+        catch (Exception ex)
+        {
+            error = $"Failed to open file: {ex.Message}";
+        }
+    }
+
+    private static string FormatDuration(TimeSpan duration) =>
+        duration.TotalMinutes >= 1
+            ? $"{(int)duration.TotalMinutes}m {duration.Seconds}s"
+            : $"{duration.TotalSeconds:0.0}s";
 
     private static Guid? ParseReaderId(string? value) => Guid.TryParse(value, out Guid id) ? id : null;
 }

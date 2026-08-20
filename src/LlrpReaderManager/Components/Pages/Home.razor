@@ -5,59 +5,129 @@
 
 <div class="section-header">
     <div>
-        <h1 class="section-title">Reader Operations</h1>
-        <p class="section-subtitle">A cross-platform LLRP workbench backed by the shared platform services.</p>
+        <h1 class="section-title">Operations Dashboard</h1>
+        <p class="section-subtitle">Real-time telemetry, connected RFID readers, active inventory sessions, and system overview.</p>
     </div>
-    <div class="toolbar">
-        <a class="btn btn-primary" href="/readers">Manage readers</a>
-        <a class="btn" href="/inventory">Open inventory</a>
+    <div class="toolbar desktop-only">
+        <a class="btn btn-primary" href="/inventory">
+            <AppIcon Name="search" Size="13" />
+            <span>Tag Inventory</span>
+        </a>
+        <a class="btn" href="/tag-memory">
+            <AppIcon Name="microchip" Size="13" />
+            <span>Tag Operations</span>
+        </a>
+        <a class="btn" href="/readers">
+            <AppIcon Name="readers" Size="13" />
+            <span>Manage Readers</span>
+        </a>
     </div>
 </div>
 
 @if (!State.IsInitialized)
 {
-    <div class="notice info">Loading persisted Reader profiles and capability state…</div>
+    <div class="notice info" style="margin-bottom: var(--space-4);">
+        Loading persisted Reader profiles and synchronizing capabilities…
+    </div>
 }
 @if (!string.IsNullOrWhiteSpace(State.LastError))
 {
-    <div class="notice error">@State.LastError</div>
+    <div class="notice error" style="margin-bottom: var(--space-4);">
+        @State.LastError
+    </div>
 }
 
-<div class="card-grid">
+<div class="card-grid" style="margin-bottom: var(--space-4);">
     <div class="card card-pad">
-        <div class="stat-label">Readers</div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div class="stat-label">Total Readers</div>
+            <span class="status-badge @(ConnectedCount > 0 ? "ok" : "neutral")">@ConnectedCount Active</span>
+        </div>
         <div class="stat-value">@State.Readers.Count</div>
-        <div class="stat-note">@ConnectedCount connected or inventorying</div>
+        <div class="stat-note">Configured physical / virtual endpoints</div>
     </div>
+
     <div class="card card-pad">
-        <div class="stat-label">Inventory leases</div>
-        <div class="stat-value">@InventoryCount</div>
-        <div class="stat-note">Lifecycle state comes from the platform service</div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div class="stat-label">Inventory Leases</div>
+            <span class="status-badge @(InventoryCount > 0 ? "ok" : "neutral")">@(InventoryCount > 0 ? "Streaming" : "Idle")</span>
+        </div>
+        <div class="stat-value" style="color: @(InventoryCount > 0 ? "var(--accent)" : "inherit");">@InventoryCount</div>
+        <div class="stat-note">Active long-running inventory sessions</div>
     </div>
+
     <div class="card card-pad">
-        <div class="stat-label">Live tags</div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div class="stat-label">Observed Tags</div>
+            <span class="status-badge info">Distinct EPCs</span>
+        </div>
         <div class="stat-value">@TagCount</div>
-        <div class="stat-note">Aggregated per Reader, not raw SDK objects</div>
+        <div class="stat-note">Aggregated tags across all readers</div>
     </div>
+
     <div class="card card-pad">
-        <div class="stat-label">Virtual widgets</div>
-        <div class="stat-value">@VirtualDevices.Instances.Count</div>
-        <div class="stat-note">SDK TCP hosts attached to Readers</div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div class="stat-label">Virtual Test Target</div>
+            <span class="status-badge @(VirtualDevices.IsRunning ? "ok" : "neutral")">
+                @(VirtualDevices.IsRunning ? "Running" : "Offline")
+            </span>
+        </div>
+        <div class="stat-value" style="font-size: 20px; line-height: 34px;">
+            @(VirtualDevices.IsRunning ? "Active Loopback" : "Idle")
+        </div>
+        <div class="stat-note">
+            @(VirtualDevices.IsRunning ? $"127.0.0.1:{VirtualDevices.CurrentInstance?.Port}" : "Local hardware emulation")
+        </div>
     </div>
 </div>
 
-<div class="split" style="margin-top: var(--space-4);">
+<!-- Handheld Quick Tools Strip -->
+<div class="mobile-only" style="margin-bottom: var(--space-3);">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+        <span style="font-size: 10.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;">
+            Quick Features
+        </span>
+        <span class="status-badge neutral" style="font-size: 9.5px; padding: 1px 5px;">Shortcuts</span>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+        <a class="quick-feature-card" href="/runs" title="Open Inventory Runs Log">
+            <div class="quick-feature-icon">
+                <AppIcon Name="history" Size="15" />
+            </div>
+            <span class="quick-feature-label">Runs Log</span>
+        </a>
+        <a class="quick-feature-card" href="/gpio" title="Open GPI/GPO Controls">
+            <div class="quick-feature-icon">
+                <AppIcon Name="bolt" Size="15" />
+            </div>
+            <span class="quick-feature-label">GPI / GPO</span>
+        </a>
+        <a class="quick-feature-card" href="/tag-lists" title="Open TOI Tag Classifications">
+            <div class="quick-feature-icon">
+                <AppIcon Name="tags" Size="15" />
+            </div>
+            <span class="quick-feature-label">TOI Lists</span>
+        </a>
+    </div>
+</div>
+
+<div class="split">
+    <!-- Left: Reader Status & Operations -->
     <section class="card">
         <div class="card-header">
-            <h2 class="card-title">Reader status</h2>
-            <a class="btn btn-sm" href="/readers">View all</a>
+            <span class="card-title">
+                <AppIcon Name="readers" Size="14" />
+                <span>Connected Readers & Status</span>
+            </span>
+            <a class="btn btn-sm btn-ghost" href="/readers">View All Readers</a>
         </div>
         @if (State.Readers.Count == 0)
         {
             <div class="empty-state">
-                <h3>No Readers yet</h3>
-                <p>Add a physical endpoint or launch a local protocol virtual Reader.</p>
-                <a class="btn btn-primary" href="/readers">Add Reader</a>
+                <AppIcon Name="readers" Size="36" />
+                <h3>No Registered Readers</h3>
+                <p>Add a physical endpoint or start the local virtual device test target.</p>
+                <a class="btn btn-primary" href="/readers" style="margin-top: var(--space-2);">Open Readers</a>
             </div>
         }
         else
@@ -65,31 +135,87 @@
             <div class="stack" style="padding: var(--space-3) var(--space-4);">
                 @foreach (ReaderRuntimeSnapshot reader in State.Readers)
                 {
-                    <div class="reader-head card" style="box-shadow: none;">
-                        <div class="reader-heading">
-                            <div class="reader-icon">RF</div>
-                            <div>
-                                <div class="reader-name">@reader.Profile.Name</div>
-                                <div class="reader-endpoint">@reader.Profile.Host:@reader.Profile.Port</div>
+                    <div class="reader-card" style="margin-bottom: 0;">
+                        <div class="reader-head">
+                            <div class="reader-heading">
+                                <div class="reader-icon @(IsVirtual(reader.ReaderId) ? "virtual" : string.Empty)">
+                                    <AppIcon Name="@(IsVirtual(reader.ReaderId) ? "cube" : "satellite-dish")" Size="16" />
+                                </div>
+                                <div>
+                                    <div class="reader-name">@reader.Profile.Name</div>
+                                    <div class="reader-endpoint mono">@reader.Profile.Host:@reader.Profile.Port</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="status-badge @StatusClass(reader.State)">@reader.State</span>
+                                <a class="btn btn-sm btn-ghost" href="/inventory" title="Open Inventory for this reader">
+                                    <AppIcon Name="search" Size="12" />
+                                    <span>Inventory</span>
+                                </a>
+                                <a class="btn btn-sm btn-ghost" href="/settings" title="Settings">
+                                    <AppIcon Name="gear" Size="12" />
+                                </a>
                             </div>
                         </div>
-                        <span class="status-badge @StatusClass(reader.State)">@reader.State</span>
                     </div>
                 }
             </div>
         }
     </section>
 
-    <section class="card virtual-widget">
-        <div class="card-header">
-            <h2 class="card-title">Protocol virtual device</h2>
-            <span class="status-badge neutral">SDK host</span>
-        </div>
-        <div class="card-pad">
-            <p class="muted">Launch a real TCP/LLRP endpoint from the UI, then attach it to the same Reader list used by hardware.</p>
-            <a class="btn btn-primary" style="margin-top: var(--space-4);" href="/readers">Open virtual device widget</a>
-        </div>
-    </section>
+    <!-- Right: Virtual Device & Quick Links -->
+    <div class="stack">
+        <section class="card virtual-widget-card">
+            <div class="card-header">
+                <span class="card-title">
+                    <AppIcon Name="cube" Size="14" />
+                    <span>Virtual Test Device</span>
+                </span>
+                <span class="status-badge @(VirtualDevices.IsRunning ? "ok" : "neutral")">
+                    @(VirtualDevices.IsRunning ? "Running" : "Idle")
+                </span>
+            </div>
+            <div class="card-pad stack">
+                <p class="form-hint" style="margin-top: 0;">
+                    Start a local LLRP protocol virtual device on loopback TCP (127.0.0.1) for testing Inventory, RF Settings, and Tag Memory operations without physical hardware.
+                </p>
+                @if (VirtualDevices.IsRunning && VirtualDevices.CurrentInstance is { } instance)
+                {
+                    <div class="notice ok" style="font-size: 12px; padding: var(--space-2) var(--space-3);">
+                        <strong>@instance.Name</strong>
+                        <div class="mono" style="margin-top: 2px;">127.0.0.1:@instance.Port</div>
+                    </div>
+                }
+                <a class="btn btn-primary" href="/readers" style="margin-top: var(--space-1); width: 100%;">
+                    <AppIcon Name="cube" Size="13" />
+                    <span>Manage Virtual Device</span>
+                </a>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <span class="card-title">
+                    <AppIcon Name="sliders" Size="14" />
+                    <span>Quick Navigation</span>
+                </span>
+            </div>
+            <div class="card-pad stack" style="gap: var(--space-2);">
+                <a class="btn btn-ghost" href="/tag-lists" style="justify-content: flex-start;">
+                    <AppIcon Name="tags" Size="14" />
+                    <span>Tags of Interest (TOI) Classification</span>
+                </a>
+                <a class="btn btn-ghost" href="/runs" style="justify-content: flex-start;">
+                    <AppIcon Name="history" Size="14" />
+                    <span>Historical Inventory Runs & Logs</span>
+                </a>
+                <a class="btn btn-ghost" href="/gpio" style="justify-content: flex-start;">
+                    <AppIcon Name="bolt" Size="14" />
+                    <span>Digital GPI / GPO Port Controls</span>
+                </a>
+            </div>
+        </section>
+    </div>
 </div>
 
 @code {
@@ -106,6 +232,8 @@
         VirtualDevices.Changed += OnChanged;
         await State.InitializeAsync();
     }
+
+    private bool IsVirtual(Guid readerId) => VirtualDevices.CurrentInstance?.ReaderId == readerId;
 
     private static string StatusClass(ReaderState state) => state switch
     {
