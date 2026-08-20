@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject ReaderManagerState State
 @inject VirtualReaderWidgetService VirtualDevices
+@inject LlrpReaderManager.Services.IAppWindowService WindowService
 
 @if (handheldPreviewMode)
 {
@@ -268,11 +269,28 @@ else
                 deviceHeight = 844;
                 break;
         }
+        if (handheldPreviewMode)
+        {
+            WindowService.ResizeToMobile(deviceWidth, deviceHeight);
+        }
     }
 
     private void SetDeviceScale(double scale)
     {
         deviceScale = scale;
+    }
+
+    private void ToggleHandheldPreview()
+    {
+        handheldPreviewMode = !handheldPreviewMode;
+        if (handheldPreviewMode)
+        {
+            WindowService.ResizeToMobile(deviceWidth, deviceHeight);
+        }
+        else
+        {
+            WindowService.RestoreToDesktop();
+        }
     }
 
     private string ProtocolBadgeText
@@ -317,8 +335,6 @@ else
     }
 
     private void ToggleNavigation() => navigationCollapsed = !navigationCollapsed;
-
-    private void ToggleHandheldPreview() => handheldPreviewMode = !handheldPreviewMode;
 
     private void OnChanged(object? sender, EventArgs args) => InvokeAsync(StateHasChanged);
 

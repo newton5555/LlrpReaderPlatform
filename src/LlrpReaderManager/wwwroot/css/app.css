@@ -2723,4 +2723,122 @@ tr.toi-row {
     box-shadow: 0 0 0 1px var(--accent);
 }
 
+/* ========================================================= */
+/* Tag Operations & Settings Responsive Mobile Enhancements  */
+/* ========================================================= */
+
+.tag-memory-mobile-tabs {
+    display: none;
+    margin-bottom: var(--space-3);
+    background: var(--surface-sunken);
+    padding: 3px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    gap: 6px;
+}
+
+.memory-view-blocks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+}
+
+.memory-view-grid {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+@media (max-width: 900px) {
+    .memory-view-blocks {
+        grid-template-columns: 1fr;
+        gap: var(--space-2);
+    }
+}
+
+@media (max-width: 768px) {
+    .tag-memory-mobile-tabs {
+        display: flex;
+    }
+
+    .access-layout {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
+    .access-layout.mobile-tab-tags .operations-panel {
+        display: none !important;
+    }
+
+    .access-layout.mobile-tab-ops .tag-selector {
+        display: none !important;
+    }
+
+    .tag-selector {
+        height: auto;
+        max-height: calc(100vh - 220px);
+    }
+
+    .memory-cell {
+        padding: 6px 1px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .memory-cell.header {
+        font-size: 9.5px;
+    }
+
+    .memory-op-form-grid,
+    .memory-write-form-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-2);
+    }
+
+    .bank-tabs {
+        width: 100%;
+        display: flex;
+    }
+
+    .bank-tab {
+        flex: 1;
+        text-align: center;
+        padding: 8px 4px;
+        font-size: 11.5px;
+    }
+
+    /* Settings Mobile Enhancements */
+    .settings-nav-tabs {
+        display: flex;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+        gap: 4px;
+    }
+
+    .settings-nav-tab {
+        flex-shrink: 0;
+        padding: 6px 12px;
+        font-size: 11.5px;
+    }
+
+    .setting-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-2);
+        padding: var(--space-3) 0;
+    }
+
+    .setting-row > div:last-child {
+        width: 100%;
+    }
+}
+
+
 

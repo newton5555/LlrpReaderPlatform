@@ -23,6 +23,24 @@
     </div>
 </div>
 
+<!-- Mobile-Only Tab Switcher (Active on Handheld/Phone screens <= 768px) -->
+<div class="tag-memory-mobile-tabs">
+    <button type="button"
+            class="btn btn-sm @(mobileTab == "tags" ? "btn-primary" : "btn-ghost")"
+            style="flex: 1; height: 34px; font-size: 12px; font-weight: 700; border-radius: var(--radius-sm); justify-content: center;"
+            @onclick='() => mobileTab = "tags"'>
+        <AppIcon Name="tags" Size="13" />
+        <span>Observed Tags (@FilteredTags.Count)</span>
+    </button>
+    <button type="button"
+            class="btn btn-sm @(mobileTab == "ops" ? "btn-primary" : "btn-ghost")"
+            style="flex: 1; height: 34px; font-size: 12px; font-weight: 700; border-radius: var(--radius-sm); justify-content: center;"
+            @onclick='() => mobileTab = "ops"'>
+        <AppIcon Name="microchip" Size="13" />
+        <span>Operations & Map</span>
+    </button>
+</div>
+
 @if (EffectiveReader is null && State.Readers.Count == 0)
 {
     <div class="card empty-state">
@@ -34,7 +52,7 @@
 }
 else
 {
-    <div class="access-layout">
+    <div class="access-layout @(mobileTab == "tags" ? "mobile-tab-tags" : "mobile-tab-ops")">
         <!-- Left: Observed Tags Selector -->
         <div class="tag-selector">
             <div class="tag-selector-header">
@@ -42,7 +60,7 @@ else
                 <span class="tag-count-label">@FilteredTags.Count tags</span>
             </div>
             <div style="padding: 0 var(--space-3) var(--space-2) var(--space-3);">
-                <input type="text" placeholder="Filter EPC / TID..." @bind="searchText" @bind:event="oninput" style="height: 28px; font-size: 11.5px;" />
+                <input type="text" placeholder="Filter EPC / TID..." @bind="searchText" @bind:event="oninput" style="height: 32px; font-size: 12px;" />
             </div>
             <div class="tag-list">
                 @if (FilteredTags.Count == 0)
@@ -78,6 +96,21 @@ else
 
         <!-- Right: Operations Panel -->
         <div class="operations-panel">
+            <!-- Mobile Target Banner -->
+            @if (selectedTagRef is not null)
+            {
+                <div class="target-tag-banner mobile-only" style="margin-bottom: var(--space-2);">
+                    <div class="target-tag-banner-left">
+                        <span class="target-tag-label">Selected Target EPC</span>
+                        <span class="mono target-tag-epc">@targetHex</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-ghost" style="height: 28px; padding: 0 8px; font-size: 11px;" @onclick='() => mobileTab = "tags"'>
+                        <AppIcon Name="tags" Size="11" />
+                        <span>Switch Tag</span>
+                    </button>
+                </div>
+            }
+
             <!-- Target Tag Specification Card -->
             <div class="card selected-tag-card">
                 <div class="card-header" style="padding: var(--space-2) var(--space-4); background: var(--surface-raised);">
@@ -235,23 +268,50 @@ else
                     <span class="status-badge neutral">Bank: @readBank</span>
                 </div>
                 <div class="memory-view-container">
-                    <div class="memory-view">
-                        @for (int i = 0; i < 16; i++)
-                        {
-                            <div class="memory-cell header">@($"{i:X2}")</div>
-                        }
-                        @for (int i = 0; i < 16; i++)
-                        {
-                            int wordIndex = i;
-                            string wordHex = GetWordHex(wordIndex);
-                            bool isHighlighted = IsWordHighlighted(wordIndex);
-                            <div class="memory-cell @(isHighlighted ? "highlight" : string.Empty)"
-                                 style="cursor: pointer; user-select: none;"
-                                 @onclick="() => SelectMemoryWord(wordIndex)"
-                                 title="@($"Word 0x{wordIndex:X2} ({wordHex}) - Click to set Word Pointer")">
-                                @wordHex
+                    <div class="memory-view-blocks">
+                        <!-- Half 1: 0x00 - 0x07 -->
+                        <div class="memory-view-half">
+                            <div class="memory-view-grid">
+                                @for (int i = 0; i < 8; i++)
+                                {
+                                    <div class="memory-cell header">@($"{i:X2}")</div>
+                                }
+                                @for (int i = 0; i < 8; i++)
+                                {
+                                    int wordIndex = i;
+                                    string wordHex = GetWordHex(wordIndex);
+                                    bool isHighlighted = IsWordHighlighted(wordIndex);
+                                    <div class="memory-cell @(isHighlighted ? "highlight" : string.Empty)"
+                                         style="cursor: pointer; user-select: none;"
+                                         @onclick="() => SelectMemoryWord(wordIndex)"
+                                         title="@($"Word 0x{wordIndex:X2} ({wordHex}) - Click to set Word Pointer")">
+                                        @wordHex
+                                    </div>
+                                }
                             </div>
-                        }
+                        </div>
+
+                        <!-- Half 2: 0x08 - 0x0F -->
+                        <div class="memory-view-half">
+                            <div class="memory-view-grid">
+                                @for (int i = 8; i < 16; i++)
+                                {
+                                    <div class="memory-cell header">@($"{i:X2}")</div>
+                                }
+                                @for (int i = 8; i < 16; i++)
+                                {
+                                    int wordIndex = i;
+                                    string wordHex = GetWordHex(wordIndex);
+                                    bool isHighlighted = IsWordHighlighted(wordIndex);
+                                    <div class="memory-cell @(isHighlighted ? "highlight" : string.Empty)"
+                                         style="cursor: pointer; user-select: none;"
+                                         @onclick="() => SelectMemoryWord(wordIndex)"
+                                         title="@($"Word 0x{wordIndex:X2} ({wordHex}) - Click to set Word Pointer")">
+                                        @wordHex
+                                    </div>
+                                }
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -299,6 +359,7 @@ else
     private string? selectedReaderText;
     private string searchText = string.Empty;
     private bool autoSelectReader = true;
+    private string mobileTab = "tags"; // "tags" or "ops" on mobile
 
     // Target Selection
     private string targetHex = string.Empty;
@@ -416,6 +477,7 @@ else
             selectionBank = TagMemoryBank.Epc;
         }
         readStatusText = $"Selected target {item.Tag.Epc}. Ready to execute.";
+        mobileTab = "ops"; // Automatically switch to Operations tab on mobile!
     }
 
     private void OnTargetHexInput(ChangeEventArgs args)

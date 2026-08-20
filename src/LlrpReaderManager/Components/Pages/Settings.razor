@@ -2,14 +2,14 @@
 @implements IDisposable
 @inject ReaderManagerState State
 
-<!-- Desktop Section Header & Toolbar -->
-<div class="section-header desktop-only">
+<!-- Section Header & Toolbar -->
+<div class="section-header">
     <div>
         <h1 class="section-title">Reader Settings</h1>
         <p class="section-subtitle">Capability-driven configuration synchronized directly with the reader hardware.</p>
     </div>
     <div class="toolbar">
-        <label class="form-label" for="settings-reader">Reader</label>
+        <label class="form-label" for="settings-reader" style="margin-left: var(--space-2);">Reader</label>
         <select id="settings-reader" style="width: min(280px, 50vw);" value="@SelectedReaderText" @onchange="SelectReader">
             <option value="">Choose Reader</option>
             @foreach (ReaderRuntimeSnapshot reader in State.Readers)
@@ -20,7 +20,7 @@
     </div>
 </div>
 
-<div class="toolbar desktop-only" style="margin-bottom: var(--space-4); flex-wrap: wrap; gap: var(--space-2);">
+<div class="toolbar" style="margin-bottom: var(--space-3); flex-wrap: wrap; gap: var(--space-2);">
     <button class="btn btn-sm" @onclick="() => LoadAsync(false)" disabled="@(pageBusy || SelectedReader is null)">
         <AppIcon Name="rotate" Size="13" />
         <span>Refresh from Reader</span>
@@ -34,35 +34,6 @@
         <AppIcon Name="check" Size="13" />
         <span>Save Configuration</span>
     </button>
-</div>
-
-<!-- Handheld / Mobile Dedicated Control Bar -->
-<div class="card mobile-only" style="margin-bottom: var(--space-2); padding: 8px 10px;">
-    <div class="stack" style="gap: 6px; width: 100%;">
-        <div style="display: flex; align-items: center; gap: 6px;">
-            <select style="flex: 1; height: 34px; font-size: 12px;" value="@SelectedReaderText" @onchange="SelectReader">
-                <option value="">Choose Reader</option>
-                @foreach (ReaderRuntimeSnapshot reader in State.Readers)
-                {
-                    <option value="@reader.ReaderId">@reader.Profile.Name (@reader.Profile.Host:@reader.Profile.Port)</option>
-                }
-            </select>
-            <button class="btn btn-primary" style="height: 34px; padding: 0 12px; font-weight: 700; white-space: nowrap;" @onclick="SaveAsync" disabled="@(pageBusy || SettingsModel is null)">
-                <AppIcon Name="check" Size="13" />
-                <span>Save</span>
-            </button>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-            <button class="btn btn-sm" style="height: 30px; justify-content: center;" @onclick="() => LoadAsync(false)" disabled="@(pageBusy || SelectedReader is null)">
-                <AppIcon Name="rotate" Size="12" />
-                <span>Refresh</span>
-            </button>
-            <button class="btn btn-sm" style="height: 30px; justify-content: center;" @onclick="() => LoadAsync(true)" disabled="@(pageBusy || SelectedReader is null)">
-                <AppIcon Name="history" Size="12" />
-                <span>SDK Defaults</span>
-            </button>
-        </div>
-    </div>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(message))
@@ -82,9 +53,9 @@
 }
 else
 {
-    <!-- Desktop Category Navigation Tabs & Search -->
-    <div class="desktop-only" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-3);">
-        <nav class="settings-nav-tabs" style="margin-bottom: 0;">
+    <!-- Category Navigation Tabs & Search -->
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-3);">
+        <nav class="settings-nav-tabs">
             <button type="button"
                     class="settings-nav-tab @(activeCategory == "rf" ? "active" : string.Empty)"
                     @onclick='() => activeCategory = "rf"'>
@@ -130,37 +101,6 @@ else
                    @bind:event="oninput"
                    style="height: 32px; font-size: 12px;" />
         </div>
-    </div>
-
-    <!-- Handheld / Mobile Category Navigation & Search -->
-    <div class="mobile-only stack" style="gap: 6px; margin-bottom: var(--space-2);">
-        <nav class="settings-nav-tabs" style="margin-bottom: 0; width: 100%;">
-            <button type="button" class="settings-nav-tab @(activeCategory == "rf" ? "active" : string.Empty)" @onclick='() => activeCategory = "rf"'>
-                <AppIcon Name="bolt" Size="12" />
-                <span>RF / Antennas</span>
-            </button>
-            <button type="button" class="settings-nav-tab @(activeCategory == "protocol" ? "active" : string.Empty)" @onclick='() => activeCategory = "protocol"'>
-                <AppIcon Name="search" Size="12" />
-                <span>Protocol</span>
-            </button>
-            <button type="button" class="settings-nav-tab @(activeCategory == "filters" ? "active" : string.Empty)" @onclick='() => activeCategory = "filters"'>
-                <AppIcon Name="filter" Size="12" />
-                <span>Filters</span>
-            </button>
-            <button type="button" class="settings-nav-tab @(activeCategory == "triggers" ? "active" : string.Empty)" @onclick='() => activeCategory = "triggers"'>
-                <AppIcon Name="zap" Size="12" />
-                <span>Triggers</span>
-            </button>
-            <button type="button" class="settings-nav-tab @(activeCategory == "reports" ? "active" : string.Empty)" @onclick='() => activeCategory = "reports"'>
-                <AppIcon Name="tags" Size="12" />
-                <span>Reports</span>
-            </button>
-            <button type="button" class="settings-nav-tab @(activeCategory == "all" ? "active" : string.Empty)" @onclick='() => activeCategory = "all"'>
-                <AppIcon Name="grid" Size="12" />
-                <span>All</span>
-            </button>
-        </nav>
-        <input type="text" placeholder="Search settings (e.g. power, session)..." @bind="searchTerm" @bind:event="oninput" style="height: 32px; font-size: 11.5px;" />
     </div>
 
     <section class="settings-card-grid">
