@@ -341,10 +341,10 @@ jobs:
         run: |
           set -euo pipefail
           artifact_root="$GITHUB_WORKSPACE/artifacts/release"
-          publish_directory="$artifact_root/publish/reader-manager-linux"
-          deb_path="$(find "$publish_directory" -type f -name '*.deb' -print -quit)"
+          deb_directory="$GITHUB_WORKSPACE/src/LlrpReaderManager.Linux/bin/Deb"
+          deb_path="$(find "$deb_directory" -type f -name '*.deb' -print -quit)"
           if [[ -z "$deb_path" ]]; then
-            echo "No Linux .deb package found under $publish_directory" >&2
+            echo "No Linux .deb package found under $deb_directory" >&2
             exit 1
           fi
 
