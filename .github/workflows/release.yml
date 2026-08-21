@@ -331,6 +331,7 @@ jobs:
             --no-restore \
             -p:CreateDeb=true \
             -p:UseLocalLlrpSdk=false \
+            -p:ApplicationDisplayVersion=${{ needs.validate-release.outputs.version }} \
             --output artifacts/release/publish/reader-manager-linux
 
       - name: Prepare Linux release asset
