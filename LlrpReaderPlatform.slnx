@@ -33,13 +33,19 @@
     <File Path="docs/development/legacy-feature-matrix.md" />
     <File Path="docs/development/hardware-validation-runbook.md" />
     <File Path="docs/development/wpf-user-and-troubleshooting.md" />
+    <File Path="docs/development/reader-manager.md" />
+    <File Path="docs/development/自研设备LLRP协议.md" />
     <File Path="docs/development/virtual-reader.md" />
     <File Path="docs/development/samples/virtual-reader.json" />
     <File Path="docs/development/samples/virtual-tags.jsonl" />
     <File Path="docs/development/release.md" />
   </Folder>
   <Folder Name="/docs/releases/">
+    <File Path="docs/releases/v2.0.2.md" />
+    <File Path="docs/releases/v2.0.1.md" />
+    <File Path="docs/releases/v2.0.0.md" />
     <File Path="docs/releases/v1.5.0.md" />
+    <File Path="docs/releases/v1.4.0.md" />
     <File Path="docs/releases/v1.0.0.md" />
   </Folder>
   <Folder Name="/docs/decisions/">
@@ -61,6 +67,7 @@
     <File Path="docs/decisions/ADR-0015-virtual-reader-development-mode.md" />
     <File Path="docs/decisions/ADR-0016-platform-virtual-reader-data-sources.md" />
     <File Path="docs/decisions/ADR-0017-probe-activate-session-handoff.md" />
+    <File Path="docs/decisions/ADR-0018-maui-blazor-multi-platform-release-assets.md" />
     <File Path="docs/decisions/ADR-0019-maui-linux-gtk4-head.md" />
   </Folder>
   <Folder Name="/docs/templates/">

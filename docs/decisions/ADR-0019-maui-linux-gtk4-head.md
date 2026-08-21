@@ -2,7 +2,7 @@
 
 ## 状态
 
-已接受（实验性消费者，2026-08-21）
+已接受（实验性后端、正式构建与发布资产，2026-08-21）
 
 ## 背景
 
@@ -19,7 +19,7 @@ Reader 生命周期。
 
 ## 约束
 
-- Linux GTK4 后端是实验性依赖，不纳入当前稳定发布承诺；
+- Linux GTK4 后端仍是实验性依赖，但已纳入 Ubuntu CI 和 Tag Release 的构建验证；
 - 运行时需要 GTK4 4.12+ 和 WebKitGTK 6.x 原生库；
 - Linux 项目采用独立 Head，不伪造 `net10.0-linux` TFM；
 - Linux 页面必须继续通过 Contracts/Services 工作，不增加 Linux 专属协议分支；
@@ -27,7 +27,8 @@ Reader 生命周期。
 
 ## 结果
 
-当前项目可以在 Linux 桌面以 GTK4 原生窗口运行同一套 Blazor UI；Linux 构建、GTK/WebKitGTK 系统
-依赖和控件兼容性需要单独在 Linux 主机或 CI 上验证。正式发布前不能把实验性后端描述为 MAUI
-官方稳定 Linux 支持。
+当前项目可以在 Linux 桌面以 GTK4 原生窗口运行同一套 Blazor UI。Ubuntu Runner 安装原生依赖和
+`maui-tizen` workload 后，使用 `linux-x64` Runtime Identifier 构建；Deb target 将 framework-dependent
+安装包输出到 `src/LlrpReaderManager.Linux/bin/Deb/`，再由 Release Job 上传。该资产不等于 MAUI
+官方稳定 Linux TFM，目标机仍需兼容的 .NET Runtime、GTK4 和 WebKitGTK。
 

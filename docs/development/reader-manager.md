@@ -146,8 +146,9 @@ sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev \
 dotnet run --project src/LlrpReaderManager.Linux/LlrpReaderManager.Linux.csproj
 ```
 
-Linux GTK4 和 BlazorWebView 后端目前是实验性依赖；可以复用当前 Razor 页面和平台 Services，
-但正式发布前需要单独验证控件、原生库、窗口生命周期和发行版打包。详见
+Linux GTK4 和 BlazorWebView 后端目前是实验性依赖，但已纳入 Ubuntu CI 和正式 Tag Release。
+发布时使用 `linux-x64` Runtime Identifier，Deb target 将 `.deb` 输出到项目的 `bin/Deb/`，目标机
+仍需兼容的 .NET Runtime、GTK4 和 WebKitGTK。详见
 [ADR-0019](../decisions/ADR-0019-maui-linux-gtk4-head.md)。
 
 ### Mac Catalyst 本地运行/安装
