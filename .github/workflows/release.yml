@@ -315,6 +315,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes libgtk-4-1 libwebkitgtk-6.0-4
 
+      - name: Install MAUI workload required by Linux head
+        run: dotnet workload install maui-tizen
+
       - name: Restore Linux GTK4 project in NuGet mode
         run: dotnet restore src/LlrpReaderManager.Linux/LlrpReaderManager.Linux.csproj -p:UseLocalLlrpSdk=false
 
