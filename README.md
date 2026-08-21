@@ -170,8 +170,8 @@ and SDK extension modules. It supports Reader discovery/addition, settings, inve
 and GPI/GPO. The embedded protocol virtual-device widget starts `LlrpDevice.Virtual.Hosting` and then adds
 the bound loopback endpoint as an ordinary Reader, so virtual and physical Readers exercise the same lifecycle.
 
-The current project is a development consumer rather than a separate release package. A Linux GTK4 Head
-(`src/LlrpReaderManager.Linux`) now reuses the same Blazor pages and platform services through the
-experimental `maui-labs` backend; it requires GTK4/WebKitGTK native libraries and is not yet a stable release
-target. See
+The current project is a development consumer rather than a separate platform NuGet package. A Linux GTK4 Head
+(`src/LlrpReaderManager.Linux`) reuses the same Blazor pages and platform services through the experimental
+`maui-labs` backend. CI builds it on Ubuntu and tagged releases publish a framework-dependent Linux x64 `.deb`;
+the target machine requires GTK4/WebKitGTK native libraries and a compatible .NET Runtime. See
 [LlrpReaderManager development mode](docs/development/reader-manager.md) for workload, build, and run commands.

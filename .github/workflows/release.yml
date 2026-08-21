@@ -295,6 +295,72 @@ jobs:
           path: artifacts/release/*.zip*
           if-no-files-found: error
 
+  publish-linux:
+    name: Publish Linux GTK4 application
+    needs:
+      - validate-release
+      - build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Install Linux native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libgtk-4-1 libwebkitgtk-6.0-4
+
+      - name: Restore Linux GTK4 project in NuGet mode
+        run: dotnet restore src/LlrpReaderManager.Linux/LlrpReaderManager.Linux.csproj -p:UseLocalLlrpSdk=false
+
+      - name: Publish Linux Debian package
+        run: |
+          mkdir -p artifacts/release/publish/reader-manager-linux
+          dotnet publish src/LlrpReaderManager.Linux/LlrpReaderManager.Linux.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained false \
+            --no-restore \
+            -p:CreateDeb=true \
+            -p:UseLocalLlrpSdk=false \
+            --output artifacts/release/publish/reader-manager-linux
+
+      - name: Prepare Linux release asset
+        env:
+          RELEASE_TAG: ${{ needs.validate-release.outputs.tag }}
+          RELEASE_DOC: ${{ needs.validate-release.outputs.release_doc }}
+        run: |
+          set -euo pipefail
+          artifact_root="$GITHUB_WORKSPACE/artifacts/release"
+          publish_directory="$artifact_root/publish/reader-manager-linux"
+          deb_path="$(find "$publish_directory" -type f -name '*.deb' -print -quit)"
+          if [[ -z "$deb_path" ]]; then
+            echo "No Linux .deb package found under $publish_directory" >&2
+            exit 1
+          fi
+
+          deb="$artifact_root/LlrpReaderManager-$RELEASE_TAG-linux-x64.deb"
+          cp "$deb_path" "$deb"
+          sha256sum "$deb" | awk '{print tolower($1) "  " $2}' > "$deb.sha256"
+          cp "$GITHUB_WORKSPACE/README.md" "$artifact_root/LlrpReaderManager-$RELEASE_TAG-linux-README.md"
+          cp "$GITHUB_WORKSPACE/$RELEASE_DOC" "$artifact_root/LlrpReaderManager-$RELEASE_TAG-linux-RELEASE-NOTES.md"
+
+      - name: Upload Linux release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux-assets
+          path: |
+            artifacts/release/*.deb
+            artifacts/release/*.deb.sha256
+            artifacts/release/*-linux-README.md
+            artifacts/release/*-linux-RELEASE-NOTES.md
+          if-no-files-found: error
+
   create-release:
     name: Create GitHub Release
     needs:
@@ -302,6 +368,7 @@ jobs:
       - publish-windows
       - publish-android
       - publish-macos
+      - publish-linux
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -322,7 +389,10 @@ jobs:
           files: |
             ./artifacts/release/*.zip
             ./artifacts/release/*.apk
+            ./artifacts/release/*.deb
             ./artifacts/release/*.sha256
+            ./artifacts/release/*-linux-README.md
+            ./artifacts/release/*-linux-RELEASE-NOTES.md
           draft: false
           prerelease: false
           body_path: ${{ needs.validate-release.outputs.release_doc }}

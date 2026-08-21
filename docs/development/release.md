@@ -11,6 +11,7 @@
 - `LlrpReaderManager-v<version>-macos-x64.zip` 和
   `LlrpReaderManager-v<version>-macos-arm64.zip`：Mac Catalyst 应用包；
 - `LlrpReaderManager-v<version>-android.apk`：Android 安装包；
+- `LlrpReaderManager-v<version>-linux-x64.deb`：Linux GTK4 x64 Debian 安装包；
 - 每个应用资产对应的 `.sha256` 校验文件；
 - GitHub Release 页面和版本说明。
 
@@ -52,8 +53,8 @@ open /Applications/LlrpReaderManager.app
 
 仓库包含两条自动流程：
 
-- `.github/workflows/ci.yml`：`master`、`release/*` 的 push/PR，以及手动触发时在 Windows 执行 NuGet 模式还原、Release 构建和自动化测试，并在 macOS 构建 Mac Catalyst 目标；
-- `.github/workflows/release.yml`：推送 `vMAJOR.MINOR.PATCH` Tag 或手动触发时，重复执行构建和测试，然后并行发布两个 WPF、MAUI Blazor 的 Windows/Mac Catalyst/Android 资产、SHA256 和 GitHub Release。
+- `.github/workflows/ci.yml`：`master`、`release/*` 的 push/PR，以及手动触发时分别在 Windows、macOS 和 Ubuntu 执行对应的构建检查；通用服务和测试在 Windows，Mac Catalyst 在 macOS，Linux GTK4 在 Ubuntu。
+- `.github/workflows/release.yml`：推送 `vMAJOR.MINOR.PATCH` Tag 或手动触发时，重复执行构建和测试，然后并行发布 WPF、MAUI Blazor 的 Windows/Mac Catalyst/Android 资产，以及 Linux GTK4 `.deb`、SHA256 和 GitHub Release。
 
 发布流程以 Tag 为触发依据，不自动限制 Tag 来源分支；团队仍应在正式 `release/*` 分支准备版本。
 流程会校验 Tag、`Directory.Build.props` 中的版本号和 `docs/releases/v<version>.md` 是否一致；任一不一致都会停止发布。
@@ -145,6 +146,10 @@ dotnet publish src/LlrpReaderManager/LlrpReaderManager.csproj `
 
 Mac Catalyst 发布在 macOS runner 上分别使用 `maccatalyst-x64` 和 `maccatalyst-arm64`，
 生成未签名 `.app` 后压缩为对应资产；签名发布需要另行提供 Apple 证书和 provisioning profile。
+
+Linux GTK4 发布在 Ubuntu runner 上执行，安装 GTK4/WebKitGTK 运行库后生成 framework-dependent
+`.deb`。目标机需要预先安装匹配的 .NET Runtime；安装包由 `dpkg`/`apt` 管理，卸载使用
+`sudo apt remove readermanager` 或 `sudo dpkg -r readermanager`。
 
 ## 正式发布步骤
 
