@@ -319,7 +319,7 @@ jobs:
         run: dotnet workload install maui-tizen
 
       - name: Restore Linux GTK4 project in NuGet mode
-        run: dotnet restore src/LlrpReaderManager.Linux/LlrpReaderManager.Linux.csproj -p:UseLocalLlrpSdk=false
+        run: dotnet restore src/LlrpReaderManager.Linux/LlrpReaderManager.Linux.csproj --runtime linux-x64 -p:UseLocalLlrpSdk=false
 
       - name: Publish Linux Debian package
         run: |

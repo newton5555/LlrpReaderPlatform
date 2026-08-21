@@ -93,7 +93,7 @@ jobs:
         run: dotnet workload install maui-tizen
 
       - name: Restore Linux GTK4 project in NuGet mode
-        run: dotnet restore src/LlrpReaderManager.Linux/LlrpReaderManager.Linux.csproj -p:UseLocalLlrpSdk=false
+        run: dotnet restore src/LlrpReaderManager.Linux/LlrpReaderManager.Linux.csproj --runtime linux-x64 -p:UseLocalLlrpSdk=false
 
       - name: Build Linux GTK4 project
-        run: dotnet build src/LlrpReaderManager.Linux/LlrpReaderManager.Linux.csproj --configuration Release --no-restore -p:UseLocalLlrpSdk=false
+        run: dotnet build src/LlrpReaderManager.Linux/LlrpReaderManager.Linux.csproj --configuration Release --runtime linux-x64 --no-restore -p:UseLocalLlrpSdk=false
