@@ -1,6 +1,6 @@
 # LlrpReaderPlatform 应用框架与首个 WPF 消费者开发计划
 
-> 状态：持续维护计划（2026-08-21，真实 Reader 客户端、报文级 Virtual Device Manager UI、`LlrpReaderManager` 跨平台 Blazor 消费者和 Linux GTK4 Head 首版已落地；平台级预设式 Data Source 作为长期规划保留）
+> 状态：持续维护计划（2026-08-21，真实 Reader 客户端、报文级 Virtual Device Manager UI、`LlrpReaderManager` 跨平台 Blazor 消费者和 Linux GTK4 Head 首版已落地，Linux Head 决策见 [ADR-0019](decisions/ADR-0019-maui-linux-gtk4-head.md)；平台级预设式 Data Source 作为长期规划保留）
 > 基线仓库：`LlrpReaderStudio` 将冻结，不作为新项目的 ProjectReference 或运行时依赖；仅作为已验证行为、迁移经验和测试样例的参考。
 > 目标：在新仓库中建设可被多个 UI 消费者复用的 LLRP 应用框架。主要交付对象是新的真实 Reader 客户端 `LlrpReaderPlatform.App.Wpf`；`LlrpReaderManager` 是共享服务的 MAUI Blazor 跨平台消费者，另有独立的 `LlrpVirtualDevice.App.Wpf` 报文级虚拟设备管理 UI。
 > 当前验证基线：现有项目已验证标准 LLRP 1.0.1 设备和 Impinj R420；新项目以此为回归基线，逐步扩展到更多 LLRP 设备和厂商能力。自动化测试当前为 385 项全绿（含 Virtual Reader 场景与生命周期测试）；Windows x64 交付采用 NuGet SDK、自包含单文件 `LlrpReaderPlatform.exe`。
@@ -819,7 +819,7 @@ Tab2 状态投影补充：主窗口状态刷新会重复向 Diagnostics 投影�
 - 直接从寻卡页启动成功后，同一长连接会刷新身份、天线能力、CapabilityRevision 和 FeatureCatalog，再进入 `Inventorying`；因此“寻卡先于设置”不会留下能力陈旧的运行时快照。
 - Tag Memory、GPI/GPO 等短操作对启动恢复或故障后的陈旧 Session 也执行必要的标准 Probe、扩展匹配和能力捕获；页面不依赖用户先打开设置页，成功后仍按短租约断开并回到 `Disconnected`。
 
-> 2026-08-20 平台发布流水线收口后，当前自动化基线以本文件 F9 表格为准：385 项全绿；新增
+> 2026-08-21 平台发布流水线收口后，当前自动化基线以本文件 F9 表格为准：385 项全绿；新增
 > `Extensions.Zebra.Tests` 6 项，Architecture.Tests 9 项。历史小节中的早期测试数字仅保留
 > 为阶段记录，不代表当前基线。厂商 Feature 归属和 WPF 语义投影见 [ADR-0014](decisions/ADR-0014-vendor-feature-ownership-and-ui-semantics.md)。
 

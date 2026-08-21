@@ -127,7 +127,9 @@ The authoritative record is the [device compatibility matrix](docs/compatibility
 - [v2.0.2 release notes](docs/releases/v2.0.2.md)
 - [v2.0.1 release notes](docs/releases/v2.0.1.md)
 - [v2.0.0 release notes](docs/releases/v2.0.0.md)
+- [v1.5.0 release notes](docs/releases/v1.5.0.md)
 - [v1.4.0 release notes](docs/releases/v1.4.0.md)
+- [v1.0.0 historical release notes](docs/releases/v1.0.0.md)
 - [Release spec & pipeline](docs/development/release.md)
 
 ### For developers & extension authors

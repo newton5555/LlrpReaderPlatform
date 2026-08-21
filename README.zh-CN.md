@@ -9,7 +9,7 @@
 </p>
 
 <p align='center'>
-  <strong>v2.0.1</strong> · Windows x64 · 自包含单文件便携发布 · <code>LlrpSdk</code> 2.0.1
+  <strong>v2.0.2</strong> · Windows x64 · 自包含单文件便携发布 · <code>LlrpSdk</code> 2.0.1
 </p>
 
 <p align='center'>
@@ -25,10 +25,13 @@ LlrpReaderPlatform 是一个新的 LLRP 应用平台，首个交付物是 Window
 冻结的 `../LlrpReaderStudio` 仓库仅作参考，只记录现有能力和迁移边界，不作为运行时依赖。
 
 当前主要交付对象是面向真实 Reader 的客户端 `LlrpReaderPlatform.App.Wpf`。解决方案同时包含
-独立的 `LlrpVirtualDevice.App.Wpf` 报文级虚拟设备管理 UI；它是辅助工具，不属于真实 Reader
+`LlrpReaderManager` MAUI Blazor 跨平台消费者、独立的 `LlrpReaderManager.Linux` GTK4 Head，
+以及 `LlrpVirtualDevice.App.Wpf` 报文级虚拟设备管理 UI；后者是辅助工具，不属于真实 Reader
 客户端的服务链路。
 
-**当前基线：** `2.0.1` · Windows x64 · 自包含单文件便携发布。构建 0 警告、0 错误，自动化测试 385 项全绿（含 Virtual Reader 场景与生命周期测试）；服务测试主要使用 `FakeSession`，Virtual Reader 套件覆盖确定性设备行为，真机结论单独记录。
+**当前基线：** `2.0.2` · Windows x64 · 自包含单文件便携发布；跨平台发布流水线新增 Linux GTK4
+`.deb`。构建 0 警告、0 错误，自动化测试 385 项全绿（含 Virtual Reader 场景与生命周期测试）；
+服务测试主要使用 `FakeSession`，Virtual Reader 套件覆盖确定性设备行为，真机结论单独记录。
 
 ## 架构
 
@@ -47,6 +50,8 @@ UI consumer -> Services -> Contracts
 - `Infrastructure` — SQLite、预设/Profile、发现和日志实现。
 - `Extensions.*` — 可插拔厂商模块（Impinj 为基线，Zebra 为实验性）；不污染通用契约。
 - `App.Wpf` — 首个 UI 消费者（WPF、CommunityToolkit.Mvvm、MahApps.Metro）；未来 UI 框架可复用同一套服务与契约。
+- `LlrpReaderManager` — MAUI Blazor 跨平台消费者，包含 Reader、Settings、Inventory、Tag Memory、Runs、TOI 和 GPI/GPO 页面；Reader 页面可启动 SDK 报文级虚拟设备挂件，并通过普通 `IReaderManager` 路径注册其 loopback 端点。
+- `LlrpReaderManager.Linux` — 独立 Linux GTK4 Head，复用同一套 Blazor 页面和平台服务；Ubuntu CI 构建，Tag Release 生成 framework-dependent Linux x64 `.deb`。
 - `LlrpVirtualDevice.App.Wpf` — 独立的报文级虚拟设备管理 UI，直接消费 SDK 的虚拟设备 Host 边界，不向客户端服务层增加虚拟设备分支。
 
 SDK 侧有两个出口：核心 `LlrpSdk`（标准 LLRP 适配，由 `Services` 消费）与 `LlrpSdk.Extensions.Impinj` / `LlrpSdk.Extensions.Zebra`（厂商适配，由 `Extensions.*` 消费）。
@@ -119,9 +124,13 @@ SDK 侧有两个出口：核心 `LlrpSdk`（标准 LLRP 适配，由 `Services` 
 - [真机验收运行手册](docs/development/hardware-validation-runbook.md)
 - [硬件测试命令行项目](tests/LlrpReaderPlatform.Hardware.Tests/LlrpReaderPlatform.Hardware.Tests.csproj)
 - [设备兼容性矩阵](docs/compatibility/device-matrix.md)
+- [LlrpReaderManager Blazor 开发模式](docs/development/reader-manager.md)
+- [v2.0.2 发布说明](docs/releases/v2.0.2.md)
 - [v2.0.1 发布说明](docs/releases/v2.0.1.md)
 - [v2.0.0 发布说明](docs/releases/v2.0.0.md)
+- [v1.5.0 发布说明](docs/releases/v1.5.0.md)
 - [v1.4.0 发布说明](docs/releases/v1.4.0.md)
+- [v1.0.0 历史发布说明](docs/releases/v1.0.0.md)
 - [发布规范与应用流水线](docs/development/release.md)
 
 ### 开发与扩展
@@ -137,7 +146,9 @@ SDK 侧有两个出口：核心 `LlrpSdk`（标准 LLRP 适配，由 `Services` 
 
 ## 项目边界
 
-本仓库包含新的平台服务、基础设施、真实 Reader 客户端 WPF 应用、独立的虚拟设备管理 UI 和自动化测试。冻结的旧 `LlrpReaderStudio` 只用于行为和迁移参考，不作为运行时依赖。不发布平台类库 NuGet 包；平台使用的 SDK NuGet 只是输入依赖。
+本仓库包含新的平台服务、基础设施、真实 Reader 客户端 WPF 应用、MAUI Blazor 跨平台消费者、
+Linux GTK4 Head、独立的虚拟设备管理 UI 和自动化测试。冻结的旧 `LlrpReaderStudio` 只用于行为和
+迁移参考，不作为运行时依赖。不发布平台类库 NuGet 包；平台使用的 SDK NuGet 只是输入依赖。
 
 ## 虚拟设备管理 UI
 
@@ -152,3 +163,16 @@ SDK 侧有两个出口：核心 `LlrpSdk`（标准 LLRP 适配，由 `Services` 
 
 虚拟设备管理器的源码运行、构建和打包命令见[Virtual Reader 开发模式](docs/development/virtual-reader.md)，
 主客户端的下载和正式发布流程见[发布规范与应用流水线](docs/development/release.md)。
+
+## LlrpReaderManager Blazor UI
+
+`src/LlrpReaderManager` 是跨平台 MAUI Blazor 消费者，复用当前平台的 Contracts、Services、
+Infrastructure 和厂商扩展，不复制 WPF 的 Reader 生命周期。页面覆盖 Reader 添加/发现、设备设置、
+Inventory、Tag Memory、Inventory Runs、TOI 和 GPI/GPO；Reader 页面上的报文虚拟设备挂件启动
+`LlrpDevice.Virtual.Hosting`，再把 loopback 端点作为普通 Reader 注册。
+
+界面沿用归档 `LLRPReaderManagement` 的深色顶栏、侧边导航、卡片和绿色强调色，通过响应式 CSS
+适配桌面和手持尺寸。`src/LlrpReaderManager.Linux` 是复用同一套页面和服务的独立 Linux GTK4
+Head；它通过 `maui-labs` 后端参与 Ubuntu CI 和 Tag Release，生成 framework-dependent Linux x64
+`.deb`。目标机需要兼容的 .NET Runtime、GTK4 和 WebKitGTK 原生库。详见
+[LlrpReaderManager Blazor 开发模式](docs/development/reader-manager.md)。

@@ -31,12 +31,13 @@
 - [WPF 用户操作与故障排查](development/wpf-user-and-troubleshooting.md)
 - [LlrpReaderManager Blazor 开发模式](development/reader-manager.md)
 - [Virtual Reader 开发模式](development/virtual-reader.md)
+- [自研设备 LLRP 协议说明](development/自研设备LLRP协议.md)
 - [发布规范、单文件交付与 SDK 切换](development/release.md)
 
 ### 4.1 已发布版本
 
- - [v2.0.2（正式发布说明）](releases/v2.0.2.md)
- - [v2.0.1（正式发布说明）](releases/v2.0.1.md)
+- [v2.0.2（正式发布说明）](releases/v2.0.2.md)
+- [v2.0.1（正式发布说明）](releases/v2.0.1.md)
 - [v2.0.0（正式发布说明）](releases/v2.0.0.md)
 - [v1.5.0（正式发布说明）](releases/v1.5.0.md)
 - [v1.4.0（正式发布说明）](releases/v1.4.0.md)
@@ -49,6 +50,7 @@
 - Probe 到 Activate 的连接交接规则见 [ADR-0017](decisions/ADR-0017-probe-activate-session-handoff.md)；
   日志分类和盘存快照规则见 [ADR-0007](decisions/ADR-0007-layered-logging-and-inventory-snapshots.md)；
   MAUI Blazor 多平台发布资产见 [ADR-0018](decisions/ADR-0018-maui-blazor-multi-platform-release-assets.md)；
+  Linux GTK4 独立 Head 见 [ADR-0019](decisions/ADR-0019-maui-linux-gtk4-head.md)；
   SDK 引用切换规则见 [ADR-0008](decisions/ADR-0008-switchable-sdk-references.md)；
   Windows 单文件交付规则见 [ADR-0009](decisions/ADR-0009-windows-self-contained-single-file.md)；
   硬件验证 CLI 规则见 [ADR-0010](decisions/ADR-0010-hardware-validation-cli.md)；Virtual Reader 开发替身见 [ADR-0015](decisions/ADR-0015-virtual-reader-development-mode.md)，平台虚拟 Data Source、内置预设和独立报文虚拟设备边界见 [ADR-0016](decisions/ADR-0016-platform-virtual-reader-data-sources.md)。

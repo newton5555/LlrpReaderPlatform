@@ -116,7 +116,8 @@ Settings draft、Tag Memory 表单/历史、Runs 筛选等属于页面状态，�
 
 ## 依赖、构建与启动
 
-开发机需要 .NET 10 SDK、MAUI Android/Windows/Mac Catalyst workload。仓库默认通过中央包版本管理引用 SDK NuGet；
+开发机需要 .NET 10 SDK、MAUI Android/Windows/Mac Catalyst workload；Linux GTK4 Head 还需要 Linux 原生依赖和
+`maui-tizen` workload。仓库默认通过中央包版本管理引用 SDK NuGet；
 跨仓库联调可由被忽略的 `Directory.Build.local.props` 启用本地 `LLRPCSharp` 项目引用。
 
 Windows 开发验证：
@@ -130,7 +131,7 @@ dotnet run --project src/LlrpReaderManager/LlrpReaderManager.csproj -f net10.0-w
 Android 使用相同项目和 `net10.0-android` TFM。响应式 CSS 只改变布局，不分叉业务状态。
 
 macOS 使用 `net10.0-maccatalyst` TFM，在 macOS 和 Xcode 环境中发布；当前正式流水线按
-`maccatalyst-x64` 与 `maccatalyst-arm64` 生成未签名应用包。Windows、Mac Catalyst 和 Android
+`maccatalyst-x64` 与 `maccatalyst-arm64` 生成未签名应用包。Windows、Mac Catalyst、Android 和 Linux GTK4
 的发布入口统一维护在 `.github/workflows/release.yml`，不对整个解决方案执行 MAUI 发布。
 
 ### Linux GTK4 本地运行
@@ -166,5 +167,6 @@ Linux GTK4 和 BlazorWebView 后端目前是实验性依赖，但已纳入 Ubunt
 - `Components/Pages` 负责交互、表单和渲染，不编译 LLRP 配置；
 - 新增设备能力优先扩展 Contracts/Services，再由 WPF 和 Blazor 共同消费。
 
-该项目已经进入独立发布流水线，但 Windows、Mac Catalyst 和 Android 的安装、签名、真机兼容性
-仍需按平台分别验收；流水线的未签名 Mac Catalyst 包不等同于 App Store 或公证发布包。
+该项目已经进入独立发布流水线，但 Windows、Mac Catalyst、Android 和 Linux GTK4 的安装、签名/原生依赖、
+真机兼容性仍需按平台分别验收；Linux `.deb` 是 framework-dependent，流水线的未签名 Mac Catalyst 包也不等同于
+App Store 或公证发布包。

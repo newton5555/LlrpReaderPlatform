@@ -18,7 +18,8 @@
 平台使用的 `LlrpSdk` NuGet 包属于输入依赖，不是本仓库的发布产物。
 
 两个 WPF 应用使用 Windows x64 自包含单文件交付；`LlrpReaderManager` 是 MAUI Blazor
-Hybrid 应用，Windows 使用目录包，Mac Catalyst 使用未签名 `.app` 压缩包，Android 使用 APK。
+Hybrid 应用，Windows 使用目录包，Mac Catalyst 使用未签名 `.app` 压缩包，Android 使用 APK；Linux
+GTK4 使用独立 Head 生成 framework-dependent `.deb`。
 Mac Catalyst 的签名、公证和 Android 的商店签名不由当前流水线提供，正式分发前需要补充对应平台凭据。
 虚拟设备管理 UI 已切换为直接引用 `LlrpDevice.Virtual.Hosting` 顶层 NuGet 包；运行和构建方式见
 [Virtual Reader 开发模式](virtual-reader.md)。
@@ -66,7 +67,7 @@ open /Applications/LlrpReaderManager.app
 - `LlrpSdk`：`2.0.1`
 - `LlrpSdk.Extensions.Impinj`：`2.0.1`
 - `LlrpSdk.Extensions.Zebra`：`2.0.1`
-- `LlrpDevice.Virtual.Hosting`：`2.0.1`（Virtual Device Studio 唯一直接依赖）
+- `LlrpDevice.Virtual.Hosting`：`2.0.1`（`LlrpVirtualDevice.App.Wpf` 和 Blazor 虚拟设备挂件的直接依赖）
 
 版本统一维护在仓库根部的 `Directory.Packages.props`。`LlrpSdk` 包含平台客户端所需的
 LlrpNet 和 SDK 扩展抽象依赖，`LlrpSdk.Extensions.Impinj` 传递依赖同版本的
@@ -148,7 +149,8 @@ Mac Catalyst 发布在 macOS runner 上分别使用 `maccatalyst-x64` 和 `macca
 生成未签名 `.app` 后压缩为对应资产；签名发布需要另行提供 Apple 证书和 provisioning profile。
 
 Linux GTK4 发布在 Ubuntu runner 上执行，安装 GTK4/WebKitGTK 运行库后生成 framework-dependent
-`.deb`。目标机需要预先安装匹配的 .NET Runtime；安装包由 `dpkg`/`apt` 管理，卸载使用
+`.deb`，原始产物位于 `src/LlrpReaderManager.Linux/bin/Deb/`。还原、构建和发布必须带
+`--runtime linux-x64`，否则可能因缺少 Runtime target 导致 `project.assets.json` 错误。目标机需要预先安装匹配的 .NET Runtime；安装包由 `dpkg`/`apt` 管理，卸载使用
 `sudo apt remove readermanager` 或 `sudo dpkg -r readermanager`。
 
 ## 正式发布步骤
@@ -164,7 +166,7 @@ Linux GTK4 发布在 Ubuntu runner 上执行，安装 GTK4/WebKitGTK 运行库�
    git push origin v1.0.0
    ```
 
-4. GitHub Actions 自动运行发布流程；成功后在 GitHub Release 下载 ZIP 和 SHA256 文件；
-5. 解压 ZIP，在现场 Windows 机器上启动应用并按[真机验收运行手册](hardware-validation-runbook.md)完成最后验收。
+4. GitHub Actions 自动运行发布流程；成功后在 GitHub Release 下载对应平台资产和 SHA256 文件；
+5. 按目标平台安装或解压资产，在现场设备上启动应用并按[真机验收运行手册](hardware-validation-runbook.md)完成最后验收。
 
 也可以在 GitHub Actions 页面手动运行 `Application Release`，输入与项目版本一致的 Tag。手动运行同样不会跳过构建、测试和版本说明校验。
