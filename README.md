@@ -1,182 +1,225 @@
 # LlrpReaderPlatform
 
-<p align='center'>
-  <img src='src/LlrpReaderPlatform.App.Wpf/Assets/LlrpReader_Pro_Icon.png' alt='LlrpReaderPlatform' width='160' />
+<p align="center">
+  <img src="src/LlrpReaderPlatform.App.Wpf/Assets/LlrpReader_Pro_Icon.png" alt="LlrpReaderPlatform" width="144" />
 </p>
 
-<p align='center'>
-  <strong>WPF and cross-platform Blazor operator tools for real LLRP readers</strong>
+<p align="center">
+  <strong>Operator applications and reusable services for LLRP RFID readers</strong>
 </p>
 
-<p align='center'>
-  <strong>v2.0.2</strong> · Windows x64 · self-contained single-file portable · <code>LlrpSdk</code> 2.0.1
+<p align="center">
+  Version 2.0.2 · .NET 10 · <a href="README.zh-CN.md">中文</a>
 </p>
 
-<p align='center'>
-  <strong>English</strong> · <a href='README.zh-CN.md'>中文</a>
-</p>
+LlrpReaderPlatform is an application platform built on the [LLRPCSharp](https://github.com/newton5555/LLRPCSharp) SDK. It provides reusable reader-management services, persistence, vendor modules, and several UI consumers for discovering readers, editing capability-driven settings, running inventory, accessing tag memory, controlling GPIO, and reviewing inventory history.
 
----
+The primary field client is a Windows WPF application. A MAUI Blazor Hybrid client reuses the same platform services on Windows, Android, and Mac Catalyst, with a separate experimental Linux GTK4 head. The repository also includes an independent WPF manager for the protocol-level virtual readers supplied by LLRPCSharp.
 
-## Overview
+This is an application repository, not a second LLRP SDK. Protocol encoding, transport, managed reader behavior, and the TCP virtual-device runtime come from LLRPCSharp packages or optional local source references.
 
-LlrpReaderPlatform is a new LLRP application platform whose first deliverable is a Windows WPF application for connecting to readers, reading device capabilities, editing configuration, running inventory, and performing Tag Access. The UI keeps the operating habits of the frozen legacy `LlrpReaderStudio`, while a new services layer, an SDK adapter, and an EF Core SQLite data layer provide the implementation.
+## Applications in this repository
 
-The frozen `../LlrpReaderStudio` repository is reference material only — it documents existing capabilities and migration boundaries and is never a runtime dependency.
+| Application | Purpose | Current position |
+|---|---|---|
+| **LlrpReaderPlatform.App.Wpf** | Full desktop operator client for physical or TCP virtual readers | Primary client and current real-device acceptance surface |
+| **LlrpReaderManager** | Responsive MAUI Blazor Hybrid reader client | Shared-services consumer for Windows, Android, and Mac Catalyst |
+| **LlrpReaderManager.Linux** | GTK4 head that hosts the same Blazor pages and platform services | Experimental Linux x64 path; built in CI and released as a framework-dependent Debian package |
+| **LlrpVirtualDevice.App.Wpf** | Creates and manages TCP/LLRP virtual-reader instances | Independent auxiliary tool; it does not share the physical-reader session manager |
 
-The primary real-reader client is `LlrpReaderPlatform.App.Wpf`. The solution also contains
-`LlrpReaderManager`, a MAUI Blazor cross-platform consumer with a responsive desktop/handheld layout, and
-`LlrpVirtualDevice.App.Wpf`, a separate auxiliary manager for SDK TCP/LLRP virtual devices. The Blazor
-consumer and WPF client share the same platform services; the standalone virtual-device manager remains
-outside the real-reader client service path.
-
-**Current baseline:** `2.0.2` · Windows x64 · self-contained single-file portable, with Linux GTK4 `.deb` added to the cross-platform release pipeline. The build is clean (0 warnings, 0 errors) and automated tests are green (385 tests, including the Virtual Reader suite). Most service tests use a `FakeSession`; the Virtual Reader suite exercises deterministic multi-step reader behavior. Real-device conclusions are recorded separately.
-
-## Architecture
-
-Dependencies flow in one direction. `Contracts` stays UI-, SDK-, and vendor-agnostic; `Services` owns the device semantics; `Infrastructure` and `Extensions.*` provide implementations; the WPF app is only a consumer.
-
-<img src='docs/assets/architecture.svg' alt='LlrpReaderPlatform layering and dependency diagram' width='960' />
-
-```text
-UI consumer -> Services -> Contracts
-                       -> Infrastructure
-                       -> Extensions.*
-```
-
-- **Contracts** — UI-agnostic DTOs, state, settings-editing models, and service interfaces; it must not reference WPF, the SDK, or vendor extension types.
-- **Services** — reader lifecycle, connection leases, capability aggregation, settings, inventory, and Tag Access.
-- **Infrastructure** — SQLite, presets/profiles, discovery, and logging implementations.
-- **Extensions.\*** — pluggable vendor modules (Impinj baseline, Zebra experimental); they never pollute the common contracts.
-- **App.Wpf** — the first UI consumer (WPF, CommunityToolkit.Mvvm, MahApps.Metro); future UI frameworks can reuse the same services and contracts.
-- **LlrpReaderManager** — a MAUI Blazor Hybrid consumer with Reader, Settings, Inventory, Tag Memory, Runs, TOI, and GPI/GPO pages. Its Reader page can start an SDK protocol virtual-device widget and register its loopback endpoint through the normal `IReaderManager` path.
-- **LlrpReaderManager.Linux** — an independent Linux GTK4 Head that reuses the same Blazor pages and platform services; Ubuntu CI builds it and tagged releases publish a framework-dependent x64 `.deb`.
-- **LlrpVirtualDevice.App.Wpf** — an independent virtual-device manager UI; it consumes the SDK virtual-host boundary directly and does not add virtual-device branches to the client services.
-
-On the SDK side there are two outlets: core `LlrpSdk` (the standard LLRP adapter consumed by `Services`) and `LlrpSdk.Extensions.Impinj` / `LlrpSdk.Extensions.Zebra` (the vendor adapters consumed by `Extensions.*`).
-
-**Reader ownership rule** — one `ReaderHandle` owns one TCP `ReaderSession`; commands to a reader serialize through that session's single `Gate`. Inventory is a long-running lease, while settings, Tag Access, and GPO are short operations that return an explicit `ReaderBusy` on conflict instead of silently restarting inventory.
-
-## Compatibility layers
-
-The platform works across four compatibility layers. Support is claimed layer by layer from real-device testing, never inferred from a vendor name or an SDK package.
-
-<img src='docs/assets/compatibility.svg' alt='LLRP compatibility layers L1 through L4' width='960' />
-
-- **L1** — connection, LLRP handshake, protocol version, identity, capability discovery.
-- **L2** — standard inventory: EPC, RSSI, antenna, channel, SeenCount, timestamps.
-- **L3** — standard settings, Gen2 filters, Tag Access, GPI/GPO (availability gated by capability).
-- **L4** — vendor extensions (e.g. Impinj Search Mode, FastID, Phase) only after a dedicated module and real-device validation.
+The frozen legacy **LlrpReaderStudio** repository is migration reference only. It is not a runtime dependency.
 
 ## Core capabilities
 
-- **Reader lifecycle** — discover → probe → activate → capability/settings query → inventory or short operation → stop → disconnect. Each reader exclusively owns its LLRP session and command queue.
-- **Standard LLRP** — LLRP 1.0.1 baseline with connection strategies Auto / Force 1.0.1 / Force 1.1, plus gating infrastructure for 1.1 / 2.0 (marked `PendingHardware` until real devices are available).
-- **Standard configuration** — editable settings generated from the reader capability table; Tx power, Rx sensitivity, RF mode, session, tag population, report, and antenna configuration write real device index/id.
-- **Inventory** — unified tag events; multi-reader parallelism, lifecycle stop reasons, count aggregation, TID, RSSI, antenna, channel, and time information.
-- **Tag Access** — EPC/TID/User/Reserved memory bank read/write gated by device capability; unsupported devices or banks are never misreported as available in the UI.
-- **GPI/GPO** — port status query, GPO control, and GPI events; controls are generated from real port capability.
-- **Vendor extensions** — Impinj R420 (Search Mode, FastID, Phase, Low Duty, fixed frequency, GPI debounce, extended tag fields) via an independent module; Zebra is wired as an experimental module and is not claimed as supported until real-device calibration.
-- **Local data** — EF Core SQLite stores reader profiles, settings presets, TOI, inventory runs, and app settings.
-- **Diagnostics & logging** — UI, platform services, and SDK/LLRP messages are logged in layers; inventory snapshots and optional raw JSONL reports.
+- **Reader fleet lifecycle** — discovery, manual registration, probe, enable/disable, activation, removal, state snapshots, and recovery after faults.
+- **Capability-driven settings** — RF mode, power, sensitivity, antennas, Gen2 session/population, filters, reports, GPI triggers, GPO state, and applicable vendor settings are generated from the active reader capability snapshot.
+- **Inventory** — one or many readers, long-running sessions, explicit stop reasons, bounded aggregation, EPC/TID/RSSI/antenna/channel/time fields, optional raw JSONL logging, and final inventory snapshots.
+- **Tag Access** — platform-level read and write workflows for EPC, TID, User, and Reserved banks, gated by the reader's reported capability.
+- **GPIO** — GPI status and events, GPI-triggered inventory stop, and GPO control when the device exposes the required ports.
+- **Local persistence** — EF Core SQLite stores reader profiles, settings presets, tag lists, inventory runs, and application settings.
+- **Vendor modules** — Impinj is the maintained extension path; Zebra is integrated as an experimental module pending broader physical calibration.
+- **Diagnostics** — layered application/service/SDK logging, stable platform error codes, inventory run history, and an auxiliary virtual-device packet inspector.
 
-## Application pages
+## Architecture
 
-| Page | What it does |
+![LlrpReaderPlatform architecture](docs/assets/architecture.svg)
+
+The core is UI-independent:
+
+~~~text
+Application composition roots
+  -> Contracts
+  -> Services -> Contracts + LlrpSdk
+  -> Infrastructure -> Services + Contracts
+  -> Extensions.* -> Services + Contracts + vendor SDK packages
+~~~
+
+- **Contracts** contains immutable DTOs, capability and settings semantics, stable error codes, persistence contracts, and public service interfaces. It has no WPF, SDK, or vendor dependency.
+- **Services** owns reader lifecycle, session leases, settings compilation, inventory, Tag Access, GPIO, extension resolution, and projection from SDK objects to platform contracts.
+- **Infrastructure** implements SQLite persistence, Zeroconf discovery, logging, snapshots, and tag logs.
+- **Extensions.Impinj** and **Extensions.Zebra** contribute vendor matching, features, settings, and report fields without adding vendor types to Contracts.
+- UI projects are composition roots and consumers. ViewModels and Razor components do not create SDK readers or own TCP sessions.
+
+Architecture tests enforce the dependency direction and prevent SDK or UI types from leaking into public Contracts.
+
+### Reader ownership and concurrency
+
+Each registered reader has one **ReaderHandle**, one per-reader operation gate, and at most one active TCP session.
+
+- **Probe** uses a temporary session and can hand a successful standard session to activation.
+- **Settings, Tag Access, and GPIO** use short leases: connect, execute, normalize the result, and disconnect.
+- **Inventory** uses one long lease from Start until Stop or fault; all reports come from that same InventorySession.
+- A conflicting short operation returns the stable **ReaderBusy** result. The platform does not silently stop or restart inventory.
+- Different readers keep independent gates and can operate concurrently.
+- Faulted or stale sessions are disposed before a later operation performs a fresh probe and extension match.
+
+This lifecycle is implemented once in Services and shared by WPF and Blazor consumers.
+
+## Device and protocol boundary
+
+Compatibility is claimed by layer and by physical evidence:
+
+| Layer | Meaning |
 |---|---|
-| **Data Sources** | Auto-discover or manually add readers; configure IP, port, and LLRP version policy; enable/disable; see connection, capability, and error state. |
-| **Reader Settings** | Read, edit, save, and load defaults organized in Tab1/Tab2; RF, antenna, power, report, and GPI/GPO gated by capability. |
-| **Inventory** | One or many readers simultaneously; Start/Stop, duration, auto-stop; live EPC, TID, count, RSSI, antenna, channel, time, and TOI. |
-| **Tag Memory** | Pick an enabled reader and an EPC/TID from inventory, then read/write EPC, TID, User, and Reserved banks; operation timeouts surface on this page. |
-| **Tags of Interest (TOI)** | Maintain EPC, name, and color; inventory rows show the matching name/color; add, delete, edit, save. |
-| **Inventory Runs** | History with start/end time, duration, read count, unique tag count, and stop reason. |
-| **Software Settings** | App-level options: database, logging, and inventory recording mode. |
-| **About** | Application version and product info. |
+| **L1** | TCP, LLRP handshake, protocol version, identity, and standard capability query |
+| **L2** | Standard inventory and tag observations |
+| **L3** | Standard settings, Gen2 filters, Tag Access, and GPI/GPO |
+| **L4** | Vendor extensions such as Impinj Search Mode, FastID, phase, and low-duty-cycle controls |
 
-The UI uses native WPF `ProgressBar`, MahApps.Metro, and FontAwesome icons. Tables, settings groups, GPI/GPO, and antenna configuration keep the legacy WPF operating style and hide options the reader does not actually support.
+Current baseline:
 
-## Typical workflow
-
-1. Start the app and discover or add a reader under **Data Sources**.
-2. Choose the protocol policy, probe, and enable the reader.
-3. Open **Reader Settings**, read the current settings, adjust Tab1/Tab2 by capability, and save.
-4. Enter **Inventory**, choose a duration or auto-stop condition, and start one or more readers.
-5. Watch EPC/TID, RSSI, antenna, TOI, and stats; go to **Tag Memory** to access tags.
-6. After stopping, review the run and snapshot under **Inventory Runs**.
-
-## First-release device support boundary
-
-| Device | Status |
+| Target | State |
 |---|---|
-| Standard LLRP 1.0.1 reader | Connection, identity/capability query, and part of standard settings accepted; inventory, Tag Access, and GPI/GPO continue field acceptance per device capability. |
-| Impinj R420 | First real-device baseline; verified connection, standard/Impinj settings, inventory, EPC/TID/User/Reserved read, User write-restore, GPO, and part of GPI/extended fields. |
-| Standard reader `192.168.41.148` | Verified forced LLRP 1.0.1 probe, activate, settings query, and part of settings write-back; inventory/Tag Access await antenna and field acceptance. |
-| Other vendor readers | Work through standard LLRP first; vendor extensions are only claimed after a dedicated module and real-device validation. |
+| **Impinj R420 / LLRP 1.0.1** | Main physical baseline. Connection, standard and Impinj settings, inventory, FastID/phase reports, tag-memory reads, User-bank write/restore, GPI status, and GPO control have recorded evidence. Some physical GPI-trigger, multi-reader inventory, and fault-recovery scenarios remain explicit acceptance items. |
+| **Standard LLRP 1.0.1 reader** | Probe, activation, capability/settings query, and settings write-back have physical evidence on the maintained standard-reader baseline. Inventory and Tag Access remain device/antenna dependent. |
+| **LLRP 1.1 and 2.0** | Connection policies and standard capability-gating infrastructure are present. They remain PendingHardware in this platform until suitable physical readers are accepted. |
+| **Zebra FX9600** | Standard connection and identity have physical evidence. The platform module is experimental and does not claim L4 support yet. |
 
-The authoritative record is the [device compatibility matrix](docs/compatibility/device-matrix.md). Code tests, protocol mappings, or SDK capability tables cannot replace acceptance with real readers, antennas, and tags.
+The [device compatibility matrix](docs/compatibility/device-matrix.md) is authoritative. Automated tests, virtual readers, SDK mappings, or a vendor name do not raise a device's support level.
+
+## Run the primary WPF client
+
+Requirements:
+
+- Windows with the .NET 10 SDK for source builds;
+- network access to an LLRP reader, normally on TCP port 5084.
+
+The repository uses published LLRPCSharp NuGet packages by default:
+
+~~~powershell
+dotnet restore src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj -p:UseLocalLlrpSdk=false
+dotnet run --project src/LlrpReaderPlatform.App.Wpf/App.Wpf.csproj -p:UseLocalLlrpSdk=false
+~~~
+
+On first run, the application creates its SQLite database, logs, and inventory data under:
+
+~~~text
+%LocalAppData%\LlrpReaderPlatform\
+~~~
+
+Typical workflow:
+
+1. Discover or add a reader under **Data Sources**.
+2. Select the protocol policy, probe the endpoint, and enable the reader.
+3. Open **Reader Settings**, load current values or SDK defaults, edit only capability-supported fields, and apply.
+4. Start one or more readers under **Inventory** and observe live tags and aggregate statistics.
+5. Use **Tag Memory**, **Tag Lists**, **Inventory Runs**, and **Diagnostics** as needed.
+6. Stop inventory explicitly before settings, Tag Access, or GPIO operations on the same reader.
+
+See the [WPF user and troubleshooting guide](docs/development/wpf-user-and-troubleshooting.md) for operational details.
+
+## Other clients and virtual readers
+
+### MAUI Blazor Hybrid
+
+The MAUI application targets Windows and Android from the main project and Mac Catalyst on macOS. It reuses Contracts, Services, Infrastructure, and vendor modules; responsive pages change presentation, not reader lifecycle.
+
+~~~powershell
+dotnet build src/LlrpReaderManager/LlrpReaderManager.csproj -f net10.0-windows10.0.19041.0
+dotnet run --project src/LlrpReaderManager/LlrpReaderManager.csproj -f net10.0-windows10.0.19041.0
+~~~
+
+Android and Mac Catalyst require their corresponding MAUI workloads and platform toolchains. The Linux head additionally requires GTK4, WebKitGTK, a compatible .NET runtime, and the preview MAUI Linux backend. See [ReaderManager development mode](docs/development/reader-manager.md).
+
+### Virtual Reader development paths
+
+The repository contains two deliberately different virtual-reader mechanisms:
+
+- **LlrpReaderPlatform.VirtualReader** is an in-process IReaderSession implementation for deterministic Services/UI development. It does not listen on TCP and is not an external LLRP endpoint.
+- **LlrpVirtualDevice.App.Wpf** manages real TCP/LLRP virtual endpoints from the LLRPCSharp Virtual Device Hosting package. The primary client connects to those endpoints exactly as it connects to hardware.
+
+Run the protocol-level virtual-device manager on Windows:
+
+~~~powershell
+dotnet run --project src/LlrpVirtualDevice.App.Wpf/LlrpVirtualDevice.App.Wpf.csproj -p:UseLocalLlrpSdk=false
+~~~
+
+See [Virtual Reader development mode](docs/development/virtual-reader.md) for scenarios, persistence, and packaging.
+
+## Build and test
+
+The full solution includes WPF, MAUI, Linux GTK4, shared libraries, and tests. Install the workloads required by the projects you intend to build.
+
+~~~powershell
+dotnet restore LlrpReaderPlatform.slnx -p:UseLocalLlrpSdk=false
+dotnet build LlrpReaderPlatform.slnx --no-restore -p:UseLocalLlrpSdk=false
+dotnet test LlrpReaderPlatform.slnx --no-build -p:UseLocalLlrpSdk=false
+~~~
+
+Warnings are treated as errors. Automated coverage includes Contracts, Services, Infrastructure, WPF ViewModels, architecture boundaries, vendor modules, and the in-process Virtual Reader. Physical-reader acceptance is a separate workflow described in the [hardware validation runbook](docs/development/hardware-validation-runbook.md).
+
+### Develop against a local LLRPCSharp checkout
+
+For cross-repository debugging, either pass properties explicitly:
+
+~~~powershell
+dotnet build LlrpReaderPlatform.slnx -p:UseLocalLlrpSdk=true -p:LlrpSdkSourceRoot=..\LLRPCSharp
+~~~
+
+or copy **Directory.Build.local.props.example** to the ignored **Directory.Build.local.props** and edit the source path. CI and release builds always use **UseLocalLlrpSdk=false** so release artifacts come from published SDK packages.
+
+## Repository map
+
+~~~text
+src/
+  LlrpReaderPlatform.Contracts/          public domain contracts
+  LlrpReaderPlatform.Services/           reader and operation orchestration
+  LlrpReaderPlatform.Infrastructure/     SQLite, discovery, logging, snapshots
+  LlrpReaderPlatform.Extensions.Impinj/  Impinj platform module
+  LlrpReaderPlatform.Extensions.Zebra/   experimental Zebra module
+  LlrpReaderPlatform.VirtualReader/      in-process development reader
+
+  LlrpReaderPlatform.App.Wpf/            primary Windows client
+  LlrpReaderManager/                     MAUI Blazor Hybrid client
+  LlrpReaderManager.Linux/               experimental Linux GTK4 head
+  LlrpVirtualDevice.App.Wpf/             TCP virtual-device manager
+
+tests/                                   contract, service, UI, architecture, extension,
+                                         virtual-reader, and hardware validation projects
+docs/                                    architecture, ADRs, development, compatibility,
+                                         release, and migration documentation
+~~~
+
+## Releases
+
+This repository publishes applications rather than platform NuGet packages:
+
+- self-contained Windows x64 WPF client and virtual-device manager;
+- MAUI Blazor Windows package, Android APK, and Mac Catalyst application archives;
+- framework-dependent Linux x64 Debian package;
+- checksums and release notes.
+
+Mac Catalyst artifacts are currently unsigned and unnotarized. The Linux package depends on compatible .NET, GTK4, and WebKitGTK runtimes. See the [release specification](docs/development/release.md) for exact artifact and platform requirements.
 
 ## Documentation
 
-### For users & validation
-
-- [WPF user guide & troubleshooting](docs/development/wpf-user-and-troubleshooting.md)
-- [LlrpReaderManager Blazor development mode](docs/development/reader-manager.md)
-- [Hardware validation runbook](docs/development/hardware-validation-runbook.md)
-- [Hardware test CLI project](tests/LlrpReaderPlatform.Hardware.Tests/LlrpReaderPlatform.Hardware.Tests.csproj)
-- [Device compatibility matrix](docs/compatibility/device-matrix.md)
-- [v2.0.2 release notes](docs/releases/v2.0.2.md)
-- [v2.0.1 release notes](docs/releases/v2.0.1.md)
-- [v2.0.0 release notes](docs/releases/v2.0.0.md)
-- [v1.5.0 release notes](docs/releases/v1.5.0.md)
-- [v1.4.0 release notes](docs/releases/v1.4.0.md)
-- [v1.0.0 historical release notes](docs/releases/v1.0.0.md)
-- [Release spec & pipeline](docs/development/release.md)
-
-### For developers & extension authors
-
-- [Overall vision](docs/llrp-framework-vision.md)
+- [Documentation index](docs/README.md)
+- [Project vision](docs/llrp-framework-vision.md)
 - [Architecture overview](docs/architecture/overview.md)
-- [Reader lifecycle & connection ownership](docs/architecture/reader-runtime.md)
-- [Vendor extensions & settings model](docs/architecture/extensions-and-settings.md)
-- [Legacy WPF feature migration matrix](docs/development/legacy-feature-matrix.md)
+- [Reader lifecycle and ownership](docs/architecture/reader-runtime.md)
+- [Extensions and settings model](docs/architecture/extensions-and-settings.md)
 - [Testing strategy](docs/development/testing-strategy.md)
-- [Virtual Reader and virtual-device manager](docs/development/virtual-reader.md)
+- [Device compatibility matrix](docs/compatibility/device-matrix.md)
+- [Hardware validation runbook](docs/development/hardware-validation-runbook.md)
+- [Release specification](docs/development/release.md)
 - [ADR index](docs/decisions/README.md)
-
-## Project boundaries
-
-This repository contains the new platform services, infrastructure, the primary real-reader WPF client, the responsive MAUI Blazor consumer, the auxiliary virtual-device manager UI, and automated tests. The frozen legacy `LlrpReaderStudio` is used only for behavior and migration reference, never as a runtime dependency. No platform class-library NuGet packages are published — the SDK NuGet packages are input dependencies only.
-
-## Virtual Device Manager UI
-
-`src/LlrpVirtualDevice.App.Wpf` is a separate WPF tool for managing TCP/LLRP virtual readers supplied by
-the adjacent SDK repository. It can create and delete multiple virtual-reader instances, configure the
-listen endpoint, choose a capability profile and protocol version, start/stop/restart the TCP host, save
-configuration, inspect connected clients and observed LLRP messages, and maintain the virtual tag pool with
-RF simulation settings.
-
-The current tag-pool UI supports adding a tag, generating 20 tags, and deleting the selected tag; it also
-supports Static/MovingTags/Noisy scenarios, detection probability, and RSSI jitter. These controls are
-disabled while the virtual reader is running. The manager persists the configuration in its own
-`virtual-devices.json`; the next start rebuilds the Host from the saved `Config.Tags`. The real-reader
-client connects to that host exactly as it connects to a hardware Reader. The event/fault injection page
-is currently only an interaction placeholder and is not described as a working injection feature.
-
-The virtual-device manager's source run, build, and packaging instructions are in
-[Virtual Reader development mode](docs/development/virtual-reader.md). The primary client's download and
-release procedure is in [Release spec & pipeline](docs/development/release.md).
-
-## LlrpReaderManager Blazor UI
-
-`src/LlrpReaderManager` is the cross-platform MAUI Blazor consumer. It uses the archived
-`LLRPReaderManagement` visual language while consuming the current platform Contracts/Services/Infrastructure
-and SDK extension modules. It supports Reader discovery/addition, settings, inventory, Tag Access, runs, TOI,
-and GPI/GPO. The embedded protocol virtual-device widget starts `LlrpDevice.Virtual.Hosting` and then adds
-the bound loopback endpoint as an ordinary Reader, so virtual and physical Readers exercise the same lifecycle.
-
-The current project is a development consumer rather than a separate platform NuGet package. A Linux GTK4 Head
-(`src/LlrpReaderManager.Linux`) reuses the same Blazor pages and platform services through the experimental
-`maui-labs` backend. CI builds it on Ubuntu and tagged releases publish a framework-dependent Linux x64 `.deb`;
-the target machine requires GTK4/WebKitGTK native libraries and a compatible .NET Runtime. The Debian package is
-generated by the Linux publish job from `src/LlrpReaderManager.Linux/bin/Deb/`. See
-[LlrpReaderManager development mode](docs/development/reader-manager.md) for workload, build, and run commands.
