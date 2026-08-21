@@ -133,6 +133,14 @@ macOS 使用 `net10.0-maccatalyst` TFM，在 macOS 和 Xcode 环境中发布；�
 `maccatalyst-x64` 与 `maccatalyst-arm64` 生成未签名应用包。Windows、Mac Catalyst 和 Android
 的发布入口统一维护在 `.github/workflows/release.yml`，不对整个解决方案执行 MAUI 发布。
 
+### Mac Catalyst 本地运行/安装
+
+开发或验收 Mac Catalyst 包时，按 Mac 芯片选择 `maccatalyst-arm64` 或 `maccatalyst-x64`。发布 ZIP
+解压后直接打开 `LlrpReaderManager.app`；首次启动按 macOS 的 Gatekeeper 提示右键“打开”或在
+“系统设置 → 隐私与安全性”中允许。当前未签名包只适合开发/内部测试，不能当作已完成签名、公证的 Mac
+正式分发包。测试时确认 Mac 能访问 Reader 地址和 LLRP `5084` 端口；完整的下载、首次启动和 Gatekeeper
+处理见[发布规范](release.md#下载与运行)。
+
 ## 代码边界
 
 - `State/ReaderManagerState` 是 Blazor UI 状态投影，只持有平台接口，不持有 SDK Session；
