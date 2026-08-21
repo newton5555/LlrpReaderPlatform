@@ -132,7 +132,7 @@
                     <div class="reader-head">
                         <div class="reader-heading">
                             <div class="reader-icon @(IsVirtual(reader.ReaderId) ? "virtual" : string.Empty)">
-                                <AppIcon Name="@(IsVirtual(reader.ReaderId) ? "cube" : "satellite-dish")" Size="18" />
+                                <AppIcon Name="@(IsVirtual(reader.ReaderId) ? "cube" : "reader")" Size="18" />
                             </div>
                             <div>
                                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -324,7 +324,7 @@
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
                         <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
                             <div class="reader-icon @(IsVirtual(reader.ReaderId) ? "virtual" : string.Empty)" style="width: 28px; height: 28px; border-radius: var(--radius-sm); flex-shrink: 0;">
-                                <AppIcon Name="@(IsVirtual(reader.ReaderId) ? "cube" : "satellite-dish")" Size="14" />
+                                <AppIcon Name="@(IsVirtual(reader.ReaderId) ? "cube" : "reader")" Size="14" />
                             </div>
                             <div style="min-width: 0; flex: 1;">
                                 <strong style="font-size: 13px; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 190px;">@reader.Profile.Name</strong>

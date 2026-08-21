@@ -1178,6 +1178,23 @@ tbody tr:last-child td {
     align-items: start;
 }
 
+.settings-collapse-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    transition: transform .16s ease, color .16s ease;
+}
+
+.settings-collapse-icon.expanded {
+    transform: rotate(180deg);
+    color: var(--accent);
+}
+
+.settings-card .card-header:hover .settings-collapse-icon {
+    color: var(--accent);
+}
+
 .setting-row {
     display: grid;
     grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);

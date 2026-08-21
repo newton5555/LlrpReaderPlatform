@@ -328,7 +328,9 @@ else
                         </span>
                         <div style="display: flex; align-items: center; gap: 6px;">
                             <span class="status-badge neutral">@history.Count record(s)</span>
-                            <span style="font-size: 10px; color: var(--muted);">@(historyExpanded ? "▲" : "▼")</span>
+                            <span class="settings-collapse-icon @(historyExpanded ? "expanded" : string.Empty)" aria-hidden="true">
+                                <AppIcon Name="chevron-down" Size="14" />
+                            </span>
                         </div>
                     </div>
                     @if (historyExpanded)

@@ -58,37 +58,37 @@ else
         <nav class="settings-nav-tabs">
             <button type="button"
                     class="settings-nav-tab @(activeCategory == "rf" ? "active" : string.Empty)"
-                    @onclick='() => activeCategory = "rf"'>
+                    @onclick='() => SelectCategory("rf")'>
                 <AppIcon Name="bolt" Size="13" />
                 <span>Antennas & RF</span>
             </button>
             <button type="button"
                     class="settings-nav-tab @(activeCategory == "protocol" ? "active" : string.Empty)"
-                    @onclick='() => activeCategory = "protocol"'>
+                    @onclick='() => SelectCategory("protocol")'>
                 <AppIcon Name="search" Size="13" />
                 <span>Inventory & Protocol</span>
             </button>
             <button type="button"
                     class="settings-nav-tab @(activeCategory == "filters" ? "active" : string.Empty)"
-                    @onclick='() => activeCategory = "filters"'>
+                    @onclick='() => SelectCategory("filters")'>
                 <AppIcon Name="filter" Size="13" />
                 <span>Filters & Singulation</span>
             </button>
             <button type="button"
                     class="settings-nav-tab @(activeCategory == "triggers" ? "active" : string.Empty)"
-                    @onclick='() => activeCategory = "triggers"'>
+                    @onclick='() => SelectCategory("triggers")'>
                 <AppIcon Name="zap" Size="13" />
                 <span>Triggers & Timers</span>
             </button>
             <button type="button"
                     class="settings-nav-tab @(activeCategory == "reports" ? "active" : string.Empty)"
-                    @onclick='() => activeCategory = "reports"'>
+                    @onclick='() => SelectCategory("reports")'>
                 <AppIcon Name="tags" Size="13" />
                 <span>Reports & Advanced</span>
             </button>
             <button type="button"
                     class="settings-nav-tab @(activeCategory == "all" ? "active" : string.Empty)"
-                    @onclick='() => activeCategory = "all"'>
+                    @onclick='() => SelectCategory("all")'>
                 <AppIcon Name="grid" Size="13" />
                 <span>All Categories</span>
             </button>
@@ -123,7 +123,9 @@ else
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
                         <span class="status-badge neutral">@visibleEntries.Count</span>
-                        <span style="font-size: 10px; color: var(--muted);">@(IsGroupExpanded(group.Key) ? "▲" : "▼")</span>
+                        <span class="settings-collapse-icon @(IsGroupExpanded(group.Key) ? "expanded" : string.Empty)" aria-hidden="true">
+                            <AppIcon Name="chevron-down" Size="14" />
+                        </span>
                     </div>
                 </div>
                 @if (IsGroupExpanded(group.Key))
@@ -261,7 +263,7 @@ else
     private readonly HashSet<string> expandedGroups = new(StringComparer.OrdinalIgnoreCase) { "rf" };
 
     private bool IsGroupExpanded(string key) =>
-        !string.IsNullOrWhiteSpace(searchTerm) || activeCategory != "all" || expandedGroups.Contains(key);
+        !string.IsNullOrWhiteSpace(searchTerm) || expandedGroups.Contains(key);
 
     private void ToggleGroup(string key)
     {
@@ -270,6 +272,25 @@ else
             expandedGroups.Remove(key);
         }
         else
+        {
+            expandedGroups.Add(key);
+        }
+    }
+
+    private void SelectCategory(string category)
+    {
+        activeCategory = category;
+        IReadOnlyList<string> categoryGroups = category switch
+        {
+            "rf" => new[] { SettingsGroups.Power, SettingsGroups.Antenna },
+            "protocol" => new[] { SettingsGroups.Manual, SettingsGroups.Frequency },
+            "filters" => new[] { SettingsGroups.Filter, SettingsGroups.StateAware },
+            "triggers" => new[] { SettingsGroups.Gpi, SettingsGroups.LowDuty },
+            "reports" => new[] { SettingsGroups.Report, SettingsGroups.Other },
+            _ => Array.Empty<string>(),
+        };
+
+        foreach (string key in categoryGroups)
         {
             expandedGroups.Add(key);
         }
