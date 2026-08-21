@@ -133,6 +133,31 @@ macOS 使用 `net10.0-maccatalyst` TFM，在 macOS 和 Xcode 环境中发布；�
 `maccatalyst-x64` 与 `maccatalyst-arm64` 生成未签名应用包。Windows、Mac Catalyst 和 Android
 的发布入口统一维护在 `.github/workflows/release.yml`，不对整个解决方案执行 MAUI 发布。
 
+### Linux GTK4 本地运行
+
+Linux 使用独立的 `src/LlrpReaderManager.Linux` Head，不修改主 MAUI 项目的 Android、Windows 和
+Mac Catalyst 目标。该 Head 使用 GTK4 及其 BlazorWebView 扩展，运行前需要 Linux .NET 10 SDK、
+GTK4 4.12+、WebKitGTK 6.x 和对应开发包：
+
+```bash
+sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev \
+  gobject-introspection libgirepository1.0-dev \
+  gir1.2-gtk-4.0 gir1.2-webkit-6.0 pkg-config
+dotnet run --project src/LlrpReaderManager.Linux/LlrpReaderManager.Linux.csproj
+```
+
+Linux GTK4 和 BlazorWebView 后端目前是实验性依赖；可以复用当前 Razor 页面和平台 Services，
+但正式发布前需要单独验证控件、原生库、窗口生命周期和发行版打包。详见
+[ADR-0019](../decisions/ADR-0019-maui-linux-gtk4-head.md)。
+
+### Mac Catalyst 本地运行/安装
+
+开发或验收 Mac Catalyst 包时，按 Mac 芯片选择 `maccatalyst-arm64` 或 `maccatalyst-x64`。发布 ZIP
+解压后直接打开 `LlrpReaderManager.app`；首次启动按 macOS 的 Gatekeeper 提示右键“打开”或在
+“系统设置 → 隐私与安全性”中允许。当前未签名包只适合开发/内部测试，不能当作已完成签名、公证的 Mac
+正式分发包。测试时确认 Mac 能访问 Reader 地址和 LLRP `5084` 端口；完整的下载、首次启动和 Gatekeeper
+处理见[发布规范](release.md#下载与运行)。
+
 ## 代码边界
 
 - `State/ReaderManagerState` 是 Blazor UI 状态投影，只持有平台接口，不持有 SDK Session；

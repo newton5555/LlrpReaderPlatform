@@ -29,6 +29,25 @@ Mac Catalyst 的签名、公证和 Android 的商店签名不由当前流水线�
 自包含单文件，目标机无需另装 .NET Desktop Runtime。Reader 需要通过网络可达，默认 LLRP 端口为 `5084`。首次运行会在
 `%LocalAppData%\LlrpReaderPlatform\` 创建 SQLite 数据库、日志和盘存快照目录。
 
+### Mac Catalyst 应用
+
+GitHub Release 中的 `LlrpReaderManager-v<version>-macos-arm64.zip` 用于 Apple Silicon Mac，
+`LlrpReaderManager-v<version>-macos-x64.zip` 用于 Intel Mac。按芯片选择对应资产，解压后运行其中的
+`LlrpReaderManager.app`，也可以将它复制到 `/Applications`。该应用是自包含的，不需要另外安装 .NET Runtime；
+Reader 仍需通过网络可达，默认 LLRP 端口为 `5084`。
+
+macOS 支持在 App Store 之外直接分发 `.app`，因此可以通过 ZIP 解压后运行；但这不等于没有安全限制。
+当前流水线生成的是未签名、未公证的内部/测试包，不等同于 App Store 或 Developer ID 正式分发包。首次打开时如果
+macOS 提示无法验证开发者，请在 Finder 中右键应用选择“打开”；如果仍被拦截，在“系统设置 → 隐私与安全性”中选择
+“仍要打开”。仅对确认来自可信 Release 的包，必要时可清除下载隔离标记：
+
+```bash
+xattr -dr com.apple.quarantine /Applications/LlrpReaderManager.app
+open /Applications/LlrpReaderManager.app
+```
+
+正式对外分发时，还需要补充 Developer ID 签名和公证，以及相应的安装/升级验收。
+
 ## GitHub Actions
 
 仓库包含两条自动流程：

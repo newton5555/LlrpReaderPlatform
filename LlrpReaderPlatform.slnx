@@ -61,6 +61,7 @@
     <File Path="docs/decisions/ADR-0015-virtual-reader-development-mode.md" />
     <File Path="docs/decisions/ADR-0016-platform-virtual-reader-data-sources.md" />
     <File Path="docs/decisions/ADR-0017-probe-activate-session-handoff.md" />
+    <File Path="docs/decisions/ADR-0019-maui-linux-gtk4-head.md" />
   </Folder>
   <Folder Name="/docs/templates/">
     <File Path="docs/templates/ADR-template.md" />
@@ -88,6 +89,9 @@
 
   <Folder Name="/src/LlrpReaderManager/">
     <Project Path="src/LlrpReaderManager/LlrpReaderManager.csproj" />
+  </Folder>
+  <Folder Name="/src/LlrpReaderManager.Linux/">
+    <Project Path="src/LlrpReaderManager.Linux/LlrpReaderManager.Linux.csproj" />
   </Folder>
 
   <!-- Test projects -->

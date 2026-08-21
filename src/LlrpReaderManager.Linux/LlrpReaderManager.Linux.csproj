@@ -1,0 +1,79 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDefaultCssItems>false</EnableDefaultCssItems>
+    <RootNamespace>LlrpReaderManager</RootNamespace>
+    <ApplicationTitle>LLRP Reader Manager</ApplicationTitle>
+    <ApplicationId>com.llrp.readermanager</ApplicationId>
+    <ApplicationDisplayVersion>2.0.1</ApplicationDisplayVersion>
+    <Description>LLRP Reader Manager Linux GTK4 client</Description>
+    <AssemblyName>LlrpReaderManager.Linux</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" />
+    <PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4" />
+    <PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4.BlazorWebView" />
+    <PackageReference Include="Microsoft.Maui.Platforms.Linux.Gtk4.Essentials" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LlrpReaderPlatform.Contracts\Contracts.csproj" />
+    <ProjectReference Include="..\LlrpReaderPlatform.Services\Services.csproj" />
+    <ProjectReference Include="..\LlrpReaderPlatform.Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\LlrpReaderPlatform.Extensions.Impinj\Extensions.Impinj.csproj" />
+    <ProjectReference Include="..\LlrpReaderPlatform.Extensions.Zebra\Extensions.Zebra.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalLlrpSdk)' == 'true'">
+    <ProjectReference Include="$(LlrpSdkSourceRoot)\src\LlrpDevice.Virtual.Hosting\LlrpDevice.Virtual.Hosting.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseLocalLlrpSdk)' != 'true'">
+    <PackageReference Include="LlrpDevice.Virtual.Hosting" />
+  </ItemGroup>
+
+  <!-- Reuse the existing MAUI/Blazor consumer files without making the mobile
+       project target a non-existent net10.0-linux TFM. -->
+  <ItemGroup>
+    <Compile Include="..\LlrpReaderManager\App.xaml.cs" Link="App.xaml.cs" />
+    <Compile Include="..\LlrpReaderManager\State\**\*.cs" Link="State\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\LlrpReaderManager\VirtualDevices\**\*.cs" Link="VirtualDevices\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\LlrpReaderManager\Services\IAppWindowService.cs" Link="Services\IAppWindowService.cs" />
+    <Compile Include="..\LlrpReaderManager\Services\AppWindowService.cs" Link="Services\AppWindowService.cs" />
+    <MauiXaml Include="..\LlrpReaderManager\App.xaml" Link="App.xaml" />
+    <RazorComponent Include="..\LlrpReaderManager\Components\**\*.razor" Link="Components\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Content Include="..\LlrpReaderManager\wwwroot\**\*" Link="wwwroot\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <MauiImage Include="..\LlrpReaderManager\Resources\Images\**\*" Link="Resources\Images\%(RecursiveDir)%(Filename)%(Extension)" />
+    <MauiFont Include="..\LlrpReaderManager\Resources\Fonts\**\*" Link="Resources\Fonts\%(RecursiveDir)%(Filename)%(Extension)" />
+    <MauiAsset Include="..\LlrpReaderManager\Resources\Raw\**\*" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+    <MauiIcon Include="..\LlrpReaderManager\Resources\AppIcon\appicon.png" Link="Resources\AppIcon\appicon.png" />
+  </ItemGroup>
+
+  <!-- The target machine uses a user-local .NET installation. Keep the Deb
+       framework-dependent, but make the desktop launcher discover that
+       installation before falling back to the system .NET location. -->
+  <Target Name="ConfigureLlrpDebLauncher"
+          AfterTargets="_GenerateDebLauncher"
+          BeforeTargets="CreateDeb"
+          Condition="'$(CreateDeb)' == 'true'">
+    <ItemGroup>
+      <_LlrpDebLauncherLines Include="#!/bin/sh" />
+      <_LlrpDebLauncherLines Include="if [ -x &quot;$HOME/.dotnet/dotnet&quot; ]; then" />
+      <_LlrpDebLauncherLines Include="    export DOTNET_ROOT=&quot;$HOME/.dotnet&quot;" />
+      <_LlrpDebLauncherLines Include="    export DOTNET_ROOT_X64=&quot;$HOME/.dotnet&quot;" />
+      <_LlrpDebLauncherLines Include="    export PATH=&quot;$HOME/.dotnet:$PATH&quot;" />
+      <_LlrpDebLauncherLines Include="fi" />
+      <_LlrpDebLauncherLines Include="exec &quot;$(_DebInstallPrefix)/$(AssemblyName)&quot; &quot;$@&quot;" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(_DebStagingDir)/usr/bin/$(DebPackageName)"
+                     Lines="@(_LlrpDebLauncherLines)"
+                     Overwrite="true" />
+    <Exec Command="chmod +x &quot;$(_DebStagingDir)/usr/bin/$(DebPackageName)&quot;" />
+  </Target>
+</Project>
