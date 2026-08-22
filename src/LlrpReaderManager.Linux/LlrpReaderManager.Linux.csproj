@@ -10,7 +10,7 @@
     <RootNamespace>LlrpReaderManager</RootNamespace>
     <ApplicationTitle>LLRP Reader Manager</ApplicationTitle>
     <ApplicationId>com.llrp.readermanager</ApplicationId>
-    <ApplicationDisplayVersion>2.0.2</ApplicationDisplayVersion>
+    <ApplicationDisplayVersion>2.0.3</ApplicationDisplayVersion>
     <Description>LLRP Reader Manager Linux GTK4 client</Description>
     <AssemblyName>LlrpReaderManager.Linux</AssemblyName>
   </PropertyGroup>

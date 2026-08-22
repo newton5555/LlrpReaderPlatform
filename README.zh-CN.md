@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  版本 2.0.2 · .NET 10 · <a href="README.md">English</a>
+  版本 2.0.3 · .NET 10 · <a href="README.md">English</a>
 </p>
 
 LlrpReaderPlatform 是构建在 [LLRPCSharp](https://github.com/newton5555/LLRPCSharp) SDK 之上的应用平台。它提供可复用的 Reader 管理服务、持久化、厂商模块和多种 UI 消费者，用于发现读写器、编辑能力驱动设置、执行盘存、访问标签内存、控制 GPIO 和查看盘存历史。
@@ -222,4 +222,5 @@ Mac Catalyst 产物目前未签名、未公证。Linux 包依赖兼容的 .NET�
 - [设备兼容性矩阵](docs/compatibility/device-matrix.md)
 - [硬件验证 Runbook](docs/development/hardware-validation-runbook.md)
 - [发布规范](docs/development/release.md)
+- [UI 介绍与发布产物](docs/ui-overview.md)
 - [ADR 导航](docs/decisions/README.md)

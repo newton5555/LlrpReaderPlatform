@@ -102,7 +102,7 @@ Virtual Reader 是平台内进程 Session，用于 WPF 和 Services 全链路验
 
 `src/LlrpVirtualDevice.App.Wpf` 在正式发布流水线中作为独立的
 `LlrpVirtualDeviceManager-v<version>-win-x64.zip` 资产发布，已按正式依赖方式消费
-`LlrpDevice.Virtual.Hosting` 2.0.1 NuGet 包。只有跨仓库联调时显式设置
+`LlrpDevice.Virtual.Hosting` 2.0.3 NuGet 包。只有跨仓库联调时显式设置
 `UseLocalLlrpSdk=true`，才会切换到相邻 `LLRPCSharp` 项目。
 
 从仓库根目录以 NuGet 模式运行管理 UI：

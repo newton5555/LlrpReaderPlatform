@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  Version 2.0.2 · .NET 10 · <a href="README.zh-CN.md">中文</a>
+  Version 2.0.3 · .NET 10 · <a href="README.zh-CN.md">中文</a>
 </p>
 
 LlrpReaderPlatform is an application platform built on the [LLRPCSharp](https://github.com/newton5555/LLRPCSharp) SDK. It provides reusable reader-management services, persistence, vendor modules, and several UI consumers for discovering readers, editing capability-driven settings, running inventory, accessing tag memory, controlling GPIO, and reviewing inventory history.
@@ -222,4 +222,5 @@ Mac Catalyst artifacts are currently unsigned and unnotarized. The Linux package
 - [Device compatibility matrix](docs/compatibility/device-matrix.md)
 - [Hardware validation runbook](docs/development/hardware-validation-runbook.md)
 - [Release specification](docs/development/release.md)
+- [UI overview and release assets](docs/ui-overview.md)
 - [ADR index](docs/decisions/README.md)

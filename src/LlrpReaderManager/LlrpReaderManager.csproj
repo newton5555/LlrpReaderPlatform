@@ -15,8 +15,8 @@
     <EnableDefaultCssItems>false</EnableDefaultCssItems>
     <ApplicationTitle>LLRP Reader Manager</ApplicationTitle>
     <ApplicationId>com.llrp.readermanager</ApplicationId>
-    <ApplicationDisplayVersion>2.0</ApplicationDisplayVersion>
-    <ApplicationVersion>2</ApplicationVersion>
+    <ApplicationDisplayVersion>2.0.3</ApplicationDisplayVersion>
+    <ApplicationVersion>3</ApplicationVersion>
     <WindowsPackageType>None</WindowsPackageType>
     <EmbedAssembliesIntoApk Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">true</EmbedAssembliesIntoApk>
     <AndroidPackageFormat Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">apk</AndroidPackageFormat>
