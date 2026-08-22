@@ -108,6 +108,7 @@ public sealed class FakeSession : IReaderSession
                 false,
                 canDoRfSurvey,
                 null,
+                null,
             ],
             culture: null)!;
     }

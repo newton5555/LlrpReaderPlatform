@@ -219,6 +219,7 @@ public sealed class StandardSettingsCompilerTests
                 false,
                 false,
                 null,
+                null,
             ],
             culture: null)!;
         var runtime = new ReaderSettingsRuntimeSnapshot(
@@ -913,6 +914,7 @@ public sealed class StandardSettingsCompilerTests
                 false,
                 false,
                 maxRxSensitivityDbm,
+                null,
             ],
             culture: null)!;
     }

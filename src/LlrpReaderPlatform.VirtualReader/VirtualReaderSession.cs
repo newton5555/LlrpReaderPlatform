@@ -998,6 +998,7 @@ public sealed class VirtualReaderSession : IReaderSession
                 false,
                 false,
                 null,
+                null,
             ],
             culture: null)!;
     }

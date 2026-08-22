@@ -84,7 +84,10 @@ internal sealed class LlrpReaderSession : IReaderSession
             .ValidateSettingsAsync(settings, cancellationToken)
             .ConfigureAwait(false);
         validation.ThrowIfInvalid();
-        await reader.ApplySettingsAsync(settings, cancellationToken).ConfigureAwait(false);
+        await reader.ApplySettingsAsync(
+            settings,
+            ResourceTakeoverPolicy.ReplaceAll,
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task StartInventoryAsync(Tagging.InventorySpec spec, CancellationToken cancellationToken)
@@ -99,7 +102,10 @@ internal sealed class LlrpReaderSession : IReaderSession
         ReaderSettingsSnapshot current = await reader.QuerySettingsAsync(cancellationToken).ConfigureAwait(false);
         InventorySettings settings = InventorySettingsResolver.Resolve(current);
         settings = ApplyInventorySpec(settings, spec);
-        InventorySession session = await reader.StartInventoryAsync(settings, cancellationToken).ConfigureAwait(false);
+        InventorySession session = await reader.StartInventoryAsync(
+            settings,
+            ResourceTakeoverPolicy.ReplaceAll,
+            cancellationToken).ConfigureAwait(false);
         StartInventoryReportConsumer(session);
     }
 
@@ -112,7 +118,10 @@ internal sealed class LlrpReaderSession : IReaderSession
         }
 
         await SynchronizeIfNeededAsync(cancellationToken).ConfigureAwait(false);
-        InventorySession session = await reader.StartInventoryAsync(settings, cancellationToken).ConfigureAwait(false);
+        InventorySession session = await reader.StartInventoryAsync(
+            settings,
+            ResourceTakeoverPolicy.ReplaceAll,
+            cancellationToken).ConfigureAwait(false);
         StartInventoryReportConsumer(session);
     }
 
@@ -280,7 +289,10 @@ internal sealed class LlrpReaderSession : IReaderSession
 
         ReaderSettings settings = MaterializeTagAccessSettings(snapshot, fallbackSettings);
 
-        await reader.ApplySettingsAsync(settings, cancellationToken).ConfigureAwait(false);
+        await reader.ApplySettingsAsync(
+            settings,
+            ResourceTakeoverPolicy.ReplaceAll,
+            cancellationToken).ConfigureAwait(false);
     }
 
     internal static ReaderSettings MaterializeTagAccessSettings(
