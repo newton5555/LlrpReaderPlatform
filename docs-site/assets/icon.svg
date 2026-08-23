@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    
+    <!-- Accent Gradient -->
+    <linearGradient id="accentGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00f2fe" />
+      <stop offset="100%" stop-color="#4facfe" />
+    </linearGradient>
+
+    <!-- Chip Gradient -->
+    <linearGradient id="chipGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#334155" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+
+    <!-- Gold Gradient for RFID Antenna -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="25" stdDeviation="25" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- App Icon Squircle -->
+  <rect x="64" y="64" width="896" height="896" rx="224" fill="url(#bgGrad)" filter="url(#shadow)" />
+  <rect x="64" y="64" width="896" height="896" rx="224" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="4" />
+  
+  <!-- RFID Tag / Reader Chip -->
+  <g transform="translate(220, 580)" filter="url(#shadow)">
+    <!-- Glassmorphism Tag Body -->
+    <rect x="0" y="0" width="240" height="240" rx="40" fill="url(#chipGrad)" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+    
+    <!-- RFID Spiral Antenna -->
+    <path d="M 40 180 V 40 H 200 V 200 H 60 V 60 H 180 V 180 H 80 V 80 H 160 V 160 H 100 V 100 H 140 V 140 H 120" 
+          fill="none" stroke="url(#goldGrad)" stroke-width="6" stroke-linejoin="round" stroke-linecap="round" />
+    
+    <!-- Inner Reader Core -->
+    <rect x="104" y="104" width="32" height="32" rx="8" fill="url(#bgGrad)" stroke="url(#goldGrad)" stroke-width="3"/>
+    
+    <!-- Glowing indicator inside the core -->
+    <circle cx="120" cy="120" r="10" fill="url(#accentGrad)" filter="url(#glow)"/>
+  </g>
+
+  <!-- RFID Waves -->
+  <g transform="translate(340, 700)" filter="url(#glow)">
+    <path d="M 0 -160 A 160 160 0 0 1 160 0" fill="none" stroke="url(#accentGrad)" stroke-width="40" stroke-linecap="round" />
+    <path d="M 0 -300 A 300 300 0 0 1 300 0" fill="none" stroke="url(#accentGrad)" stroke-width="40" stroke-linecap="round" opacity="0.8" />
+    <path d="M 0 -440 A 440 440 0 0 1 440 0" fill="none" stroke="url(#accentGrad)" stroke-width="40" stroke-linecap="round" opacity="0.6" />
+    <path d="M 0 -580 A 580 580 0 0 1 580 0" fill="none" stroke="url(#accentGrad)" stroke-width="40" stroke-linecap="round" opacity="0.4" />
+  </g>
+</svg>

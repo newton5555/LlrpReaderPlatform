@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="LLRP Reader Studio (Windows WPF) - 面向真实射频读写器与虚拟设备的桌面级工控操作客户端">
+  <title>LLRP Reader Studio (WPF) · LlrpReaderPlatform</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+</head>
+<body>
+
+<!-- Header Topbar -->
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <div class="brand-icon">
+      <img src="assets/icon.svg" width="24" height="24" alt="Icon">
+    </div>
+    <div class="brand-text">
+      <span>LlrpReaderPlatform</span>
+      <small>WPF Studio</small>
+    </div>
+  </a>
+  <button class="menu-toggle">☰</button>
+  <nav class="topbar-nav">
+    <a href="index.html">首页</a>
+    <a href="wpf-studio.html" class="active">WPF 客户端</a>
+    <a href="cross-platform.html">MAUI 跨平台</a>
+    <a href="virtual-device.html">虚拟设备工具</a>
+    <a href="architecture.html">系统架构</a>
+    <a href="releases.html">下载与发布</a>
+    <a href="https://newton5555.github.io/LLRPCSharp/" target="_blank">LLRPCSharp SDK ↗</a>
+  </nav>
+  <a class="github-btn" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">
+    <span>GitHub</span> ↗
+  </a>
+</header>
+
+<main class="shell docs-layout">
+  <!-- Side Nav -->
+  <aside class="side-nav">
+    <p class="eyebrow">WPF STUDIO VIEWS</p>
+    <a href="#overview" class="active">客户端定位与概览</a>
+    <a href="#view-inventory">01. 寻卡与监控 (Inventory)</a>
+    <a href="#view-tagmem">02. 标签内存读写 (Tag Memory)</a>
+    <a href="#view-toi">03. 目标卡管理 (TOI)</a>
+    <a href="#view-runs">04. 历史盘存运行 (Runs)</a>
+    <a href="#view-settings">05. 读写器配置 (Settings)</a>
+    <a href="#view-datasources">06. 读写器数据源 (Sources)</a>
+    <a href="#view-gpio">07. GPIO 触发与控制</a>
+  </aside>
+
+  <!-- Content Article -->
+  <article class="doc-content">
+    <p class="eyebrow">01 / WINDOWS DESKTOP CLIENT</p>
+    <h1>LLRP Reader Studio (Windows WPF)</h1>
+    <p class="doc-lead">
+      <code>src/LlrpReaderPlatform.App.Wpf</code> 是平台的主桌面客户端，针对大屏工控机、调试工位以及真机验收设计。支持对物理硬件与 TCP 虚拟读写器进行全功能控制。
+    </p>
+
+    <!-- Overview -->
+    <section id="overview">
+      <h2>设计定位与运行特性</h2>
+      <p>
+        LLRP Reader Studio 基于 WPF (.NET 10) 架构，结合 MVVM 模式与平台通用服务。所有的读写器会话均受底层 <code>ReaderHandle</code> 租约门禁严格保护，避免多线程并发下发导致设备状态异常。
+      </p>
+      <ul>
+        <li><strong>单实例单文件部署</strong>：发布为自包含 (Self-Contained) 的单一执行文件，目标机器无需预装 .NET 运行时。</li>
+        <li><strong>零内存泄漏设计</strong>：针对持续数天的长盘点场景，采用有界通道聚合与弱引用事件，内存占用平稳。</li>
+        <li><strong>硬件验收主载体</strong>：当前 Impinj R420 与标准 LLRP 物理设备的实机验收均以此客户端作为标准交互界面。</li>
+      </ul>
+    </section>
+
+    <!-- View 1: Inventory -->
+    <section id="view-inventory">
+      <h2>01. 寻卡与实时流式监控 (Inventory View)</h2>
+      <p>
+        提供高吞吐的标签盘存观察视图。实时解析从读写器上报的 <code>RO_ACCESS_REPORT</code> 帧并渲染至聚合表格：
+      </p>
+      <div class="code-block">
+        <button class="copy-btn">复制</button>
+        <pre><code>// 盘点上报字段解析与投影
+EPC (Hex)          : 96-bit / 128-bit EPC 十六进制编码
+Antenna ID         : 物理射频天线编号 (1 ~ 4)
+Peak RSSI (dBm)    : 接收信号强度峰值与动态衰减趋势
+Seen Count         : 视野内累计捕获次数 (聚合统计)
+Last Seen (UTC)    : 亚毫秒级时间戳记录
+TID / User Memory  : AttachedData 附加区数据 (若启用)
+Impinj FastID      : 64-bit 硬件级 Serialized TID
+Impinj RF Phase    : 射频相位角 (0 ~ 4095 归一化)</code></pre>
+      </div>
+      <p>
+        支持一键暂停、清空列表、按天线/RSSI 过滤、导出 CSV，以及将原始标签事件异步记录为本地 <code>.jsonl</code> 审计日志。
+      </p>
+    </section>
+
+    <!-- View 2: Tag Memory -->
+    <section id="view-tagmem">
+      <h2>02. 标签内存读写与操作 (Tag Memory Access)</h2>
+      <p>
+        提供向特定标签发起 C1G2 内存级操作的交互向导。包括：
+      </p>
+      <ul>
+        <li><strong>选择器过滤 (Tag Selection)</strong>：通过 EPC 或 TID 前缀与掩码精确锁定操作目标卡片。</li>
+        <li><strong>读写存储区</strong>：Reserved (密码区)、EPC 区、TID 固化区以及 User 用户区（以 16-bit 字为单位）。</li>
+        <li><strong>安全锁定与销毁 (Lock & Kill)</strong>：支持配置 Access Password，修改存储区读写保护属性或永久灭活标签。</li>
+      </ul>
+      <div class="callout tip">
+        <strong>租约机制：</strong> 执行 Tag Access 时，平台自动申请短期会话租约，完成操作后即刻释放连接，不会阻碍后续的长盘点操作。
+      </div>
+    </section>
+
+    <!-- View 3: TOI -->
+    <section id="view-toi">
+      <h2>03. 目标关注卡管理 (Target of Interest - TOI)</h2>
+      <p>
+        在仓储和资产管理场景下，操作员往往需要对特定 EPC 进行重点追踪：
+      </p>
+      <ul>
+        <li><strong>本地库维护</strong>：通过 SQLite 维护关注卡列表，为每张卡赋予业务名称（如“高价值设备 #108”）、分类与自定义高亮颜色。</li>
+        <li><strong>全局投影</strong>：在寻卡视图与历史记录中，匹配到的标签将自动带有鲜明的关注卡徽章与触发提示。</li>
+      </ul>
+    </section>
+
+    <!-- View 4: Runs -->
+    <section id="view-runs">
+      <h2>04. 历史盘存运行分析 (Inventory Runs)</h2>
+      <p>
+        每一次点击“开始盘存”到“停止盘存”都会形成一个独立的 <code>InventoryRun</code> 结构化实体保存在本地数据库中：
+      </p>
+      <ul>
+        <li>记录起止时间戳、总捕获卡数、唯一卡数以及<strong>显式停止原因</strong>（用户手动停止 / GPI 触发自动停止 / 网络故障断开）。</li>
+        <li>支持随时回放历史 Run 的标签汇总清单并导出报告。</li>
+      </ul>
+    </section>
+
+    <!-- View 5: Settings -->
+    <section id="view-settings">
+      <h2>05. 能力驱动配置编辑器 (Reader Settings Editor)</h2>
+      <p>
+        告别传统配置软件盲目下发参数导致读写器报错（LLRP 错误码 398 等）的痛点：
+      </p>
+      <ul>
+        <li><strong>动态能力映射</strong>：连接读写器后自动读取硬件声明的 <code>TransmitPowerTable</code>、<code>ReceiveSensitivityTable</code> 与 <code>UHFRFModeTable</code>。</li>
+        <li><strong>安全范围约束</strong>：滑块和下拉菜单仅展示当前读写器物理支持的功率档位与 RF 模式。</li>
+        <li><strong>多天线独立调节</strong>：各天线端口可单独开关、设置发射功率与接收灵敏度。</li>
+        <li><strong>厂商扩展配置</strong>：针对 Impinj 读写器，自动展现 Low Duty Cycle (低占空比)、Search Mode (双向搜寻模式) 与 FastID 选项。</li>
+      </ul>
+    </section>
+
+    <!-- View 6: Data Sources -->
+    <section id="view-datasources">
+      <h2>06. 读写器数据源与自动发现 (Data Sources)</h2>
+      <p>
+        支持多读写器设备档案管理：
+      </p>
+      <ul>
+        <li><strong>Zeroconf / mDNS 自动发现</strong>：局域网内开机自动发现，免去逐一扫 IP 的烦恼。</li>
+        <li><strong>手动添加与探测 (Probe)</strong>：输入 IP 与端口后一键 Probe，自动提取硬件型号、固件版本与 MAC 地址。</li>
+        <li><strong>激活与切换</strong>：支持一键切换当前工作激活的读写器，或多读写器并行待命。</li>
+      </ul>
+    </section>
+
+    <!-- View 7: GPIO -->
+    <section id="view-gpio">
+      <h2>07. GPIO 触发器与继电器联动 (GPIO Control)</h2>
+      <p>
+        面向自动化流水线与门禁场景：
+      </p>
+      <ul>
+        <li><strong>GPI 状态监控</strong>：实时展示光电传感器或红外对射信号的高低电平变化。</li>
+        <li><strong>GPI 触发寻卡</strong>：支持配置“当 GPI 1 触发高电平时自动开始盘点，低电平或超时后自动停止”。</li>
+        <li><strong>GPO 手动控制</strong>：一键驱动读写器板载继电器、声光报警器或三色信号灯。</li>
+      </ul>
+    </section>
+  </article>
+</main>
+
+<!-- Footer -->
+<footer class="main-footer">
+  <div class="shell footer-content">
+    <div>
+      <strong>LlrpReaderPlatform</strong> · Windows WPF 客户端指南
+    </div>
+    <div style="display:flex;gap:20px;">
+      <a href="cross-platform.html">查看 MAUI 跨平台客户端 →</a>
+      <a href="releases.html">下载 WPF 客户端 →</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

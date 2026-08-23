@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="LlrpReaderPlatform 多平台应用发布、安装说明与二进制下载 (Windows / Android / macOS / Linux)">
+  <title>下载与发布 · LlrpReaderPlatform</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+</head>
+<body>
+
+<!-- Header Topbar -->
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <div class="brand-icon">
+      <img src="assets/icon.svg" width="24" height="24" alt="Icon">
+    </div>
+    <div class="brand-text">
+      <span>LlrpReaderPlatform</span>
+      <small>Releases</small>
+    </div>
+  </a>
+  <button class="menu-toggle">☰</button>
+  <nav class="topbar-nav">
+    <a href="index.html">首页</a>
+    <a href="wpf-studio.html">WPF 客户端</a>
+    <a href="cross-platform.html">MAUI 跨平台</a>
+    <a href="virtual-device.html">虚拟设备工具</a>
+    <a href="architecture.html">系统架构</a>
+    <a href="releases.html" class="active">下载与发布</a>
+    <a href="https://newton5555.github.io/LLRPCSharp/" target="_blank">LLRPCSharp SDK ↗</a>
+  </nav>
+  <a class="github-btn" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">
+    <span>GitHub</span> ↗
+  </a>
+</header>
+
+<main class="shell docs-layout">
+  <!-- Side Nav -->
+  <aside class="side-nav">
+    <p class="eyebrow">RELEASES & PACKAGES</p>
+    <a href="#matrix" class="active">多平台发布矩阵</a>
+    <a href="#windows-wpf">Windows WPF 客户端</a>
+    <a href="#windows-vdevice">Windows 虚拟设备管理器</a>
+    <a href="#android-apk">Android 手持端 (APK)</a>
+    <a href="#macos-app">macOS (Mac Catalyst)</a>
+    <a href="#linux-deb">Linux (Debian / Ubuntu)</a>
+    <a href="#verify">SHA256 完整性校验</a>
+  </aside>
+
+  <!-- Content Article -->
+  <article class="doc-content">
+    <p class="eyebrow">05 / RELEASES & INSTALLATION</p>
+    <h1>应用下载与多平台发布矩阵</h1>
+    <p class="doc-lead">
+      <code>LlrpReaderPlatform</code> 通过 GitHub Actions 自动化流水线构建并发布多端原生二进制。所有资产均经过编译与打包测试，开箱即用。
+    </p>
+
+    <!-- Release Matrix -->
+    <section id="matrix">
+      <h2>多平台发布资产矩阵 (v2.0.3)</h2>
+      <div style="background:var(--bg-card);border:1px solid var(--border-dim);border-radius:var(--radius-md);overflow-x:auto;margin-bottom:30px;">
+        <table class="stream-table">
+          <thead>
+            <tr>
+              <th>平台 / 操作系统</th>
+              <th>应用名称</th>
+              <th>打包格式</th>
+              <th>运行时依赖</th>
+              <th>获取通道</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Windows 10/11 (x64)</strong></td>
+              <td>LLRP Reader Studio (WPF)</td>
+              <td><code>.zip</code> (自包含单文件)</td>
+              <td>无 (自带运行时)</td>
+              <td><a href="https://github.com/newton5555/LlrpReaderPlatform/releases" target="_blank" style="color:var(--accent-cyan);font-weight:700;">GitHub Release ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>Windows 10/11 (x64)</strong></td>
+              <td>Virtual Device Manager (WPF)</td>
+              <td><code>.zip</code> (自包含单文件)</td>
+              <td>无 (自带运行时)</td>
+              <td><a href="https://github.com/newton5555/LlrpReaderPlatform/releases" target="_blank" style="color:var(--accent-cyan);font-weight:700;">GitHub Release ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>Windows 10/11 (x64)</strong></td>
+              <td>LlrpReaderManager (MAUI)</td>
+              <td><code>.zip</code> (目录发布包)</td>
+              <td>Windows App SDK</td>
+              <td><a href="https://github.com/newton5555/LlrpReaderPlatform/releases" target="_blank" style="color:var(--accent-cyan);font-weight:700;">GitHub Release ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>Android 8.0+ (ARM64/x64)</strong></td>
+              <td>LlrpReaderManager</td>
+              <td><code>.apk</code> (独立安装包)</td>
+              <td>Android Runtime</td>
+              <td><a href="https://github.com/newton5555/LlrpReaderPlatform/releases" target="_blank" style="color:var(--accent-cyan);font-weight:700;">GitHub Release ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>macOS 12+ (ARM64/Intel)</strong></td>
+              <td>LlrpReaderManager (Mac Catalyst)</td>
+              <td><code>.zip</code> (包含 <code>.app</code>)</td>
+              <td>macOS 原生</td>
+              <td><a href="https://github.com/newton5555/LlrpReaderPlatform/releases" target="_blank" style="color:var(--accent-cyan);font-weight:700;">GitHub Release ↗</a></td>
+            </tr>
+            <tr>
+              <td><strong>Linux x64 (Ubuntu/Debian)</strong></td>
+              <td>LlrpReaderManager.Linux (GTK4)</td>
+              <td><code>.deb</code> (Debian 包)</td>
+              <td>.NET 10 + GTK4 + WebKit</td>
+              <td><a href="https://github.com/newton5555/LlrpReaderPlatform/releases" target="_blank" style="color:var(--accent-cyan);font-weight:700;">GitHub Release ↗</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Windows WPF -->
+    <section id="windows-wpf">
+      <h2>Windows WPF 客户端安装与运行</h2>
+      <p>
+        推荐绝大多数工业现场操作员使用该版本：
+      </p>
+      <ol style="margin-left:20px;color:var(--text-sub);line-height:1.8;">
+        <li>从 GitHub Releases 下载 <code>LlrpReaderPlatform.App.Wpf-win-x64.zip</code>。</li>
+        <li>解压至本地任意目录（例如 <code>D:\RFID\LlrpReaderStudio\</code>）。</li>
+        <li>双击运行 <code>LlrpReaderPlatform.App.Wpf.exe</code> 即可直接启动，无需安装任何前置环境。</li>
+      </ol>
+    </section>
+
+    <!-- Windows Virtual Device -->
+    <section id="windows-vdevice">
+      <h2>Windows 虚拟设备管理器</h2>
+      <p>
+        下载 <code>LlrpVirtualDevice.App.Wpf-win-x64.zip</code> 解压后双击运行 <code>LlrpVirtualDevice.App.Wpf.exe</code>，即可在本地创建与启动 TCP 虚拟读写器实例。
+      </p>
+    </section>
+
+    <!-- Android APK -->
+    <section id="android-apk">
+      <h2>Android 手持端安装说明</h2>
+      <p>
+        下载 <code>LlrpReaderManager-android.apk</code> 后通过数据线或微信传输至 Android 手持机/PDA，允许“安装未知来源应用”后点击安装即可。
+      </p>
+    </section>
+
+    <!-- macOS App -->
+    <section id="macos-app">
+      <h2>macOS (Mac Catalyst) 打开说明</h2>
+      <p>
+        由于 CI 构建包暂未申请 Apple 商业公证证书，首次运行时如遇到“无法打开因为来自无法确认的开发者”提示：
+      </p>
+      <div class="code-block">
+        <button class="copy-btn">复制</button>
+        <pre><code># 解压后如遇 Gatekeeper 隔离拦截，可在终端执行：
+xattr -cr /Applications/LlrpReaderManager.app</code></pre>
+      </div>
+    </section>
+
+    <!-- Linux deb -->
+    <section id="linux-deb">
+      <h2>Linux (Debian / Ubuntu) 安装说明</h2>
+      <div class="code-block">
+        <button class="copy-btn">复制</button>
+        <pre><code># 1. 安装 Debian 包
+sudo dpkg -i llrp-reader-manager-linux-x64.deb
+
+# 2. 自动修复依赖环境
+sudo apt-get update && sudo apt-get install -f -y
+
+# 3. 运行程序
+llrp-reader-manager</code></pre>
+      </div>
+    </section>
+
+    <!-- Verify -->
+    <section id="verify">
+      <h2>SHA256 完整性校验</h2>
+      <p>
+        每个 GitHub Release 均附带有官方生成的 <code>checksums.sha256</code> 校验文本。在 PowerShell 中可通过以下命令比对哈希：
+      </p>
+      <div class="code-block">
+        <button class="copy-btn">复制</button>
+        <pre><code># 校验下载包哈希
+Get-FileHash .\LlrpReaderPlatform.App.Wpf-win-x64.zip -Algorithm SHA256</code></pre>
+      </div>
+    </section>
+  </article>
+</main>
+
+<!-- Footer -->
+<footer class="main-footer">
+  <div class="shell footer-content">
+    <div>
+      <strong>LlrpReaderPlatform</strong> · 下载与发布中心
+    </div>
+    <div style="display:flex;gap:20px;">
+      <a href="index.html">返回首页</a>
+      <a href="https://github.com/newton5555/LlrpReaderPlatform/releases" target="_blank">前往 GitHub Releases 页面 ↗</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

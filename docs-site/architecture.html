@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="LlrpReaderPlatform 平台服务体系、会话租约门禁、EF Core SQLite 本地持久化与架构设计">
+  <title>系统架构与设计 · LlrpReaderPlatform</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+</head>
+<body>
+
+<!-- Header Topbar -->
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <div class="brand-icon">
+      <img src="assets/icon.svg" width="24" height="24" alt="Icon">
+    </div>
+    <div class="brand-text">
+      <span>LlrpReaderPlatform</span>
+      <small>Architecture</small>
+    </div>
+  </a>
+  <button class="menu-toggle">☰</button>
+  <nav class="topbar-nav">
+    <a href="index.html">首页</a>
+    <a href="wpf-studio.html">WPF 客户端</a>
+    <a href="cross-platform.html">MAUI 跨平台</a>
+    <a href="virtual-device.html">虚拟设备工具</a>
+    <a href="architecture.html" class="active">系统架构</a>
+    <a href="releases.html">下载与发布</a>
+    <a href="https://newton5555.github.io/LLRPCSharp/" target="_blank">LLRPCSharp SDK ↗</a>
+  </nav>
+  <a class="github-btn" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">
+    <span>GitHub</span> ↗
+  </a>
+</header>
+
+<main class="shell docs-layout">
+  <!-- Side Nav -->
+  <aside class="side-nav">
+    <p class="eyebrow">ARCHITECTURE</p>
+    <a href="#layering" class="active">分层与依赖方向</a>
+    <a href="#lease-concurrency">读写器句柄与租约并发</a>
+    <a href="#persistence">EF Core SQLite 持久化</a>
+    <a href="#extensions">插件化厂商扩展</a>
+    <a href="#error-codes">统一错误码体系</a>
+    <a href="#hardware-matrix">硬件兼容性矩阵</a>
+  </aside>
+
+  <!-- Content Article -->
+  <article class="doc-content">
+    <p class="eyebrow">04 / CORE ARCHITECTURE & PLATFORM SERVICES</p>
+    <h1>平台服务体系与架构设计</h1>
+    <p class="doc-lead">
+      <code>LlrpReaderPlatform</code> 不是第二个 LLRP SDK，而是一套<strong>建立在 LLRPCSharp 之上的应用服务平台</strong>。负责协调读写器生命周期、会话租约排队、配置编译投影、本地数据持久化以及多 UI 消费者的解耦。
+    </p>
+
+    <!-- Layering -->
+    <section id="layering">
+      <h2>分层设计与严格的依赖方向</h2>
+      <p>
+        为了保证核心业务逻辑的高内聚与可测试性，平台代码遵循单向依赖原则：
+      </p>
+      <div class="code-block">
+        <button class="copy-btn">复制</button>
+        <pre><code>UI Composition Roots (WPF / MAUI / Linux)
+      │
+      ▼
+LlrpReaderPlatform.Contracts (纯 DTO / 接口 / 错误码 - 零外部依赖)
+      │
+      ▼
+LlrpReaderPlatform.Services (生命周期 / 租约门禁 / 盘存聚合 / 投影)
+      │
+      ├─► LlrpReaderPlatform.Infrastructure (SQLite / Zeroconf / 日志)
+      ├─► LlrpReaderPlatform.Extensions.Impinj & Zebra (厂商模块)
+      └─► LlrpSdk NuGet (LLRPCSharp 协议驱动)</code></pre>
+      </div>
+      <div class="callout tip">
+        <strong>架构单测守护：</strong> 仓库内包含专门的架构约束测试（Architecture Tests），强制禁止在 <code>Contracts</code> 中引用 WPF、SDK 报文或厂商专属类型，杜绝类型泄漏。
+      </div>
+    </section>
+
+    <!-- Lease Concurrency -->
+    <section id="lease-concurrency">
+      <h2>读写器句柄与会话租约门禁 (Reader Ownership & Concurrency)</h2>
+      <p>
+        RFID 读写器通常只支持单 TCP 连接与单会话状态机。为了防止 UI 界面在盘存过程中意外发送冲突指令导致设备报错，平台设计了 <code>ReaderHandle</code> 租约机制：
+      </p>
+      <ul>
+        <li><strong>单读写器单门禁</strong>：每个注册读写器具有唯一的 <code>ReaderHandle</code> 与专属的操作网关。</li>
+        <li><strong>短期租约 (Short Leases)</strong>：探测 (Probe)、配置下发 (ApplySettings)、Tag Access 读写与 GPIO 控制申请短期租约，完成后立即释放。</li>
+        <li><strong>长期独占会话 (Long Inventory Session)</strong>：盘存从 <code>StartInventory</code> 到 <code>Stop</code> 独占会话通道，期间所有报告由此通道持续上报。</li>
+        <li><strong>确定性忙碌返回</strong>：若在运行盘点时触发短操作，平台立即返回标准错误码 <code>ReaderBusy</code>，绝不静默中断或盲目重启读写器。</li>
+      </ul>
+    </section>
+
+    <!-- Persistence -->
+    <section id="persistence">
+      <h2>EF Core SQLite 本地结构化持久化</h2>
+      <p>
+        内置 <code>LlrpReaderPlatform.Infrastructure</code> 模块，采用 EF Core 配合轻量级 SQLite 数据库：
+      </p>
+      <div class="code-block">
+        <button class="copy-btn">复制</button>
+        <pre><code>// 本地持久化主要实体
+- ReaderProfileEntity       : 已注册读写器连接信息、名称与硬件能力缓存
+- SettingsPresetEntity      : 业务配置预设方案 (天线/RF模式/功率)
+- TargetOfInterestEntity    : TOI 关注卡库 (EPC、分类、预警级别与颜色)
+- InventoryRunEntity        : 历史盘存 Session 结构化记录与显式停止原因
+- AppSettingsEntity         : UI 主题、日志级别与通用偏好</code></pre>
+      </div>
+    </section>
+
+    <!-- Extensions -->
+    <section id="extensions">
+      <h2>插件化厂商扩展架构 (Impinj & Zebra)</h2>
+      <p>
+        平台在连接读写器后会自动解析设备企业号 (Enterprise Number / IANA)：
+      </p>
+      <ul>
+        <li><strong>IANA <code>25882</code> (Impinj)</strong>：自动激活 <code>Extensions.Impinj</code> 模块，加载双向搜寻模式 (Search Mode)、低占空比、Serialized TID 与 RF 相位角上报。</li>
+        <li><strong>IANA <code>161</code> (Zebra)</strong>：自动激活 <code>Extensions.Zebra</code> 模块，提供射频电源与自主模式扩展支持。</li>
+        <li><strong>标准读写器</strong>：未匹配到厂商扩展时，平滑回退至标准通用 LLRP 驱动路径。</li>
+      </ul>
+    </section>
+
+    <!-- Error Codes -->
+    <section id="error-codes">
+      <h2>统一错误码体系 (Platform Error Codes)</h2>
+      <p>
+        平台定义了面向应用层的稳定错误码，屏蔽底层底层 Socket 异常与复杂的 LLRP 状态码：
+      </p>
+      <ul>
+        <li><code>ReaderNotFound</code>：指定的读写器句柄不存在或已被移除。</li>
+        <li><code>ReaderBusy</code>：读写器当前正在执行独占盘存或关键操作，租约已被占用。</li>
+        <li><code>ConnectionFailed</code>：TCP 传输无法建立，网络超时或端口被占用。</li>
+        <li><code>ProtocolError</code>：读写器返回了非预期的 LLRP 错误响应。</li>
+        <li><code>CapabilityMismatch</code>：下发的参数超出该型号读写器支持的物理能力范围。</li>
+      </ul>
+    </section>
+
+    <!-- Hardware Matrix -->
+    <section id="hardware-matrix">
+      <h2>物理硬件兼容性与验收基线</h2>
+      <p>
+        平台的兼容性声明严格以真机验收记录为准（非 Mock 或单元测试）：
+      </p>
+      <ul>
+        <li><strong>Impinj Speedway Revolution R420 (LLRP 1.0.1)</strong>：<strong>生产级验收通过</strong>。连接、能力探测、标准与 Impinj 专有配置、盘点、FastID、相位、User 区读写、GPI 状态与 GPO 控制均具备完整实机验收证据。</li>
+        <li><strong>标准 LLRP 1.0.1 / 1.1 读写器</strong>：<strong>基础功能验收通过</strong>。连接、能力探测与配置回写已验证。</li>
+        <li><strong>Zebra FX9600</strong>：<strong>实验性模块</strong>。已验证连接与设备身份，高级特性待进一步标定。</li>
+      </ul>
+    </section>
+  </article>
+</main>
+
+<!-- Footer -->
+<footer class="main-footer">
+  <div class="shell footer-content">
+    <div>
+      <strong>LlrpReaderPlatform</strong> · 系统架构与设计
+    </div>
+    <div style="display:flex;gap:20px;">
+      <a href="releases.html">前往下载中心 →</a>
+      <a href="https://newton5555.github.io/LLRPCSharp/" target="_blank">查看底层 LLRPCSharp SDK ↗</a>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/app.js"></script>
+</body>
+</html>
