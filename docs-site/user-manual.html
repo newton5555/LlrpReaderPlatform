@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="LLRP Reader Studio 与跨平台客户端详细操作使用手册、界面说明与图文指引">
+  <title>用户操作手册 · LlrpReaderPlatform</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/brand.css">
+  <style>
+    .screenshot-frame {
+      margin: 20px 0 32px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(16,43,52,.05);
+    }
+    .screenshot-placeholder {
+      min-height: 220px;
+      background: linear-gradient(135deg, #f0f7f5 0%, #e3eee9 100%);
+      border-bottom: 1px dashed #b5d5cf;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+      text-align: center;
+      color: var(--teal);
+    }
+    .screenshot-placeholder .icon {
+      font-size: 36px;
+      margin-bottom: 10px;
+      opacity: 0.85;
+    }
+    .screenshot-placeholder strong {
+      font-size: 15px;
+      margin-bottom: 4px;
+      color: var(--teal);
+    }
+    .screenshot-placeholder span {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+    .screenshot-caption {
+      padding: 12px 18px;
+      background: #fafcfb;
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .screenshot-caption small {
+      color: #8c9da5;
+    }
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <img class="project-logo" src="assets/icon.svg" alt="LlrpReaderPlatform">
+    <span>LlrpReaderPlatform<small>User Manual</small></span>
+  </a>
+  <button class="menu-toggle">☰</button>
+  <nav>
+    <a href="index.html">首页</a>
+    <a href="user-manual.html" class="active">用户手册</a>
+    <a href="wpf-studio.html">WPF 客户端</a>
+    <a href="cross-platform.html">MAUI 跨平台</a>
+    <a href="virtual-device.html">虚拟设备工具</a>
+    <a href="architecture.html">系统架构</a>
+    <a href="releases.html">下载与发布</a>
+  </nav>
+  <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
+</header>
+
+<main class="shell docs-layout">
+  <!-- Side Nav -->
+  <aside class="side-nav">
+    <p class="eyebrow">USER MANUAL</p>
+    <a href="#intro" class="active">手册说明与准备</a>
+    <a href="#step-1">01. 读写器发现与连接</a>
+    <a href="#step-2">02. 硬件能力与参数配置</a>
+    <a href="#step-3">03. 启动寻卡与实时监控</a>
+    <a href="#step-4">04. TOI 关注卡标记</a>
+    <a href="#step-5">05. 标签内存读写 (C1G2)</a>
+    <a href="#step-6">06. GPIO 触发与继电器</a>
+    <a href="#step-7">07. 历史 Runs 审计导出</a>
+    <a href="#troubleshoot">08. 常见问题与故障排查</a>
+  </aside>
+
+  <!-- Content Article -->
+  <article class="doc-content">
+    <p class="eyebrow">00 / OPERATOR & USER GUIDE</p>
+    <h1>LLRP Reader Studio 用户操作手册</h1>
+    <p class="doc-lead">
+      本手册面向 RFID 现场实施工程师、工控操作员以及系统集成测试人员，详细介绍如何通过 <strong>LLRP Reader Studio</strong> 完成读写器连接、射频调优、标签盘存监控、内存读写与自动化触发。
+    </p>
+
+    <!-- Intro -->
+    <section id="intro">
+      <h2>快速入门与环境准备</h2>
+      <p>
+        在开始使用前，请确认：
+      </p>
+      <ul>
+        <li><strong>网络连通</strong>：操作工控机与 RFID 读写器处于同一局域网（或直连网口），能够相互 Ping 通（默认 LLRP 端口通常为 <code>5084</code>）。</li>
+        <li><strong>绿色免安装</strong>：解压下载的 <code>LlrpReaderPlatform.App.Wpf-win-x64.zip</code>，双击 <code>LlrpReaderPlatform.App.Wpf.exe</code> 即可启动主程序。</li>
+      </ul>
+      <div class="callout tip">
+        <strong>无硬件测试：</strong> 如果现场暂无实体硬件，可直接启动配套的 <code>Virtual Device Manager</code> 虚拟读写器管理器，监听 <code>127.0.0.1:5084</code> 进行仿真演练。
+      </div>
+    </section>
+
+    <!-- Step 1: Discovery -->
+    <section id="step-1">
+      <h2>01. 读写器发现与连接 (Data Sources)</h2>
+      <p>
+        进入左侧导航栏的 <strong>数据源 (Data Sources)</strong> 界面：
+      </p>
+      <div class="number-list">
+        <div>
+          <b>A</b>
+          <div><strong>局域网自动发现</strong>：点击“扫描读写器 (Discover)”，系统将通过 mDNS / Zeroconf 广播自动检索局域网内在线的 RFID 读写器并呈现清单。</div>
+        </div>
+        <div>
+          <b>B</b>
+          <div><strong>手动添加与探测</strong>：输入读写器的 IP 地址（如 <code>192.168.1.100</code>）与端口 <code>5084</code>，点击“探测 (Probe)”。系统将建立瞬时握手，自动回填硬件型号、固件版本与 MAC 地址。</div>
+        </div>
+        <div>
+          <b>C</b>
+          <div><strong>激活设备</strong>：勾选目标读写器并点击“激活 (Activate)”，将其设置为主工作数据源。</div>
+        </div>
+      </div>
+
+      <!-- Screenshot Placeholder: Data Sources -->
+      <div class="screenshot-frame">
+        <div class="screenshot-placeholder">
+          <div class="icon">🖼️</div>
+          <strong>[ 界面截图占位：数据源发现与设备探测界面 ]</strong>
+          <span>建议存放路径: docs/assets/ui/windows/data-sources.png</span>
+        </div>
+        <div class="screenshot-caption">
+          <span>图 1-1：读写器设备列表、mDNS 自动发现、IP 探测与在线状态指示</span>
+          <small>Data Sources View</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 2: Settings -->
+    <section id="step-2">
+      <h2>02. 硬件能力与参数配置 (Reader Settings)</h2>
+      <p>
+        进入 <strong>读写器配置 (Reader Settings)</strong> 界面。本平台采用<strong>能力驱动 (Capability-Driven)</strong> 模式，界面上所有调节项均基于读写器实际支持的物理参数表动态渲染：
+      </p>
+      <ul>
+        <li><strong>天线通道开关</strong>：勾选需要启用的天线端口（如 Antenna 1、2）。</li>
+        <li><strong>发射功率 (Tx Power)</strong>：通过滑块或下拉档位精准设置发射功率（例如 <code>30.00 dBm</code>）。</li>
+        <li><strong>射频模式 (RF Mode)</strong>：选择调制速率与编码（如 MaxThroughput 或 DenseReader）。</li>
+        <li><strong>Gen2 参数</strong>：设置 Session (0, 1, 2, 3) 与视野内预估标签数 (Tag Population，推荐 32~64)。</li>
+        <li><strong>厂商专有设置</strong>：针对 Impinj 读写器，可开启双向搜寻模式 (Search Mode)、低占空比 (Low Duty Cycle) 或 Serialized TID (FastID)。</li>
+      </ul>
+      <p>
+        设置完成后，点击 <strong>“应用配置 (Apply Settings)”</strong> 将配置持久化下发至读写器，并可另存为本地预设方案。
+      </p>
+
+      <!-- Screenshot Placeholder: Settings -->
+      <div class="screenshot-frame">
+        <div class="screenshot-placeholder">
+          <div class="icon">🖼️</div>
+          <strong>[ 界面截图占位：能力驱动读写器配置编辑器 ]</strong>
+          <span>建议存放路径: docs/assets/ui/windows/reader-settings.png</span>
+        </div>
+        <div class="screenshot-caption">
+          <span>图 2-1：多天线功率调节、RF Mode 档位选择与 Impinj 厂商扩展配置</span>
+          <small>Reader Settings View</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 3: Inventory -->
+    <section id="step-3">
+      <h2>03. 启动寻卡与实时流式监控 (Inventory)</h2>
+      <p>
+        进入 <strong>寻卡监控 (Inventory)</strong> 界面：
+      </p>
+      <div class="number-list">
+        <div>
+          <b>01</b>
+          <div>点击顶部工具栏绿色的 <strong>“开始寻卡 (Start Inventory)”</strong> 按钮。系统将申请独占会话租约并启动射频扫描。</div>
+        </div>
+        <div>
+          <b>02</b>
+          <div>实时数据表格将持续刷新：显示标签 EPC、捕获天线端口、峰值 RSSI (dBm)、累计读取次数以及最后活跃时间。</div>
+        </div>
+        <div>
+          <b>03</b>
+          <div>支持在搜索栏按 EPC 前缀即时过滤，或按天线通道分组筛选。</div>
+        </div>
+        <div>
+          <b>04</b>
+          <div>点击 <strong>“停止寻卡 (Stop)”</strong> 结束当前会话。可点击“导出 CSV”将当前观测清单导出到本地。</div>
+        </div>
+      </div>
+
+      <!-- Screenshot Placeholder: Inventory -->
+      <div class="screenshot-frame">
+        <div class="screenshot-placeholder">
+          <div class="icon">🖼️</div>
+          <strong>[ 界面截图占位：寻卡与实时流式监控主界面 ]</strong>
+          <span>建议存放路径: docs/assets/ui/windows/inventory-view.png</span>
+        </div>
+        <div class="screenshot-caption">
+          <span>图 3-1：实时标签聚合表格、速率统计仪表、RSSI 信号强度与 TOI 高亮标记</span>
+          <small>Inventory Stream View</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 4: TOI -->
+    <section id="step-4">
+      <h2>04. 目标关注卡管理 (Target of Interest - TOI)</h2>
+      <p>
+        在密集标签场景下，操作员往往需要快速发现指定托盘或重要资产：
+      </p>
+      <ul>
+        <li>在 <strong>TOI 管理</strong> 界面，点击“新增关注卡”，输入目标 EPC、资产名称（如“核心测试机 #01”）与所属分类。</li>
+        <li>选择醒目的高亮颜色（金黄、亮蓝、翠绿等）。</li>
+        <li>当寻卡过程中读写器扫描到该 EPC 时，表格行将自动以指定颜色高亮投影，并显示专属徽章。</li>
+      </ul>
+
+      <!-- Screenshot Placeholder: TOI -->
+      <div class="screenshot-frame">
+        <div class="screenshot-placeholder">
+          <div class="icon">🖼️</div>
+          <strong>[ 界面截图占位：TOI 目标关注卡管理与颜色分配 ]</strong>
+          <span>建议存放路径: docs/assets/ui/windows/toi-management.png</span>
+        </div>
+        <div class="screenshot-caption">
+          <span>图 4-1：关注卡列表库、自定义资产别名与实时高亮颜色规则</span>
+          <small>Target of Interest View</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 5: Tag Memory Access -->
+    <section id="step-5">
+      <h2>05. 标签内存读写与加锁 (Tag Memory Access)</h2>
+      <p>
+        进入 <strong>标签内存 (Tag Memory)</strong> 界面，对视野内的特定 C1G2 标签进行底层存储区操作：
+      </p>
+      <div class="number-list">
+        <div>
+          <b>Read</b>
+          <div><strong>读取数据</strong>：输入目标 EPC 掩码，选择存储区（Reserved / EPC / TID / User），设置起始字指针与字长度，点击“读取”。</div>
+        </div>
+        <div>
+          <b>Write</b>
+          <div><strong>写入数据</strong>：在目标存储区输入待写入的 16-bit 十六进制字（例如 <code>CAFE BABE</code>），点击“写入”。</div>
+        </div>
+        <div>
+          <b>Lock</b>
+          <div><strong>加锁与保护</strong>：配置 32-bit Access Password，设置 User 或 EPC 存储区的读写锁保护属性（Lock / PermaLock）。</div>
+        </div>
+      </div>
+
+      <!-- Screenshot Placeholder: Tag Memory -->
+      <div class="screenshot-frame">
+        <div class="screenshot-placeholder">
+          <div class="icon">🖼️</div>
+          <strong>[ 界面截图占位：C1G2 标签存储区读写与加锁向导 ]</strong>
+          <span>建议存放路径: docs/assets/ui/windows/tag-memory.png</span>
+        </div>
+        <div class="screenshot-caption">
+          <span>图 5-1：EPC / TID / User 存储区 16-bit 字读取、写入与密码保护设置</span>
+          <small>Tag Memory Access View</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 6: GPIO -->
+    <section id="step-6">
+      <h2>06. GPIO 触发器与继电器控制 (GPIO Control)</h2>
+      <p>
+        面向产线光电传感器联动与报警器驱动：
+      </p>
+      <ul>
+        <li><strong>GPI 输入监控</strong>：界面实时展示 GPI 1~4 的当前高低电平状态。</li>
+        <li><strong>触发寻卡模式</strong>：配置“当 GPI 1 检测到上升沿信号时自动启动盘点，下降沿或持续 5 秒后自动停止”。</li>
+        <li><strong>GPO 继电器输出</strong>：点击按钮可手动切换 GPO 1~4 输出电平，控制蜂鸣器或流水线挡板。</li>
+      </ul>
+
+      <!-- Screenshot Placeholder: GPIO -->
+      <div class="screenshot-frame">
+        <div class="screenshot-placeholder">
+          <div class="icon">🖼️</div>
+          <strong>[ 界面截图占位：GPIO 输入监控与继电器控制面板 ]</strong>
+          <span>建议存放路径: docs/assets/ui/windows/gpio-control.png</span>
+        </div>
+        <div class="screenshot-caption">
+          <span>图 6-1：GPI 光电信号指示灯、自动触发规则与 GPO 继电器开关</span>
+          <small>GPIO Panel View</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 7: Runs -->
+    <section id="step-7">
+      <h2>07. 历史盘存 Runs 记录与审计报告 (Inventory Runs)</h2>
+      <p>
+        每一次寻卡会话的开始与停止都会被本地 SQLite 数据库自动存档为结构化 <code>InventoryRun</code>：
+      </p>
+      <ul>
+        <li><strong>会话元数据</strong>：记录起止时间、持续时长、总卡次、唯一卡数与<strong>显式停止原因</strong>（ManualStop / GpiTriggered / Disconnected）。</li>
+        <li><strong>历史标签清单</strong>：点击任意历史 Run 即可查阅当时捕获的全部标签详情。</li>
+        <li><strong>审计导出</strong>：支持将历史运行记录整体导出为 Excel / CSV 审计报表。</li>
+      </ul>
+
+      <!-- Screenshot Placeholder: Runs -->
+      <div class="screenshot-frame">
+        <div class="screenshot-placeholder">
+          <div class="icon">🖼️</div>
+          <strong>[ 界面截图占位：历史盘存 Runs 记录与汇总审计视图 ]</strong>
+          <span>建议存放路径: docs/assets/ui/windows/inventory-runs.png</span>
+        </div>
+        <div class="screenshot-caption">
+          <span>图 7-1：历史盘存会话列表、显式停止原因、标签明细回放与报表导出</span>
+          <small>Inventory Runs View</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- Troubleshoot -->
+    <section id="troubleshoot">
+      <h2>08. 常见问题与故障排查 (Troubleshooting)</h2>
+      <div class="do-dont">
+        <div>
+          <strong>常见问题现象</strong>
+          <ul>
+            <li>点击寻卡提示 <code>ReaderBusy</code>：表明读写器正被其他会话占用或正在执行 Tag Access，等待片刻后重试。</li>
+            <li>连接超时：请检查读写器 IP 是否可 Ping 通，防火墙是否放行 TCP 5084 端口。</li>
+            <li>读写器报错 398：表明下发了硬件不支持的功率或模式，请在 Reader Settings 中点击“重新获取默认配置”。</li>
+          </ul>
+        </div>
+        <div>
+          <strong>推荐操作规范</strong>
+          <ul>
+            <li>在长盘点期间，避免同时在外部频繁发送强行重置指令。</li>
+            <li>现场测试完成后，建议点击“停止寻卡”正常释放租约。</li>
+            <li>定期备份 <code>LlrpReaderPlatform.db</code> 本地数据库以归档历史数据。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </article>
+</main>
+
+<footer class="shell footer">
+  <span>LlrpReaderPlatform · 用户操作手册</span>
+  <span><a href="wpf-studio.html">查看 WPF 客户端架构 →</a></span>
+</footer>
+
+<script src="assets/app.js"></script>
+</body>
+</html>
