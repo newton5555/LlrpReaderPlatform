@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="LlrpReaderPlatform - 面向工业级 RFID 读写器的现代化多端操作应用平台与可复用服务体系 (WPF / MAUI Blazor / Linux GTK4)">
+  <meta name="description" content="LlrpReaderPlatform - 面向工业级 RFID 读写器的现代化多端操作应用平台与可复用服务体系 (WPF / LlrpReaderManager MAUI Blazor)">
   <title>LlrpReaderPlatform · 工业级 RFID 读写器多端应用平台</title>
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/brand.css">
@@ -19,12 +19,7 @@
   <nav>
     <a href="index.html" class="active">首页</a>
     <a href="user-manual.html">用户手册</a>
-    <a href="wpf-studio.html">WPF 客户端</a>
-    <a href="cross-platform.html">MAUI 跨平台</a>
-    <a href="virtual-device.html">虚拟设备工具</a>
-    <a href="architecture.html">系统架构</a>
     <a href="releases.html">下载与发布</a>
-    <a href="https://newton5555.github.io/LLRPCSharp/" target="_blank">LLRPCSharp SDK ↗</a>
   </nav>
   <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
 </header>
@@ -40,23 +35,18 @@
     <div style="display:flex;gap:12px;flex-wrap:wrap;">
       <a class="button primary" href="releases.html">立即下载客户端 (v2.0.3)</a>
       <a class="button secondary" href="user-manual.html">查阅用户操作手册</a>
-      <a class="button secondary" href="wpf-studio.html">探索 WPF 客户端</a>
-      <a class="button secondary" href="cross-platform.html">MAUI 跨平台端</a>
-      <a class="button secondary" href="architecture.html">系统架构</a>
     </div>
     <div class="docs-home-badges">
       <div class="badge-item"><span class="status-dot"></span>Windows 10/11 (WPF x64)</div>
-      <div class="badge-item"><span class="status-dot blue"></span>Android (MAUI Blazor APK)</div>
-      <div class="badge-item"><span class="status-dot blue"></span>macOS (Mac Catalyst)</div>
-      <div class="badge-item"><span class="status-dot amber"></span>Linux (GTK4 .deb)</div>
+      <div class="badge-item"><span class="status-dot blue"></span>LlrpReaderManager (MAUI Blazor · Android / Windows / macOS / Linux)</div>
       <div class="badge-item"><span class="status-dot"></span>.NET 10 / C# 14</div>
     </div>
   </section>
 
-  <!-- 4 Pillars Section -->
+  <!-- 3 Core Applications -->
   <section class="pillar-section">
     <p class="eyebrow">ECOSYSTEM MATRIX</p>
-    <h2>四大核心应用矩阵</h2>
+    <h2>三大核心应用矩阵</h2>
     <p class="pillar-section-lead">针对工业现场巡检、大屏中控、跨平台移动操作与离线协议仿真提供完整解决方案：</p>
     
     <div class="pillar-grid">
@@ -67,7 +57,7 @@
           <span class="pillar-tag">Primary Desktop</span>
         </div>
         <h3>LLRP Reader Studio (WPF)</h3>
-        <p>面向现场工控与工程调试的 Windows 桌面级大屏客户端。支持完整硬件验收与全功能操控。</p>
+        <p>面向现场工控与工程调试的 Windows 桌面级大屏客户端。用于真机验收与日常操控，具体操作由设备能力驱动。</p>
         <ul class="pillar-features">
           <li>多天线高速盘点与实时 RSSI 仪表</li>
           <li>C1G2 标签内存读/写/锁/灭</li>
@@ -84,43 +74,27 @@
           <div class="pillar-icon">📱</div>
           <span class="pillar-tag" style="background:#eaf0fb;color:var(--blue);">Cross-Platform</span>
         </div>
-        <h3>LlrpReaderManager (MAUI)</h3>
-        <p>基于 MAUI Blazor Hybrid 的跨平台读写器管理端，100% 复用平台服务与 SQLite 本地数据模型。</p>
+        <h3>LlrpReaderManager (MAUI Blazor)</h3>
+        <p>一个基于 MAUI Blazor Hybrid 的跨平台读写器管理项目，复用同一套 Razor 页面、平台服务与 SQLite 本地数据模型；Linux 由 GTK4 宿主承载同一套应用逻辑。</p>
         <ul class="pillar-features">
           <li>Android 工业手持机/PDA 触控优化</li>
           <li>macOS (Mac Catalyst) 桌面原生支持</li>
           <li>Windows 现代响应式轻量窗口</li>
+          <li>Linux GTK4 宿主与 Debian 发布包</li>
           <li>mDNS / Zeroconf 局域网读写器自动发现</li>
-          <li>盘点历史 Runs 导出与结构化分析</li>
+          <li>盘点历史 Runs 查看与结构化分析</li>
         </ul>
         <span class="pillar-action">查看跨平台客户端 →</span>
       </a>
 
-      <!-- Pillar 3: Linux GTK4 -->
-      <a class="pillar-card" href="cross-platform.html#linux-gtk4">
-        <div class="pillar-header">
-          <div class="pillar-icon">🐧</div>
-          <span class="pillar-tag" style="background:#fdf3e7;color:var(--amber);">Experimental Linux</span>
-        </div>
-        <h3>Linux Head (GTK4 / WebKit)</h3>
-        <p>专为 Linux 工控机与边缘盒子打造的 GTK4 原生宿主。以 <code>.deb</code> 形式分发，承载相同 Blazor 界面。</p>
-        <ul class="pillar-features">
-          <li>Linux x64 工业网关无缝运行</li>
-          <li>WebKitGTK 高性能嵌入式渲染</li>
-          <li>共享平台 Contracts 与 Services</li>
-          <li>CI 自动化构建与 Debian 打包</li>
-        </ul>
-        <span class="pillar-action">了解 Linux 部署 →</span>
-      </a>
-
-      <!-- Pillar 4: Virtual Device Studio -->
+      <!-- Pillar 3: Virtual Device Studio -->
       <a class="pillar-card" href="virtual-device.html">
         <div class="pillar-header">
-          <div class="pillar-icon">🧪</div>
+          <div class="pillar-icon" style="background:#f3eafd;color:#7c3aed;">🧪</div>
           <span class="pillar-tag" style="background:#f3eafd;color:#7c3aed;">Simulation</span>
         </div>
         <h3>Virtual Device Manager</h3>
-        <p>独立的虚拟读写器管理工具，基于 LLRPCSharp 虚拟仿真核，在本地创建与管理 TCP 虚拟读写器实例。</p>
+        <p>独立的虚拟读写器管理工具，基于 LLRPCSharp 确定性软件虚拟读写器内核，在本地创建与管理 TCP 虚拟读写器实例。</p>
         <ul class="pillar-features">
           <li>无物理硬件时验证完整业务流程</li>
           <li>模拟 Impinj R420 或标准 LLRP 读写器</li>
@@ -132,116 +106,6 @@
     </div>
   </section>
 
-  <!-- Core Features & Package Summary -->
-  <section class="docs-home-grid">
-    <div>
-      <p class="eyebrow">CORE CAPABILITIES</p>
-      <h2>平台核心服务与技术特征</h2>
-      <div class="reference-list">
-        <a href="architecture.html#lease-concurrency">
-          <b>读写器会话租约门禁 (Leased Concurrency)</b>
-          <span>短租约 (配置/读写) 与长盘点隔离，确定性返回 ReaderBusy 避免竞争</span>
-          <i>→</i>
-        </a>
-        <a href="architecture.html#persistence">
-          <b>EF Core SQLite 本地结构化持久化</b>
-          <span>自动持久化已注册设备、配置方案、TOI 关注库与历史盘存 Runs</span>
-          <i>→</i>
-        </a>
-        <a href="wpf-studio.html#view-settings">
-          <b>能力驱动配置编辑器 (Capability-Driven)</b>
-          <span>根据物理硬件真实声明的功率与模式表动态生成界面，杜绝非法下发</span>
-          <i>→</i>
-        </a>
-        <a href="wpf-studio.html#view-toi">
-          <b>TOI 目标卡关注库与实时投影</b>
-          <span>为关键资产自定义标签与颜色，在所有盘存流与历史报告中高亮标记</span>
-          <i>→</i>
-        </a>
-        <a href="wpf-studio.html#view-gpio">
-          <b>GPIO 传感器联动与继电器控制</b>
-          <span>实时监控 GPI 输入信号电平，支持光电触发自动寻卡与 GPO 报警</span>
-          <i>→</i>
-        </a>
-        <a href="architecture.html#extensions">
-          <b>插件化厂商扩展架构 (Impinj / Zebra)</b>
-          <span>低侵入性适配 Impinj FastID / Phase / Search Mode 与 Zebra 自主模式</span>
-          <i>→</i>
-        </a>
-      </div>
-    </div>
-
-    <!-- Aside package summary -->
-    <aside class="docs-home-aside">
-      <div class="aside-block">
-        <p class="eyebrow">MODULE MAP</p>
-        <h3>LlrpReaderPlatform.Contracts</h3>
-        <p>纯不可变 DTO、服务接口与平台标准错误码，零外部污染。</p>
-        <h3>LlrpReaderPlatform.Services</h3>
-        <p>会话租约调度、生命周期、配置编译与标签聚合。</p>
-        <h3>LlrpReaderPlatform.Infrastructure</h3>
-        <p>EF Core SQLite 本地持久化与 Zeroconf 自动发现。</p>
-        <h3>LlrpReaderPlatform.Extensions.*</h3>
-        <p>Impinj 与 Zebra 厂商扩展模块解析器。</p>
-      </div>
-
-      <div class="aside-block">
-        <p class="eyebrow">TARGET CLIENTS</p>
-        <p><span class="status-dot"></span> Windows WPF (LLRP Reader Studio)</p>
-        <p><span class="status-dot blue"></span> Android MAUI APK</p>
-        <p><span class="status-dot blue"></span> macOS (Mac Catalyst)</p>
-        <p><span class="status-dot amber"></span> Linux (GTK4 .deb)</p>
-        <p><span class="status-dot purple"></span> Virtual Device Manager</p>
-      </div>
-    </aside>
-  </section>
-
-  <!-- Sequence Section -->
-  <section class="docs-home-section">
-    <p class="eyebrow">LIFECYCLE WORKFLOW</p>
-    <h2>标准读写器操作调度生命周期</h2>
-    <div class="sequence">
-      <div>
-        <b>01</b>
-        <code>Discovery / Probe</code>
-        <span>通过 mDNS 自动发现或输入 IP 建立临时会话，探测硬件能力</span>
-      </div>
-      <div>
-        <b>02</b>
-        <code>Register & Activate</code>
-        <span>保存设备至 SQLite 本地数据库并激活为主工作读写器</span>
-      </div>
-      <div>
-        <b>03</b>
-        <code>Capability Settings</code>
-        <span>基于物理能力表编辑 RF 功率、模式与过滤，下发并保存为预设</span>
-      </div>
-      <div>
-        <b>04</b>
-        <code>Start Inventory</code>
-        <span>申请独占 Session 租约，启动持续盘点并流式消费标签</span>
-      </div>
-      <div>
-        <b>05</b>
-        <code>Runs & Snapshot</code>
-        <span>停止盘点并持久化本次 Run 的完整汇总与停止原因</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- Architectural Design Banner -->
-  <section class="docs-home-section note-section">
-    <p class="eyebrow">PLATFORM PHILOSOPHY</p>
-    <h2>设计哲学：UI 独立与严格的架构边界</h2>
-    <p>
-      <strong>LlrpReaderPlatform 保证 UI 仅仅是消费端。</strong>所有的 ViewModels 和 Razor 组件均不直接操作 TCP Socket 或构建底层 LLRP 报文。统一通过 <code>LlrpReaderPlatform.Services</code> 申请短期/长期租约，确保了无论是多天线工业大屏监控、Android 手持机巡检，还是自动化测试脚本，均能享受完全一致的高可靠性保障。
-    </p>
-    <div style="display:flex;gap:16px;margin-top:18px;">
-      <a class="text-link" href="architecture.html">阅读平台架构设计 →</a>
-      <a class="text-link" href="wpf-studio.html">查看 WPF 客户端功能 →</a>
-      <a class="text-link" href="releases.html">前往下载中心 →</a>
-    </div>
-  </section>
 </main>
 
 <footer class="shell footer">

@@ -18,10 +18,7 @@
   <nav>
     <a href="index.html">首页</a>
     <a href="user-manual.html">用户手册</a>
-    <a href="wpf-studio.html">WPF 客户端</a>
-    <a href="cross-platform.html">MAUI 跨平台</a>
-    <a href="virtual-device.html">虚拟设备工具</a>
-    <a href="architecture.html" class="active">系统架构</a>
+
     <a href="releases.html">下载与发布</a>
   </nav>
   <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
@@ -59,17 +56,16 @@
       </p>
       <div class="code-block">
         <button class="copy-code">复制</button>
-        <pre><code>UI Composition Roots (WPF / MAUI / Linux)
-      │
-      ▼
-LlrpReaderPlatform.Contracts (纯 DTO / 接口 / 错误码 - 零外部依赖)
-      │
-      ▼
-LlrpReaderPlatform.Services (生命周期 / 租约门禁 / 盘存聚合 / 投影)
-      │
-      ├─► LlrpReaderPlatform.Infrastructure (SQLite / Zeroconf / 日志)
-      ├─► LlrpReaderPlatform.Extensions.Impinj & Zebra (厂商模块)
-      └─► LlrpSdk NuGet (LLRPCSharp 协议驱动)</code></pre>
+        <pre><code>App.Wpf / LlrpReaderManager (composition roots)
+      ├──► Services ───────────────► Contracts + LlrpSdk
+      ├──► Infrastructure ─────────► Services + Contracts
+      └──► Extensions.* ───────────► Services + Contracts + vendor SDK adapter
+
+Contracts (DTO / interfaces / error codes; no UI or SDK dependency)
+Services (reader lifecycle / leases / settings / inventory / Tag Access)
+
+LlrpVirtualDevice.App.Wpf
+      └──► LlrpDevice.Virtual.Hosting (independent TCP virtual-reader tool)</code></pre>
       </div>
       <div class="callout tip">
         <strong>架构单测守护：</strong> 仓库内包含专门的架构约束测试（Architecture Tests），强制禁止在 <code>Contracts</code> 中引用 WPF、SDK 报文或厂商专属类型，杜绝底层依赖泄漏。
@@ -125,8 +121,8 @@ LlrpReaderPlatform.Services (生命周期 / 租约门禁 / 盘存聚合 / 投影
         平台在连接读写器后会自动解析设备企业号 (Enterprise Number / IANA)：
       </p>
       <ul>
-        <li><strong>IANA <code>25882</code> (Impinj)</strong>：自动激活 <code>Extensions.Impinj</code> 模块，加载双向搜寻模式 (Search Mode)、低占空比、Serialized TID 与 RF 相位角上报。</li>
-        <li><strong>IANA <code>161</code> (Zebra)</strong>：自动激活 <code>Extensions.Zebra</code> 模块，提供射频电源与自主模式扩展支持。</li>
+         <li><strong>IANA <code>25882</code> (Impinj)</strong>：自动激活 <code>Extensions.Impinj</code> 模块，加载已定义的 Search Mode、低占空比、Serialized TID 与 RF 相位语义。</li>
+         <li><strong>IANA <code>161</code> (Zebra)</strong>：匹配 <code>Extensions.Zebra</code> 实验性模块；高级字段和配置仍需按型号/固件完成真机验证。</li>
         <li><strong>标准读写器</strong>：未匹配到厂商扩展时，平滑回退至标准通用 LLRP 驱动路径。</li>
       </ul>
     </section>
@@ -153,8 +149,9 @@ LlrpReaderPlatform.Services (生命周期 / 租约门禁 / 盘存聚合 / 投影
         平台的兼容性声明严格以真机验收记录为准（非 Mock 或单元测试）：
       </p>
       <ul>
-        <li><strong>Impinj Speedway Revolution R420 (LLRP 1.0.1)</strong>：<strong>生产级验收通过</strong>。连接、能力探测、标准与 Impinj 专有配置、盘点、FastID、相位、User 区读写、GPI 状态与 GPO 控制均具备完整实机验收证据。</li>
-        <li><strong>标准 LLRP 1.0.1 / 1.1 读写器</strong>：<strong>基础功能验收通过</strong>。连接、能力探测与配置回写已验证。</li>
+         <li><strong>Impinj Speedway Revolution R420 (LLRP 1.0.1)</strong>：当前硬件矩阵中的主要真机基线；已覆盖连接、能力、设置、盘点及部分 Tag Access/厂商字段，剩余项目仍以验收表为准。</li>
+         <li><strong>标准 LLRP 1.0.1</strong>：已有连接、能力和部分设置链路证据；Inventory/Tag Access 按具体设备和现场条件验收。</li>
+         <li><strong>标准 LLRP 1.1 / 2.0</strong>：软件适配与自动化覆盖存在，真实设备互操作仍标记为 PendingHardware。</li>
         <li><strong>Zebra FX9600</strong>：<strong>实验性模块</strong>。已验证连接与设备身份，高级特性待进一步标定。</li>
       </ul>
     </section>

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="LlrpReaderPlatform Virtual Device Manager and deterministic software reader workflow.">
+  <title>Virtual Device Manager · LlrpReaderPlatform</title>
+  <link rel="stylesheet" href="../assets/styles.css"><link rel="stylesheet" href="../assets/brand.css">
+</head>
+<body>
+<header class="topbar"><a class="brand" href="index.html"><img class="project-logo" src="../assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>Virtual Device</small></span></a><button class="menu-toggle" aria-label="Open navigation">☰</button><nav><a href="index.html">Home</a><a href="user-manual.html">User Manual</a><a href="releases.html">Downloads</a></nav><a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a></header>
+<main class="shell docs-layout"><aside class="side-nav"><p class="eyebrow">VIRTUAL DEVICE</p><a href="#overview">Overview</a><a href="#features">Features</a><a href="#profiles">Profiles</a><a href="#tag-pool">Tag pool</a><a href="#workflow">Workflow</a></aside><article class="doc-content"><p class="eyebrow">03 / TESTING &amp; SOFTWARE SIMULATION TOOL</p><h1>Virtual Device Manager</h1><p class="doc-lead"><code>src/LlrpVirtualDevice.App.Wpf</code> is an independent Windows WPF tool built on LLRPCSharp Virtual Device Hosting. It starts, monitors and manages deterministic LLRP TCP software readers; it does not simulate physical RF waveforms.</p>
+<section id="overview"><h2>Why a separate virtual-device tool?</h2><p>It gives application and test engineers a repeatable TCP endpoint when hardware is unavailable, occupied or unsuitable for an edge-case scenario.</p><ul><li><strong>Protocol behavior:</strong> software selection for LLRP 1.0.1, 1.1 and 2.0, TCP handshake, keepalive and ROSpec lifecycle paths.</li><li><strong>Transparent client path:</strong> WPF Studio or MAUI can connect to <code>127.0.0.1:5084</code> as to any LLRP TCP reader.</li><li><strong>Independent lifecycle:</strong> the tool has its own host and does not share a physical-reader session lease with the main client.</li></ul></section>
+<section id="features"><h2>Core software behavior</h2><div class="code-block"><button class="copy-code">Copy</button><pre><code>TCP listen port      : configurable, default 5084
+Antenna ports        : determined by the selected capability profile
+RSSI variation       : deterministic integer dB jitter
+Tag pool             : EPC, TID, User memory and initial antenna
+Client monitoring    : connected clients and active ROSpec ID</code></pre></div></section>
+<section id="profiles"><h2>Built-in capability profiles</h2><p>The UI label and underlying Hosting ID are shown separately.</p><ul><li><strong>Standard</strong> (<code>llrp1.0.1_standard</code>): standard LLRP 1.0.1 software profile.</li><li><strong>Impinj-R420</strong> (<code>impinj.r420.llrp-1.0.1</code>): Impinj R420-shaped software profile for extension and report integration.</li><li><strong>Protocol version:</strong> the UI can select 1.0.1, 1.1 or 2.0 for the virtual endpoint. This is not evidence that a corresponding physical reader has passed interoperability acceptance.</li></ul></section>
+<section id="tag-pool"><h2>Virtual tag pool and deterministic behavior</h2><ul><li><strong>EPC:</strong> enter 96-bit or 128-bit hexadecimal EPC data.</li><li><strong>Memory:</strong> initialize TID and User memory for Tag Access tests.</li><li><strong>Antenna and RSSI:</strong> select a configured antenna and base peak RSSI such as <code>-52 dBm</code>.</li></ul></section>
+<section id="workflow"><h2>Typical integration workflow</h2><ol style="margin-left:20px;color:var(--muted);line-height:1.8;"><li>Open <strong>Virtual Device Manager</strong>, choose the <code>Impinj-R420</code> / <code>impinj.r420.llrp-1.0.1</code> software profile and start the virtual reader on port 5084.</li><li>Open <strong>LLRP Reader Studio</strong> or <strong>LlrpReaderManager</strong>, add <code>127.0.0.1:5084</code> as a data source and activate it.</li><li>Start inventory in the main client and observe the software tag reports, antenna projection and RSSI variation.</li></ol></section>
+</article></main>
+<footer class="shell footer"><span>LlrpReaderPlatform · Virtual Device Manager</span><span><a href="architecture.html">Read the platform architecture →</a></span></footer>
+<script src="../assets/app.js"></script>
+</body>
+</html>

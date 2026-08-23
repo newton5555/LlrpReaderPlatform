@@ -18,10 +18,7 @@
   <nav>
     <a href="index.html">首页</a>
     <a href="user-manual.html">用户手册</a>
-    <a href="wpf-studio.html" class="active">WPF 客户端</a>
-    <a href="cross-platform.html">MAUI 跨平台</a>
-    <a href="virtual-device.html">虚拟设备工具</a>
-    <a href="architecture.html">系统架构</a>
+
     <a href="releases.html">下载与发布</a>
   </nav>
   <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
@@ -32,7 +29,7 @@
   <aside class="side-nav">
     <p class="eyebrow">TOPICS</p>
     <a href="wpf-studio.html" class="active">WPF 客户端</a>
-    <a href="cross-platform.html">MAUI 跨平台</a>
+    <a href="cross-platform.html">LlrpReaderManager</a>
     <a href="virtual-device.html">虚拟设备工具</a>
     <p class="eyebrow" style="margin-top:20px;">ON THIS PAGE</p>
     <a href="#overview">客户端定位与概览</a>
@@ -61,7 +58,7 @@
       </p>
       <ul>
         <li><strong>单实例单文件部署</strong>：发布为自包含 (Self-Contained) 的单一执行文件，目标机器无需预装 .NET 运行时。</li>
-        <li><strong>零内存泄漏设计</strong>：针对持续数天的长盘点场景，采用有界通道聚合与弱引用事件，内存占用平稳。</li>
+        <li><strong>长盘点资源约束</strong>：针对持续数天的长盘点场景，采用有界通道聚合与受控事件订阅，降低无界积压风险。</li>
         <li><strong>硬件验收主载体</strong>：当前 Impinj R420 与标准 LLRP 物理设备的实机验收均以此客户端作为标准交互界面。</li>
       </ul>
     </section>
@@ -76,7 +73,7 @@
         <button class="copy-code">复制</button>
         <pre><code>// 盘点上报字段解析与投影
 EPC (Hex)          : 96-bit / 128-bit EPC 十六进制编码
-Antenna ID         : 物理射频天线编号 (1 ~ 4)
+Antenna ID         : 物理射频天线编号 (以设备声明的端口能力为准)
 Peak RSSI (dBm)    : 接收信号强度峰值与动态衰减趋势
 Seen Count         : 视野内累计捕获次数 (聚合统计)
 Last Seen (UTC)    : 亚毫秒级时间戳记录
@@ -85,7 +82,7 @@ Impinj FastID      : 64-bit 硬件级 Serialized TID
 Impinj RF Phase    : 射频相位角 (0 ~ 4095 归一化)</code></pre>
       </div>
       <p>
-        支持一键暂停、清空列表、按天线/RSSI 过滤、导出 CSV，以及将原始标签事件异步记录为本地 <code>.jsonl</code> 审计日志。
+        支持一键暂停、清空列表和按天线/RSSI 过滤；原始标签事件可异步记录为本地 <code>.jsonl</code> 审计日志。当前客户端不提供 CSV 导出。
       </p>
     </section>
 
@@ -125,7 +122,7 @@ Impinj RF Phase    : 射频相位角 (0 ~ 4095 归一化)</code></pre>
       </p>
       <ul>
         <li>记录起止时间戳、总捕获卡数、唯一卡数以及<strong>显式停止原因</strong>（用户手动停止 / GPI 触发自动停止 / 网络故障断开）。</li>
-        <li>支持随时回放历史 Run 的标签汇总清单并导出报告。</li>
+        <li>支持随时查看历史 Run 的标签汇总清单；当前客户端不提供报告导出。</li>
       </ul>
     </section>
 
@@ -173,7 +170,7 @@ Impinj RF Phase    : 射频相位角 (0 ~ 4095 归一化)</code></pre>
 
 <footer class="shell footer">
   <span>LlrpReaderPlatform · Windows WPF 客户端指南</span>
-  <span><a href="cross-platform.html">查看 MAUI 跨平台客户端 →</a></span>
+  <span><a href="cross-platform.html">查看 LlrpReaderManager 客户端 →</a></span>
 </footer>
 
 <script src="assets/app.js"></script>

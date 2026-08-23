@@ -5,3 +5,83 @@
   flex: 0 0 34px;
   border-radius: 9px;
 }
+
+.language-toggle {
+  border: 1px solid #abcac7;
+  border-radius: 999px;
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
+/* Keep the desktop header on one line, then switch to the existing menu. */
+.topbar .brand {
+  flex: 0 0 auto;
+}
+
+.topbar .brand small {
+  display: inline;
+  margin-left: 8px;
+}
+
+.topbar nav {
+  min-width: 0;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: clamp(10px, 1.4vw, 20px);
+}
+
+.topbar nav a,
+.topbar .github,
+.topbar .language-toggle {
+  white-space: nowrap;
+}
+
+.topbar .github,
+.topbar .language-toggle {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 1180px) {
+  .topbar {
+    padding-left: 20px;
+    padding-right: 20px;
+    gap: 12px;
+  }
+
+  .topbar .menu-toggle {
+    display: block;
+    margin-left: auto;
+  }
+
+  .topbar nav {
+    display: none;
+    position: absolute;
+    top: 76px;
+    left: 0;
+    right: 0;
+    padding: 15px 22px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .topbar nav.open {
+    display: flex;
+  }
+
+  .topbar nav a {
+    padding: 4px 0;
+  }
+}
+
+@media (max-width: 800px) {
+  .topbar .github {
+    display: none;
+  }
+}

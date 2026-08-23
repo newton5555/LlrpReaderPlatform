@@ -18,10 +18,7 @@
   <nav>
     <a href="index.html">首页</a>
     <a href="user-manual.html">用户手册</a>
-    <a href="wpf-studio.html">WPF 客户端</a>
-    <a href="cross-platform.html">MAUI 跨平台</a>
-    <a href="virtual-device.html" class="active">虚拟设备工具</a>
-    <a href="architecture.html">系统架构</a>
+
     <a href="releases.html">下载与发布</a>
   </nav>
   <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
@@ -32,7 +29,7 @@
   <aside class="side-nav">
     <p class="eyebrow">TOPICS</p>
     <a href="wpf-studio.html">WPF 客户端</a>
-    <a href="cross-platform.html">MAUI 跨平台</a>
+    <a href="cross-platform.html">LlrpReaderManager</a>
     <a href="virtual-device.html" class="active">虚拟设备工具</a>
     <p class="eyebrow" style="margin-top:20px;">ON THIS PAGE</p>
     <a href="#overview">工具定位与用途</a>
@@ -47,7 +44,7 @@
     <p class="eyebrow">03 / TESTING & SIMULATION TOOL</p>
     <h1>虚拟设备管理器 (Virtual Device Manager)</h1>
     <p class="doc-lead">
-      <code>src/LlrpVirtualDevice.App.Wpf</code> 是一个独立的 Windows WPF 工具。它基于 <strong>LLRPCSharp 虚拟仿真引擎</strong>，支持在本地快速启动、监控和管理标准 LLRP TCP 虚拟读写器实例。
+       <code>src/LlrpVirtualDevice.App.Wpf</code> 是一个独立的 Windows WPF 工具。它基于 <strong>LLRPCSharp Virtual Device Hosting</strong>，支持在本地启动、监控和管理标准 LLRP TCP 软件虚拟读写器实例；它不模拟真实 RF 波形。
     </p>
 
     <!-- Overview -->
@@ -57,9 +54,9 @@
         在 RFID 应用开发与交付过程中，开发者和测试人员经常面临没有物理读写器、硬件被现场占用或需要模拟大批量异常场景的困扰：
       </p>
       <ul>
-        <li><strong>真机行为仿真</strong>：虚拟设备完整实现了 LLRP 1.0.1 / 1.1 的 TCP 握手、版本协商、Keepalive 心跳以及 ROSpec 编译状态机。</li>
+         <li><strong>协议行为仿真</strong>：虚拟设备覆盖 LLRP 1.0.1、1.1 与 2.0 的软件协议选择、TCP 握手、Keepalive 和 ROSpec 生命周期路径。</li>
         <li><strong>对主客户端透明</strong>：主客户端（WPF Studio 或 MAUI 客户端）将虚拟设备视作标准的 TCP 读写器（连接 <code>127.0.0.1:5084</code> 即可），无需在业务代码中写任何 Mock 分支。</li>
-        <li><strong>独立生命周期</strong>：虚拟设备管理器独立运行，不共享物理客户端的会话调度器，确保测试环境绝对客观。</li>
+         <li><strong>独立生命周期</strong>：虚拟设备管理器独立运行，不共享物理客户端的会话调度器，让测试进程与物理客户端解耦。</li>
       </ul>
     </section>
 
@@ -70,8 +67,8 @@
         <button class="copy-code">复制</button>
         <pre><code>// 虚拟读写器核心仿真参数
 TCP 监听端口       : 自定义端口 (默认 5084，支持多实例多端口并行)
-天线端口数量       : 1 ~ 32 天线动态配置
-射频信号高斯抖动   : 模拟真实环境下的 ±1.5 dB RSSI 波动
+       天线端口数量       : 由所选 capability profile 决定
+       射频信号抖动       : 可配置的确定性整数 dB RSSI 抖动
 模拟标签池         : 支持注入自定义 EPC、TID、User 区与初始天线
 客户端连接监听     : 实时显示已连接客户端 IP 与当前活跃 ROSpec ID</code></pre>
       </div>
@@ -81,24 +78,25 @@ TCP 监听端口       : 自定义端口 (默认 5084，支持多实例多端口
     <section id="profiles">
       <h2>内置硬件能力 Profile</h2>
       <p>
-        可在图形界面中一键切换设备能力档案：
+        可在图形界面中选择设备能力档案；界面名称与底层 Hosting ID 分开显示：
       </p>
       <ul>
-        <li><strong><code>llrp1.0.1_standard</code></strong>：标准 4 天线 LLRP 读写器，支持标准 Gen2 模式与功率表。</li>
-        <li><strong><code>impinj.r420.llrp-1.0.1</code></strong>：Impinj Speedway Revolution R420 仿真档案，支持响应 Impinj 专属扩展报文、RF 相位与 FastID。</li>
+         <li><strong>Standard</strong>（<code>llrp1.0.1_standard</code>）：标准 LLRP 1.0.1 软件能力 profile。</li>
+         <li><strong>Impinj-R420</strong>（<code>impinj.r420.llrp-1.0.1</code>）：Impinj R420-shaped 软件 profile，可用于扩展报文和报告字段联调。</li>
+         <li><strong>协议版本</strong>：UI 可选择 1.0.1、1.1、2.0；这表示虚拟 TCP 端点的协议配置，不代表对应真实设备已完成互操作验收。</li>
       </ul>
     </section>
 
     <!-- Tag Pool -->
     <section id="tag-pool">
-      <h2>虚拟标签池与物理世界模拟 (Virtual Tag Pool)</h2>
+       <h2>虚拟标签池与确定性行为 (Virtual Tag Pool)</h2>
       <p>
         支持在 UI 界面中直观增删改查模拟标签：
       </p>
       <ul>
         <li><strong>EPC 编码定制</strong>：自由填入 96-bit / 128-bit EPC 十六进制字符串。</li>
         <li><strong>存储区初始化</strong>：预设 TID 芯片序列号与 User 存储区数据，用于验证 Tag Access 读写功能。</li>
-        <li><strong>天线分布与信号衰减</strong>：设置标签所处的天线编号与基准 RSSI（例如 <code>-52.0 dBm</code>）。</li>
+         <li><strong>天线分布与信号参数</strong>：设置标签所处的天线编号与峰值 RSSI（例如 <code>-52 dBm</code>）。</li>
       </ul>
     </section>
 
