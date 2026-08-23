@@ -6,41 +6,35 @@
   <meta name="description" content="LLRP Reader Studio (Windows WPF) - 面向真实射频读写器与虚拟设备的桌面级工控操作客户端">
   <title>LLRP Reader Studio (WPF) · LlrpReaderPlatform</title>
   <link rel="stylesheet" href="assets/styles.css">
-  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="stylesheet" href="assets/brand.css">
 </head>
 <body>
-
-<!-- Header Topbar -->
 <header class="topbar">
   <a class="brand" href="index.html">
-    <div class="brand-icon">
-      <img src="assets/icon.svg" width="24" height="24" alt="Icon">
-    </div>
-    <div class="brand-text">
-      <span>LlrpReaderPlatform</span>
-      <small>WPF Studio</small>
-    </div>
+    <img class="project-logo" src="assets/icon.svg" alt="LlrpReaderPlatform">
+    <span>LlrpReaderPlatform<small>WPF Studio</small></span>
   </a>
   <button class="menu-toggle">☰</button>
-  <nav class="topbar-nav">
+  <nav>
     <a href="index.html">首页</a>
     <a href="wpf-studio.html" class="active">WPF 客户端</a>
     <a href="cross-platform.html">MAUI 跨平台</a>
     <a href="virtual-device.html">虚拟设备工具</a>
     <a href="architecture.html">系统架构</a>
     <a href="releases.html">下载与发布</a>
-    <a href="https://newton5555.github.io/LLRPCSharp/" target="_blank">LLRPCSharp SDK ↗</a>
   </nav>
-  <a class="github-btn" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">
-    <span>GitHub</span> ↗
-  </a>
+  <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
 </header>
 
 <main class="shell docs-layout">
   <!-- Side Nav -->
   <aside class="side-nav">
-    <p class="eyebrow">WPF STUDIO VIEWS</p>
-    <a href="#overview" class="active">客户端定位与概览</a>
+    <p class="eyebrow">TOPICS</p>
+    <a href="wpf-studio.html" class="active">WPF 客户端</a>
+    <a href="cross-platform.html">MAUI 跨平台</a>
+    <a href="virtual-device.html">虚拟设备工具</a>
+    <p class="eyebrow" style="margin-top:20px;">ON THIS PAGE</p>
+    <a href="#overview">客户端定位与概览</a>
     <a href="#view-inventory">01. 寻卡与监控 (Inventory)</a>
     <a href="#view-tagmem">02. 标签内存读写 (Tag Memory)</a>
     <a href="#view-toi">03. 目标卡管理 (TOI)</a>
@@ -78,7 +72,7 @@
         提供高吞吐的标签盘存观察视图。实时解析从读写器上报的 <code>RO_ACCESS_REPORT</code> 帧并渲染至聚合表格：
       </p>
       <div class="code-block">
-        <button class="copy-btn">复制</button>
+        <button class="copy-code">复制</button>
         <pre><code>// 盘点上报字段解析与投影
 EPC (Hex)          : 96-bit / 128-bit EPC 十六进制编码
 Antenna ID         : 物理射频天线编号 (1 ~ 4)
@@ -176,17 +170,9 @@ Impinj RF Phase    : 射频相位角 (0 ~ 4095 归一化)</code></pre>
   </article>
 </main>
 
-<!-- Footer -->
-<footer class="main-footer">
-  <div class="shell footer-content">
-    <div>
-      <strong>LlrpReaderPlatform</strong> · Windows WPF 客户端指南
-    </div>
-    <div style="display:flex;gap:20px;">
-      <a href="cross-platform.html">查看 MAUI 跨平台客户端 →</a>
-      <a href="releases.html">下载 WPF 客户端 →</a>
-    </div>
-  </div>
+<footer class="shell footer">
+  <span>LlrpReaderPlatform · Windows WPF 客户端指南</span>
+  <span><a href="cross-platform.html">查看 MAUI 跨平台客户端 →</a></span>
 </footer>
 
 <script src="assets/app.js"></script>

@@ -6,41 +6,35 @@
   <meta name="description" content="LlrpReaderManager (MAUI Blazor Hybrid & Linux GTK4) - 跨平台移动与桌面读写器管理客户端">
   <title>跨平台客户端 (MAUI / GTK4) · LlrpReaderPlatform</title>
   <link rel="stylesheet" href="assets/styles.css">
-  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="stylesheet" href="assets/brand.css">
 </head>
 <body>
-
-<!-- Header Topbar -->
 <header class="topbar">
   <a class="brand" href="index.html">
-    <div class="brand-icon">
-      <img src="assets/icon.svg" width="24" height="24" alt="Icon">
-    </div>
-    <div class="brand-text">
-      <span>LlrpReaderPlatform</span>
-      <small>MAUI & GTK4</small>
-    </div>
+    <img class="project-logo" src="assets/icon.svg" alt="LlrpReaderPlatform">
+    <span>LlrpReaderPlatform<small>MAUI & GTK4</small></span>
   </a>
   <button class="menu-toggle">☰</button>
-  <nav class="topbar-nav">
+  <nav>
     <a href="index.html">首页</a>
     <a href="wpf-studio.html">WPF 客户端</a>
     <a href="cross-platform.html" class="active">MAUI 跨平台</a>
     <a href="virtual-device.html">虚拟设备工具</a>
     <a href="architecture.html">系统架构</a>
     <a href="releases.html">下载与发布</a>
-    <a href="https://newton5555.github.io/LLRPCSharp/" target="_blank">LLRPCSharp SDK ↗</a>
   </nav>
-  <a class="github-btn" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">
-    <span>GitHub</span> ↗
-  </a>
+  <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
 </header>
 
 <main class="shell docs-layout">
   <!-- Side Nav -->
   <aside class="side-nav">
-    <p class="eyebrow">CROSS-PLATFORM</p>
-    <a href="#overview" class="active">MAUI 架构与定位</a>
+    <p class="eyebrow">TOPICS</p>
+    <a href="wpf-studio.html">WPF 客户端</a>
+    <a href="cross-platform.html" class="active">MAUI 跨平台</a>
+    <a href="virtual-device.html">虚拟设备工具</a>
+    <p class="eyebrow" style="margin-top:20px;">ON THIS PAGE</p>
+    <a href="#overview">MAUI 架构与定位</a>
     <a href="#android">Android 手持端 (APK)</a>
     <a href="#macos">macOS (Mac Catalyst)</a>
     <a href="#windows-maui">Windows MAUI 轻量桌面</a>
@@ -112,9 +106,9 @@
         针对工业边缘网关、Ubuntu/Debian 工控盒子与树莓派环境，提供独立的 GTK4 原生宿主程序 <code>src/LlrpReaderManager.Linux</code>：
       </p>
       <div class="code-block">
-        <button class="copy-btn">复制</button>
+        <button class="copy-code">复制</button>
         <pre><code># Linux Debian/Ubuntu 安装运行示例
-sudo dpkg -i LlrpReaderManager-linux-x64.deb
+sudo dpkg -i llrp-reader-manager-linux-x64.deb
 sudo apt-get install -f # 自动补齐 libgtk-4-1 与 libwebkitgtk-6.0-4 依赖
 
 # 启动跨平台读写器管理器
@@ -129,38 +123,30 @@ llrp-reader-manager</code></pre>
     <!-- Shared Core -->
     <section id="shared-core">
       <h2>共享服务与组件边界 (UI Layering)</h2>
-      <div class="code-block">
-        <button class="copy-btn">复制</button>
-        <pre><code>+-----------------------------------------------------------+
-|          UI Presentation (WPF / MAUI Razor / GTK4)        |
-+-----------------------------------------------------------+
-                              | (调用平台公共服务)
-                              v
-+-----------------------------------------------------------+
-|  LlrpReaderPlatform.Services (租约门禁 / 生命周期 / 聚合)   |
-+-----------------------------------------------------------+
-                              |
-       +----------------------+----------------------+
-       v                                             v
-+-----------------------------+       +-----------------------------+
-|    LlrpSdk (LLRPCSharp)     |       |   Infrastructure (SQLite)   |
-+-----------------------------+       +-----------------------------+</code></pre>
+      <div class="architecture-stack">
+        <div>
+          <span>03</span>
+          <strong>UI Presentation</strong>
+          <p>WPF ViewModels / MAUI Razor Components / GTK4 Native Host 表现层。</p>
+        </div>
+        <div>
+          <span>02</span>
+          <strong>Platform Services</strong>
+          <p><code>LlrpReaderPlatform.Services</code> 租约调度门禁、生命周期管理与标签聚合。</p>
+        </div>
+        <div>
+          <span>01</span>
+          <strong>Engine & Data</strong>
+          <p><code>LLRPCSharp SDK</code> 协议驱动与 <code>Infrastructure</code> EF Core SQLite 持久化。</p>
+        </div>
       </div>
     </section>
   </article>
 </main>
 
-<!-- Footer -->
-<footer class="main-footer">
-  <div class="shell footer-content">
-    <div>
-      <strong>LlrpReaderPlatform</strong> · 跨平台多端管理指南
-    </div>
-    <div style="display:flex;gap:20px;">
-      <a href="virtual-device.html">了解虚拟设备管理器 →</a>
-      <a href="releases.html">前往下载中心 →</a>
-    </div>
-  </div>
+<footer class="shell footer">
+  <span>LlrpReaderPlatform · 跨平台多端管理指南</span>
+  <span><a href="virtual-device.html">了解虚拟设备管理器 →</a></span>
 </footer>
 
 <script src="assets/app.js"></script>

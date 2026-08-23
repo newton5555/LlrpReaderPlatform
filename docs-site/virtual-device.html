@@ -6,41 +6,35 @@
   <meta name="description" content="Virtual Device Manager (Windows WPF) - 独立的 LLRP TCP 虚拟读写器创建与管理测试工具">
   <title>虚拟设备管理器 · LlrpReaderPlatform</title>
   <link rel="stylesheet" href="assets/styles.css">
-  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="stylesheet" href="assets/brand.css">
 </head>
 <body>
-
-<!-- Header Topbar -->
 <header class="topbar">
   <a class="brand" href="index.html">
-    <div class="brand-icon">
-      <img src="assets/icon.svg" width="24" height="24" alt="Icon">
-    </div>
-    <div class="brand-text">
-      <span>LlrpReaderPlatform</span>
-      <small>Virtual Studio</small>
-    </div>
+    <img class="project-logo" src="assets/icon.svg" alt="LlrpReaderPlatform">
+    <span>LlrpReaderPlatform<small>Virtual Studio</small></span>
   </a>
   <button class="menu-toggle">☰</button>
-  <nav class="topbar-nav">
+  <nav>
     <a href="index.html">首页</a>
     <a href="wpf-studio.html">WPF 客户端</a>
     <a href="cross-platform.html">MAUI 跨平台</a>
     <a href="virtual-device.html" class="active">虚拟设备工具</a>
     <a href="architecture.html">系统架构</a>
     <a href="releases.html">下载与发布</a>
-    <a href="https://newton5555.github.io/LLRPCSharp/" target="_blank">LLRPCSharp SDK ↗</a>
   </nav>
-  <a class="github-btn" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">
-    <span>GitHub</span> ↗
-  </a>
+  <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
 </header>
 
 <main class="shell docs-layout">
   <!-- Side Nav -->
   <aside class="side-nav">
-    <p class="eyebrow">VIRTUAL DEVICE</p>
-    <a href="#overview" class="active">工具定位与用途</a>
+    <p class="eyebrow">TOPICS</p>
+    <a href="wpf-studio.html">WPF 客户端</a>
+    <a href="cross-platform.html">MAUI 跨平台</a>
+    <a href="virtual-device.html" class="active">虚拟设备工具</a>
+    <p class="eyebrow" style="margin-top:20px;">ON THIS PAGE</p>
+    <a href="#overview">工具定位与用途</a>
     <a href="#features">核心仿真功能</a>
     <a href="#profiles">能力 Profile 切换</a>
     <a href="#tag-pool">虚拟标签池配置</a>
@@ -72,7 +66,7 @@
     <section id="features">
       <h2>核心仿真功能</h2>
       <div class="code-block">
-        <button class="copy-btn">复制</button>
+        <button class="copy-code">复制</button>
         <pre><code>// 虚拟读写器核心仿真参数
 TCP 监听端口       : 自定义端口 (默认 5084，支持多实例多端口并行)
 天线端口数量       : 1 ~ 32 天线动态配置
@@ -110,7 +104,7 @@ TCP 监听端口       : 自定义端口 (默认 5084，支持多实例多端口
     <!-- Workflow -->
     <section id="workflow">
       <h2>典型联调与测试工作流</h2>
-      <ol style="margin-left:20px;color:var(--text-sub);line-height:1.8;">
+      <ol style="margin-left:20px;color:var(--muted);line-height:1.8;">
         <li>打开 <strong>Virtual Device Manager</strong>，选择 <code>impinj.r420.llrp-1.0.1</code> 预设，点击 <strong>Start Virtual Reader</strong>（监听 5084 端口）。</li>
         <li>打开 <strong>LLRP Reader Studio</strong> 或 <strong>LlrpReaderManager</strong>，添加数据源 <code>127.0.0.1:5084</code> 并激活。</li>
         <li>在主客户端点击“开始盘存”，即可立即看到虚拟设备实时上报的标签流、天线分布与 RSSI 信号！</li>
@@ -119,17 +113,9 @@ TCP 监听端口       : 自定义端口 (默认 5084，支持多实例多端口
   </article>
 </main>
 
-<!-- Footer -->
-<footer class="main-footer">
-  <div class="shell footer-content">
-    <div>
-      <strong>LlrpReaderPlatform</strong> · 虚拟设备仿真工具指南
-    </div>
-    <div style="display:flex;gap:20px;">
-      <a href="architecture.html">阅读平台架构与设计 →</a>
-      <a href="releases.html">下载虚拟设备管理器 →</a>
-    </div>
-  </div>
+<footer class="shell footer">
+  <span>LlrpReaderPlatform · 虚拟设备仿真工具指南</span>
+  <span><a href="architecture.html">阅读平台架构与设计 →</a></span>
 </footer>
 
 <script src="assets/app.js"></script>
