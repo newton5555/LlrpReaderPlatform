@@ -86,7 +86,9 @@ internal sealed class LlrpReaderSession : IReaderSession
         validation.ThrowIfInvalid();
         await reader.ApplySettingsAsync(
             settings,
-            ResourceTakeoverPolicy.ReplaceAll,
+            // 普通设置（包括 GPI/GPO 相关配置）不得清理其他客户端/设备已有的资源。
+            // 盘存启动时才由 StartInventoryAsync 显式选择 ReplaceAll。
+            ResourceTakeoverPolicy.PreserveForeign,
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -291,7 +293,9 @@ internal sealed class LlrpReaderSession : IReaderSession
 
         await reader.ApplySettingsAsync(
             settings,
-            ResourceTakeoverPolicy.ReplaceAll,
+            // Tag Access 的临时配置同样只接管 SDK 保留资源，不能因为准备一次访问操作
+            // 就向设备发送“删除全部 ROSpec/AccessSpec”。
+            ResourceTakeoverPolicy.PreserveForeign,
             cancellationToken).ConfigureAwait(false);
     }
 
