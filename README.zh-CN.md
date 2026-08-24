@@ -12,6 +12,10 @@
   版本 2.0.3 · .NET 10 · <a href="README.md">English</a>
 </p>
 
+<p align="center">
+  <a href="https://newton5555.github.io/LlrpReaderPlatform/"><strong>📖 访问官方文档与多平台操作手册站点 (GitHub Pages)</strong></a>
+</p>
+
 LlrpReaderPlatform 是构建在 [LLRPCSharp](https://github.com/newton5555/LLRPCSharp) SDK 之上的应用平台。它提供可复用的 Reader 管理服务、持久化、厂商模块和多种 UI 消费者，用于发现读写器、编辑能力驱动设置、执行盘存、访问标签内存、控制 GPIO 和查看盘存历史。
 
 当前主要现场客户端是 Windows WPF 应用。MAUI Blazor Hybrid 客户端在 Windows、Android 和 Mac Catalyst 上复用同一套平台服务，Linux 则使用独立的实验性 GTK4 Head。仓库还包含一个独立 WPF 管理器，用来操作 LLRPCSharp 提供的报文级虚拟 Reader。

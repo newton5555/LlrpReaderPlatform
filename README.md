@@ -12,6 +12,10 @@
   Version 2.0.3 · .NET 10 · <a href="README.zh-CN.md">中文</a>
 </p>
 
+<p align="center">
+  <a href="https://newton5555.github.io/LlrpReaderPlatform/"><strong>📖 Visit Documentation & User Manuals Site (GitHub Pages)</strong></a>
+</p>
+
 LlrpReaderPlatform is an application platform built on the [LLRPCSharp](https://github.com/newton5555/LLRPCSharp) SDK. It provides reusable reader-management services, persistence, vendor modules, and several UI consumers for discovering readers, editing capability-driven settings, running inventory, accessing tag memory, controlling GPIO, and reviewing inventory history.
 
 The primary field client is a Windows WPF application. A MAUI Blazor Hybrid client reuses the same platform services on Windows, Android, and Mac Catalyst, with a separate experimental Linux GTK4 head. The repository also includes an independent WPF manager for the protocol-level virtual readers supplied by LLRPCSharp.
