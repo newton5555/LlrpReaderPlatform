@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="LlrpReaderManager (Linux GTK4 Head) 客户端操作手册：Debian DEB 包部署、GTK4 与 WebKitGTK 运行环境依赖及工控机运行指南。">
+  <title>LlrpReaderManager · Linux 手册</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/brand.css?v=3">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><img class="project-logo" src="assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>Linux GTK4</small></span></a>
+  <button class="menu-toggle" aria-label="打开导航">☰</button>
+  <nav>
+    <a href="index.html">首页</a>
+    <div class="nav-dropdown">
+      <button class="nav-dropdown-toggle active" type="button" aria-expanded="false">用户手册 <span aria-hidden="true">⌄</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="wpf-studio.html">Windows WPF</a>
+        <a href="readermanager-windows.html">Windows MAUI</a>
+        <a href="readermanager-android.html">Android APK</a>
+        <a href="readermanager-macos.html">macOS Catalyst</a>
+        <a href="readermanager-linux.html" class="active">Linux GTK4</a>
+        <a href="virtual-device.html">虚拟读写器</a>
+      </div>
+    </div>
+    <a href="releases.html">发布下载</a>
+    <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
+  </nav>
+</header>
+
+<main class="shell docs-layout">
+  <aside class="side-nav">
+    <p class="eyebrow">GTK4 LINUX</p>
+    <a href="#install">1. 安装与 DEB 部署</a>
+    <a href="#deps">2. 运行时依赖配置</a>
+    <a href="#start">3. 启动与界面</a>
+    <a href="#workflow">4. 操作流程</a>
+    <a href="#notes">5. 注意事项</a>
+  </aside>
+
+  <article class="doc-content">
+    <p class="eyebrow">05 / LINUX GTK4 HEAD</p>
+    <h1>LlrpReaderManager · Linux GTK4 操作手册</h1>
+    <p class="doc-lead">
+      <strong>LlrpReaderManager.Linux</strong> 是基于独立 GTK4 + WebKitGTK 宿主构建的 Linux 客户端。
+      复用平台共享服务与 Blazor 页面，适用于 Ubuntu / Debian 工业工控机、边缘网关与开发工作站。
+    </p>
+
+    <!-- 1. Install -->
+    <section id="install">
+      <h2>1. 安装与 DEB 包部署</h2>
+      <p>从 Releases 页面下载 <code>LlrpReaderManager-v2.0.3-linux-x64.deb</code>，在终端中执行安装：</p>
+      <div class="code-block">
+        <button class="copy-code">复制</button>
+        <pre><code>sudo dpkg -i LlrpReaderManager-v2.0.3-linux-x64.deb
+sudo apt-get install -f -y</code></pre>
+      </div>
+    </section>
+
+    <!-- 2. Deps -->
+    <section id="deps">
+      <h2>2. 运行时依赖配置</h2>
+      <p>Linux Head 为框架依赖（Framework-Dependent）分发模式，目标机器需具备以下基础运行环境：</p>
+      <ul>
+        <li><strong>.NET 10 Runtime：</strong><code>dotnet-runtime-10.0</code>（或通过微软官方源安装）。</li>
+        <li><strong>GTK4 视窗库：</strong><code>libgtk-4-1</code> 或 <code>libgtk-4-dev</code>。</li>
+        <li><strong>WebKitGTK 渲染器：</strong><code>libwebkit2gtk-4.1-0</code> (或 Ubuntu 24.04 的 <code>libwebkitgtk-6.0-4</code>)。</li>
+      </ul>
+      <div class="code-block">
+        <button class="copy-code">复制</button>
+        <pre><code># Ubuntu / Debian 快速安装依赖
+sudo apt update
+sudo apt install -y libgtk-4-1 libwebkit2gtk-4.1-0</code></pre>
+      </div>
+    </section>
+
+    <!-- 3. Start -->
+    <section id="start">
+      <h2>3. 启动与界面展示</h2>
+      <p>安装完成后，可从 Linux 桌面应用菜单（Applications Menu）启动 <code>LlrpReaderManager</code>，或在终端输入：</p>
+      <div class="code-block">
+        <pre><code>LlrpReaderManager</code></pre>
+      </div>
+      <figure class="screenshot-figure">
+        <img src="assets/screenshots/linux-readermanager-remote.png" alt="Linux GTK4 客户端界面">
+        <figcaption>Linux GTK4 客户端在远程桌面与物理工控机下的实际运行截图。</figcaption>
+      </figure>
+    </section>
+
+    <!-- 4. Workflow -->
+    <section id="workflow">
+      <h2>4. 操作流程</h2>
+      <ol>
+        <li>在 <strong>Readers</strong> 页面添加本地或网络读写器 IP（例如 <code>192.168.1.100:5084</code>）。</li>
+        <li>点击 <strong>Probe</strong> 自动协商协议版本与能力，确认后点击 <strong>Enable</strong> 启用。</li>
+        <li>在 <strong>Tag Inventory</strong> 页面点击 <strong>Start</strong> 启动长连接寻卡，实时获取标签流。</li>
+        <li>在 <strong>Reader Settings</strong> 中编辑射频参数，按 <em>Query → 编辑 → Apply</em> 流程保存配置。</li>
+      </ol>
+    </section>
+
+    <!-- 5. Notes -->
+    <section id="notes">
+      <h2>5. 注意事项</h2>
+      <div class="callout warning">
+        <strong>提示：</strong>
+        Linux GTK4 Head 当前作为跨平台扩展路径分发。若在无头服务器（Headless Server）或通过 SSH X11 Forwarding 运行时，需确保目标环境已配置好 X11 / Wayland 显示服务（DISPLAY 环境变量正确设置）。
+      </div>
+    </section>
+
+    <!-- Bottom Navigation -->
+    <div style="display:flex;justify-content:space-between;margin-top:60px;padding-top:20px;border-top:1px solid var(--line);">
+      <a href="readermanager-macos.html" class="button secondary">← LlrpReaderManager macOS</a>
+      <a href="virtual-device.html" class="button secondary">Virtual Device Manager →</a>
+    </div>
+  </article>
+</main>
+
+<footer class="shell footer">
+  <span>LlrpReaderPlatform · Linux GTK4 操作手册</span>
+  <div style="display:flex;gap:16px;">
+    <a href="index.html">返回首页</a>
+    <a href="releases.html">下载发布</a>
+  </div>
+</footer>
+<script src="assets/app.js?v=2"></script>
+</body>
+</html>

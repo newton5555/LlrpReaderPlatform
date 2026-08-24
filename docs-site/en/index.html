@@ -1,22 +1,185 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="LlrpReaderPlatform: multi-platform RFID reader applications built on LLRPCSharp.">
-  <title>LlrpReaderPlatform · Industrial RFID Reader Applications</title>
-  <link rel="stylesheet" href="../assets/styles.css"><link rel="stylesheet" href="../assets/brand.css"><link rel="stylesheet" href="../assets/home.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="LlrpReaderPlatform - Modern, cross-platform RFID reader platform built on LLRPCSharp.">
+  <title>LlrpReaderPlatform · Cross-Platform RFID Suite</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="stylesheet" href="../assets/brand.css?v=5">
+  <link rel="stylesheet" href="../assets/home.css?v=2">
 </head>
 <body>
-<header class="topbar"><a class="brand" href="index.html"><img class="project-logo" src="../assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>v2.0.3</small></span></a><button class="menu-toggle" aria-label="Open navigation">☰</button><nav><a href="index.html" class="active">Home</a><a href="user-manual.html">User Manual</a><a href="releases.html">Downloads</a></nav><a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a></header>
-<main class="shell docs-home">
-  <section class="docs-home-head"><p class="eyebrow">LLRP READER PLATFORM / APPLICATION ECOSYSTEM</p><h1>Industrial RFID reader<br>applications for every screen</h1><p class="doc-lead">Built on <strong>LLRPCSharp</strong>, LlrpReaderPlatform provides a Windows field client, the LlrpReaderManager MAUI Blazor project across Android, Windows, macOS and Linux, and a separate virtual-device tool and a shared service/data boundary for reader sessions.</p><div style="display:flex;gap:12px;flex-wrap:wrap;"><a class="button primary" href="releases.html">Download v2.0.3</a><a class="button secondary" href="user-manual.html">Read the user manual</a></div><div class="docs-home-badges"><div class="badge-item"><span class="status-dot"></span>Windows WPF field client</div><div class="badge-item"><span class="status-dot blue"></span>LlrpReaderManager (MAUI Blazor · Android / Windows / macOS / Linux)</div></div></section>
-  <section class="pillar-grid">
-    <a class="pillar-card featured" href="wpf-studio.html"><div class="pillar-header"><div class="pillar-icon">🖥️</div><span class="pillar-tag">Primary desktop</span></div><h3>LLRP Reader Studio (WPF)</h3><p>The main Windows client for field operations, reader inspection, inventory and hardware-oriented workflows. Operations are constrained by the reader's declared capabilities.</p><ul class="pillar-features"><li>Multi-antenna inventory and live RSSI</li><li>Standard C1G2 read/write/lock/kill access</li><li>TOI tracking and persisted inventory runs</li><li>Capability-driven settings editor</li><li>Impinj extension path</li></ul><span class="pillar-action">Open the WPF client guide →</span></a>
-    <a class="pillar-card" href="cross-platform.html"><div class="pillar-header"><div class="pillar-icon">📱</div><span class="pillar-tag" style="background:#eaf0fb;color:var(--blue);">Cross-platform</span></div><h3>LlrpReaderManager (MAUI Blazor)</h3><p>One MAUI Blazor Hybrid project that reuses the same Razor views, platform services and SQLite data model across Android, Windows, macOS and Linux; Linux is hosted by the GTK4 target.</p><ul class="pillar-features"><li>Android industrial handhelds and tablets</li><li>macOS Catalyst desktop package</li><li>Windows unpackaged self-contained package</li><li>Linux GTK4 host and Debian package</li><li>Local reader discovery and run history</li></ul><span class="pillar-action">Open the cross-platform guide →</span></a>
-    <a class="pillar-card" href="virtual-device.html"><div class="pillar-header"><div class="pillar-icon" style="background:#f3eafd;color:#7c3aed;">🧪</div><span class="pillar-tag" style="background:#f3eafd;color:#7c3aed;">Software testing</span></div><h3>Virtual Device Manager</h3><p>An independent Windows tool for creating and monitoring deterministic TCP virtual-reader instances backed by LLRPCSharp hosting.</p><ul class="pillar-features"><li>Software protocol selection for 1.0.1 / 1.1 / 2.0</li><li>Standard and Impinj-shaped profiles</li><li>Configurable tags and RSSI jitter</li><li>Client and ROSpec monitoring</li></ul><span class="pillar-action">Open the virtual-device guide →</span></a>
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <img class="project-logo" src="../assets/icon.svg" alt="LlrpReaderPlatform">
+    <span>LlrpReaderPlatform</span>
+  </a>
+  <button class="menu-toggle" aria-label="Open Navigation">☰</button>
+  <nav>
+    <a href="index.html" class="active">Home</a>
+    <div class="nav-dropdown">
+      <button class="nav-dropdown-toggle" type="button" aria-expanded="false">User Manuals <span>▼</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="wpf-studio.html">Windows WPF</a>
+        <a href="readermanager-windows.html">Windows MAUI</a>
+        <a href="readermanager-android.html">Android APK</a>
+        <a href="readermanager-macos.html">macOS Catalyst</a>
+        <a href="readermanager-linux.html">Linux GTK4</a>
+        <a href="virtual-device.html">Virtual Device</a>
+      </div>
+    </div>
+    <a href="releases.html">Releases</a>
+    <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
+  </nav>
+</header>
+
+<main class="simple-home">
+  <!-- Hero Section -->
+  <section class="hero-clean">
+    <span class="eyebrow">LLRP READER PLATFORM</span>
+    <h1>Modern Cross-Platform RFID Suite</h1>
+    <p class="lead">
+      Enterprise-grade RFID reader control suite built on <strong>LLRPCSharp</strong> SDK. Featuring a flagship Windows WPF desktop client, responsive MAUI Blazor cross-platform clients, and TCP virtual reader tools supporting LLRP 1.0.1 / 1.1 / 2.0 and Impinj / Zebra extensions.
+    </p>
+    <div class="hero-actions">
+      <a class="button primary" href="releases.html">Download v2.0.3 Assets</a>
+      <a class="button secondary" href="wpf-studio.html">User Manual (WPF) →</a>
+    </div>
+  </section>
+
+  <!-- 1. Multi-Platform Clients -->
+  <section class="home-section">
+    <div class="home-section-head">
+      <span class="section-tag">APPLICATIONS</span>
+      <h2>Client Software Lineup</h2>
+    </div>
+    <div class="clients-grid">
+      <div class="client-card featured">
+        <span class="platform-badge">Windows · WPF Flagship</span>
+        <h3>LLRP Reader Studio</h3>
+        <p>Windows x64 primary client for deep debugging, field qualification, multi-antenna tuning, and 4-ch GPIO control.</p>
+        <div class="card-action">
+          <span>Portable (x64)</span>
+          <a href="wpf-studio.html">Manual →</a>
+        </div>
+      </div>
+      <div class="client-card">
+        <span class="platform-badge">Windows · MAUI</span>
+        <h3>LlrpReaderManager (Win)</h3>
+        <p>MAUI Blazor desktop client with responsive layout and unified cross-platform UX.</p>
+        <div class="card-action">
+          <span>Desktop Package</span>
+          <a href="readermanager-windows.html">Manual →</a>
+        </div>
+      </div>
+      <div class="client-card">
+        <span class="platform-badge">Android · APK</span>
+        <h3>LlrpReaderManager (Android)</h3>
+        <p>Industrial handheld PDA, barcode gun, and tablet client with touch-first scanning.</p>
+        <div class="card-action">
+          <span>Release APK</span>
+          <a href="readermanager-android.html">Manual →</a>
+        </div>
+      </div>
+      <div class="client-card">
+        <span class="platform-badge">macOS · Catalyst</span>
+        <h3>LlrpReaderManager (macOS)</h3>
+        <p>Native Mac Catalyst application available in Apple Silicon (M1~M4) and Intel builds.</p>
+        <div class="card-action">
+          <span>.app ZIP</span>
+          <a href="readermanager-macos.html">Manual →</a>
+        </div>
+      </div>
+      <div class="client-card">
+        <span class="platform-badge">Linux · GTK4</span>
+        <h3>LlrpReaderManager (Linux)</h3>
+        <p>Debian package powered by a standalone GTK4 + WebKit host for IPCs and edge gateways.</p>
+        <div class="card-action">
+          <span>Debian .deb</span>
+          <a href="readermanager-linux.html">Manual →</a>
+        </div>
+      </div>
+      <div class="client-card">
+        <span class="platform-badge">Windows · Tool</span>
+        <h3>Virtual Device Manager</h3>
+        <p>TCP/LLRP virtual reader management utility with custom Tag Pools and live packet Inspector.</p>
+        <div class="card-action">
+          <span>Single-File Tool</span>
+          <a href="virtual-device.html">Manual →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Core Architecture Highlights -->
+  <section class="home-section">
+    <div class="home-section-head">
+      <span class="section-tag">ARCHITECTURE</span>
+      <h2>Core Architecture Highlights</h2>
+    </div>
+    <div class="arch-grid">
+      <div class="arch-card">
+        <span class="arch-tag">Session Gate</span>
+        <h3>Single TCP Session Gate</h3>
+        <p>Each physical reader holds a single TCP socket with serialized command execution; active inventory returns <code>ReaderBusy</code> without interrupting scans.</p>
+      </div>
+      <div class="arch-card">
+        <span class="arch-tag">Two-Stage Probing</span>
+        <h3>Short-Lived Probing & Extensions</h3>
+        <p>Short-lived Probe queries baseline capabilities and binds Impinj/Zebra extensions, disconnecting immediately until long-term inventory begins.</p>
+      </div>
+      <div class="arch-card">
+        <span class="arch-tag">Settings Engine</span>
+        <h3>Semantic Settings & Readback</h3>
+        <p>Extensible via <code>ISettingsExtensionContributor</code>. Mutating settings strictly follows <em>Query → Edit → Apply → Readback</em> verification.</p>
+      </div>
+      <div class="arch-card">
+        <span class="arch-tag">Offline Persistence</span>
+        <h3>SQLite & Layered Snapshots</h3>
+        <p>Built-in EF Core SQLite database manages profiles and TOI tags, supporting FinalSnapshot and RawReports audit export.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Quick Start & Compatibility -->
+  <section class="home-section">
+    <div class="home-section-head">
+      <span class="section-tag">QUICK START</span>
+      <h2>Quick Start</h2>
+    </div>
+    <div class="steps-row">
+      <div class="step-box">
+        <span class="step-num">STEP 1</span>
+        <h4>Download & Run</h4>
+        <p>Download Windows single-file ZIP or Android APK; run immediately with zero runtime prerequisites.</p>
+      </div>
+      <div class="step-box">
+        <span class="step-num">STEP 2</span>
+        <h4>Probe & Activate</h4>
+        <p>Input Reader IP:Port in Data Sources, click Probe to discover capabilities, and Activate.</p>
+      </div>
+      <div class="step-box">
+        <span class="step-num">STEP 3</span>
+        <h4>Start Inventory</h4>
+        <p>Open Inventory and click Start to stream tag data; click Stop to automatically export run snapshots.</p>
+      </div>
+    </div>
+    <div class="compat-strip">
+      <strong>Verified Readers:</strong>
+      <span>Impinj Speedway R420 / R220 / R120, standard LLRP 1.0.1 / 1.1 / 2.0 readers, Zebra FX series, and virtual readers.</span>
+    </div>
   </section>
 </main>
-<footer class="shell footer"><span>LlrpReaderPlatform · Industrial RFID reader applications</span><span><a href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">Source on GitHub ↗</a></span></footer>
-<script src="../assets/app.js"></script>
+
+<footer class="footer shell">
+  <span>LlrpReaderPlatform · Cross-Platform RFID Suite</span>
+  <div style="display:flex;gap:16px;">
+    <a href="wpf-studio.html">WPF Manual</a>
+    <a href="releases.html">Releases</a>
+    <a href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
+  </div>
+</footer>
+<script src="../assets/app.js?v=3"></script>
 </body>
 </html>

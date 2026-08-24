@@ -3,166 +3,175 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="LlrpReaderPlatform 平台服务体系、会话租约门禁、EF Core SQLite 本地持久化与架构设计">
-  <title>系统架构与设计 · LlrpReaderPlatform</title>
+  <meta name="description" content="LlrpReaderPlatform 核心架构设计与工程约束：分层模型、Session 门禁、生命周期租约与设置编译体系。">
+  <title>架构与设计 · LlrpReaderPlatform</title>
   <link rel="stylesheet" href="assets/styles.css">
-  <link rel="stylesheet" href="assets/brand.css">
+  <link rel="stylesheet" href="assets/brand.css?v=3">
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="index.html">
-    <img class="project-logo" src="assets/icon.svg" alt="LlrpReaderPlatform">
-    <span>LlrpReaderPlatform<small>Architecture</small></span>
-  </a>
-  <button class="menu-toggle">☰</button>
+  <a class="brand" href="index.html"><img class="project-logo" src="assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>Architecture</small></span></a>
+  <button class="menu-toggle" aria-label="打开导航">☰</button>
   <nav>
     <a href="index.html">首页</a>
-    <a href="user-manual.html">用户手册</a>
-
-    <a href="releases.html">下载与发布</a>
+    <div class="nav-dropdown">
+      <button class="nav-dropdown-toggle" type="button" aria-expanded="false">用户手册 <span aria-hidden="true">⌄</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="wpf-studio.html">Windows WPF</a>
+        <a href="readermanager-windows.html">Windows MAUI</a>
+        <a href="readermanager-android.html">Android APK</a>
+        <a href="readermanager-macos.html">macOS Catalyst</a>
+        <a href="readermanager-linux.html">Linux GTK4</a>
+        <a href="virtual-device.html">虚拟读写器</a>
+      </div>
+    </div>
+    <a href="releases.html">发布下载</a>
+    <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
   </nav>
-  <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
 </header>
 
 <main class="shell docs-layout">
-  <!-- Side Nav -->
   <aside class="side-nav">
-    <p class="eyebrow">TOPICS</p>
-    <a href="architecture.html" class="active">系统架构</a>
-    <a href="wpf-studio.html">WPF 客户端</a>
-    <a href="releases.html">下载与发布</a>
-    <p class="eyebrow" style="margin-top:20px;">ON THIS PAGE</p>
-    <a href="#layering">分层与依赖方向</a>
-    <a href="#lease-concurrency">读写器句柄与租约并发</a>
-    <a href="#persistence">EF Core SQLite 持久化</a>
-    <a href="#extensions">插件化厂商扩展</a>
-    <a href="#error-codes">统一错误码体系</a>
-    <a href="#hardware-matrix">硬件兼容性矩阵</a>
+    <p class="eyebrow">ARCHITECTURE</p>
+    <a href="#goals">设计目标</a>
+    <a href="#layers">分层解耦体系</a>
+    <a href="#runtime">会话独占与并发门禁</a>
+    <a href="#lifecycle">短连接与长盘存租约</a>
+    <a href="#settings">设置模型与编译引擎</a>
+    <a href="#persistence">数据持久化与分层日志</a>
+    <a href="#virtual">虚拟设备与测试边界</a>
   </aside>
 
-  <!-- Content Article -->
   <article class="doc-content">
-    <p class="eyebrow">04 / CORE ARCHITECTURE & PLATFORM SERVICES</p>
-    <h1>平台服务体系与架构设计</h1>
+    <p class="eyebrow">SYSTEM ARCHITECTURE & DESIGN</p>
+    <h1>平台架构总览与工程设计</h1>
     <p class="doc-lead">
-      <code>LlrpReaderPlatform</code> 不是第二个 LLRP SDK，而是一套<strong>建立在 LLRPCSharp 之上的应用服务平台</strong>。负责协调读写器生命周期、会话租约排队、配置编译投影、本地数据持久化以及多 UI 消费者的解耦。
+      LlrpReaderPlatform 致力于将 LLRP 协议底层编排、硬件生命周期、设备能力模型、参数语义编译与厂商专有扩展完整沉淀于共享服务层，
+      实现上层 UI 框架（WPF、MAUI Blazor、GTK4）的彻底轻量化与高内聚解耦。
     </p>
 
-    <!-- Layering -->
-    <section id="layering">
-      <h2>分层设计与严格的依赖方向</h2>
-      <p>
-        为了保证核心业务逻辑的高内聚与可测试性，平台代码遵循严格的单向依赖原则：
-      </p>
+    <!-- 1. Goals -->
+    <section id="goals">
+      <h2>1. 核心设计目标</h2>
+      <ul>
+        <li><strong>UI 绝对解耦：</strong>UI 消费层（View / ViewModel / Razor Component）不直接持有 Reader TCP 连接，不编排 SDK 协议报文，仅消费平台公开契约与服务。</li>
+        <li><strong>高可靠并发控制：</strong>物理读写器是独占的 TCP 资源，所有协议通信必须通过串行化门禁（Session Gate），杜绝多线程竞争引发的协议状态机错乱。</li>
+        <li><strong>两阶段设备感知：</strong>标准 LLRP 协议先行探测基础身份，二次握手无缝挂载 Impinj / Zebra 厂商扩展能力，保证不同品牌硬件的自适应接入。</li>
+        <li><strong>配置下发闭环保障：</strong>配置修改严禁使用本地缓存冒充硬件状态，必须实施 <em>Query → 编辑 → Validate → Apply → Query 回读</em> 完整闭环校验。</li>
+      </ul>
+    </section>
+
+    <!-- 2. Layers -->
+    <section id="layers">
+      <h2>2. 分层解耦体系</h2>
+      <p>解决方案采用严格单向依赖架构，杜绝反向依赖与循环引用：</p>
       <div class="code-block">
-        <button class="copy-code">复制</button>
-        <pre><code>App.Wpf / LlrpReaderManager (composition roots)
-      ├──► Services ───────────────► Contracts + LlrpSdk
-      ├──► Infrastructure ─────────► Services + Contracts
-      └──► Extensions.* ───────────► Services + Contracts + vendor SDK adapter
-
-Contracts (DTO / interfaces / error codes; no UI or SDK dependency)
-Services (reader lifecycle / leases / settings / inventory / Tag Access)
-
-LlrpVirtualDevice.App.Wpf
-      └──► LlrpDevice.Virtual.Hosting (independent TCP virtual-reader tool)</code></pre>
+        <pre><code>[ UI Consumers: WPF / MAUI Blazor / Linux GTK4 ] (Composition Root)
+                      │
+                      ▼
+         [ LlrpReaderPlatform.Services ] ───► [ LlrpReaderPlatform.Contracts ]
+           (生命周期编排 / 设置编译 / 盘存租约)       (纯净 DTO / 错误码 / 服务接口)
+                      │                                    ▲
+          ┌───────────┴───────────┐                        │
+          ▼                       ▼                        │
+[ Infrastructure ]      [ Extensions.Impinj / Zebra ] ─────┘
+ (SQLite / mDNS / 日志)   (厂商私有参数编译 / 专有事件扩展)
+          │                       │
+          └───────────┬───────────┘
+                      ▼
+              [ LLRPCSharp SDK ]</code></pre>
       </div>
-      <div class="callout tip">
-        <strong>架构单测守护：</strong> 仓库内包含专门的架构约束测试（Architecture Tests），强制禁止在 <code>Contracts</code> 中引用 WPF、SDK 报文或厂商专属类型，杜绝底层依赖泄漏。
+      <div class="command-table" style="margin-top:20px;">
+        <div><strong>LlrpReaderPlatform.Contracts</strong><span>跨 UI、跨实现的纯领域契约，定义只读模型、枚举、事件与接口。零依赖，不引用 WPF、SDK 或第三方 UI 库。</span></div>
+        <div><strong>LlrpReaderPlatform.Services</strong><span>Reader 生命周期管理、会话租约分配、设置编译聚合、标签流分发。只依赖 Contracts 与 SDK 适配层。</span></div>
+        <div><strong>LlrpReaderPlatform.Infrastructure</strong><span>EF Core SQLite 数据库存储、mDNS / Zeroconf 发现、分层日志记录器等底层具体实现。</span></div>
+        <div><strong>LlrpReaderPlatform.Extensions.*</strong><span>厂商可插拔扩展（如 Impinj FastID / Phase / Doppler / Search Mode / 4路 GPIO）。不污染通用契约。</span></div>
       </div>
     </section>
 
-    <!-- Lease Concurrency -->
-    <section id="lease-concurrency">
-      <h2>读写器句柄与会话租约门禁 (Reader Ownership & Concurrency)</h2>
+    <!-- 3. Runtime & Session Gate -->
+    <section id="runtime">
+      <h2>3. 会话独占与并发门禁 (Session Gate)</h2>
       <p>
-        RFID 读写器通常只支持单 TCP 连接与单会话状态机。为了防止 UI 界面在盘存过程中意外发送冲突指令导致设备报错，平台设计了 <code>ReaderHandle</code> 租约机制：
+        在 LLRP 协议中，一个物理 Reader 端口在同一时刻仅允许一个活动的 TCP 连接。为防止 UI 多次触发操作引发通信冲突，平台引入了严格的独占门禁机制：
       </p>
-      <div class="ownership-grid">
-        <div>
-          <span class="tag desired">SHORT LEASE</span>
-          <h3>短期操作租约</h3>
-          <p>探测 (Probe)、配置下发 (ApplySettings)、Tag Access 与 GPIO 申请瞬时租约，执行后立即释放。</p>
-        </div>
-        <div>
-          <span class="tag restored">LONG LEASE</span>
-          <h3>长期盘存独占</h3>
-          <p>盘点从 <code>StartInventory</code> 到 <code>Stop</code> 独占会话通道，期间所有报告由此通道持续上报。</p>
-        </div>
-        <div>
-          <span class="tag observed">DETERMINISTIC</span>
-          <h3>确定性状态保护</h3>
-          <p>发生租约竞争时，平台确定性返回 <code>ReaderBusy</code> 错误码，绝不发生状态竞争或盲目重启。</p>
-        </div>
+      <div class="callout warning">
+        <strong>Session Gate 串行化约束：</strong>
+        每个 <code>ReaderHandle</code> 对应唯一的活动 <code>ReaderSession</code>。所有发往读写器的短命令（如 Probe、Query Settings、Apply Settings、Tag Read/Write、GPO 触发）均通过内部 Session Gate 排队串行执行。
       </div>
+      <p style="margin-top:12px;">
+        当某个 Reader 处于长期盘存（Inventory）状态时，连接被 ROSpec 独占。此时若尝试下发设备设置或执行 Tag Access，平台服务将立即返回确定性的 <code>PlatformErrorCode.ReaderBusy</code> 错误，<strong>绝不隐式停止、中断或重启正在运行的寻卡租约</strong>。
+      </p>
     </section>
 
-    <!-- Persistence -->
+    <!-- 4. Lifecycle & Leases -->
+    <section id="lifecycle">
+      <h2>4. 短连接与长盘存租约模型</h2>
+      <p>平台严格区分两种生命周期模型，保证网络连接的高效与健壮：</p>
+      <ul>
+        <li><strong>短连接探测 (Probe & Activate)：</strong>
+          在 Data Sources 中添加或刷新 Reader 时，平台建立短暂 TCP 握手，执行 <code>GET_READER_CAPABILITIES</code> 获取型号、固件与频率表，匹配厂商扩展后立即断开 TCP 连接，保留内存能力快照。UI 显示为“已同步能力”。
+        </li>
+        <li><strong>长连接寻卡租约 (Inventory Lease)：</strong>
+          用户点击 <strong>Start</strong> 寻卡时，平台建立持续长连接，下发编译后的 <code>ADD_ROSPEC</code> 与 <code>ENABLE_ROSPEC</code>，开启实时 <code>RO_ACCESS_REPORT</code> 报告流；点击 <strong>Stop</strong> 后，平稳排空缓冲区、保存快照并主动断开连接。
+        </li>
+      </ul>
+    </section>
+
+    <!-- 5. Settings Compilation -->
+    <section id="settings">
+      <h2>5. 设置模型与编译引擎</h2>
+      <p>
+        不同厂商的 LLRP 读写器在天线功率、跳频表、Gen2 会话、专有过滤参数上存在巨大差异。平台通过 <code>ISettingsExtensionContributor</code> 机制实现了优雅的编译扩展：
+      </p>
+      <ol>
+        <li><strong>语义化参数树：</strong>设置项以 <code>SemanticId</code> / <code>GroupKey</code> / <code>InstanceKey</code> 组织，UI 仅根据语义渲染通用编辑器（如滑块、下拉列表、复选框），不包含任何厂商代码分支。</li>
+        <li><strong>动态扩展注入：</strong>当设备识别为 Impinj 时，<code>ImpinjSettingsExtensionContributor</code> 自动将 FastID、SearchMode、RF Phase 等专有参数并入配置树。</li>
+        <li><strong>闭环回读校验：</strong>保存设置时执行 <code>SET_READER_CONFIG</code>，随后立即执行 <code>GET_READER_CONFIG</code> 回读；只有回读值与下发值一致，才判定为保存成功。</li>
+      </ol>
+    </section>
+
+    <!-- 6. Persistence & Logging -->
     <section id="persistence">
-      <h2>EF Core SQLite 本地结构化持久化</h2>
+      <h2>6. 数据持久化与分层日志</h2>
       <p>
-        内置 <code>LlrpReaderPlatform.Infrastructure</code> 模块，采用 EF Core 配合轻量级 SQLite 数据库：
+        平台内建轻量、鲁棒的数据管理机制，满足现场免维护与事后追溯需求：
       </p>
-      <div class="code-block">
-        <button class="copy-code">复制</button>
-        <pre><code>// 本地持久化主要实体
-- ReaderProfileEntity       : 已注册读写器连接信息、名称与硬件能力缓存
-- SettingsPresetEntity      : 业务配置预设方案 (天线/RF模式/功率)
-- TargetOfInterestEntity    : TOI 关注卡库 (EPC、分类、预警级别与颜色)
-- InventoryRunEntity        : 历史盘存 Session 结构化记录与显式停止原因
-- AppSettingsEntity         : UI 主题、日志级别与通用偏好</code></pre>
+      <ul>
+        <li><strong>SQLite 本地存储：</strong>数据库位于 <code>%LocalAppData%\LlrpReaderPlatform\llrp-reader-platform.db</code>，首次启动通过 EF Core 迁移闸门自动初始化，管理设备 Profile、Tag Lists 与历史 Run 记录。</li>
+        <li><strong>三层隔离日志体系：</strong>
+          <ul>
+            <li><code>ui-*.log</code>：记录 UI 交互、ViewModel 命令分发与用户操作。</li>
+            <li><code>platform-*.log</code>：记录服务生命周期、Session Gate 状态与持久化事务。</li>
+            <li><code>sdk-*.log</code>：记录原始 LLRP 协议二进制报文、TCP 链路事件与解码诊断。</li>
+          </ul>
+        </li>
+        <li><strong>盘存审计模式：</strong>提供 <code>Off</code>（仅内存聚合）、<code>FinalSnapshot</code>（停止时输出统计快照）与 <code>RawReports</code>（输出全量原始 JSONL 报告流水）三级记录模式。</li>
+      </ul>
+    </section>
+
+    <!-- 7. Virtual Device -->
+    <section id="virtual">
+      <h2>7. 虚拟设备与测试边界</h2>
+      <p>
+        为支持无硬件离线开发与自动化测试，平台确立了清晰的虚拟化双轨边界：
+      </p>
+      <div class="command-table">
+        <div><strong>进程内替身 (In-Process Mock)</strong><span>通过环境变量 <code>LLRP_VIRTUAL_SCENARIO</code> 驱动，用于单元测试与快速 UI 逻辑验证。</span></div>
+        <div><strong>独立 TCP 虚拟设备 (Virtual Device Manager)</strong><span>独立的 <code>LlrpVirtualDeviceStudio.exe</code> 工具，监听物理 5084 端口，模拟完整的真实 TCP/LLRP 报文通信与标签射频池。</span></div>
       </div>
-    </section>
-
-    <!-- Extensions -->
-    <section id="extensions">
-      <h2>插件化厂商扩展架构 (Impinj & Zebra)</h2>
-      <p>
-        平台在连接读写器后会自动解析设备企业号 (Enterprise Number / IANA)：
-      </p>
-      <ul>
-         <li><strong>IANA <code>25882</code> (Impinj)</strong>：自动激活 <code>Extensions.Impinj</code> 模块，加载已定义的 Search Mode、低占空比、Serialized TID 与 RF 相位语义。</li>
-         <li><strong>IANA <code>161</code> (Zebra)</strong>：匹配 <code>Extensions.Zebra</code> 实验性模块；高级字段和配置仍需按型号/固件完成真机验证。</li>
-        <li><strong>标准读写器</strong>：未匹配到厂商扩展时，平滑回退至标准通用 LLRP 驱动路径。</li>
-      </ul>
-    </section>
-
-    <!-- Error Codes -->
-    <section id="error-codes">
-      <h2>统一错误码体系 (Platform Error Codes)</h2>
-      <p>
-        平台定义了面向应用层的稳定错误码，屏蔽底层 Socket 异常与复杂的 LLRP 状态码：
-      </p>
-      <ul>
-        <li><code>ReaderNotFound</code>：指定的读写器句柄不存在或已被移除。</li>
-        <li><code>ReaderBusy</code>：读写器当前正在执行独占盘存或关键操作，租约已被占用。</li>
-        <li><code>ConnectionFailed</code>：TCP 传输无法建立，网络超时或端口被占用。</li>
-        <li><code>ProtocolError</code>：读写器返回了非预期的 LLRP 错误响应。</li>
-        <li><code>CapabilityMismatch</code>：下发的参数超出该型号读写器支持的物理能力范围。</li>
-      </ul>
-    </section>
-
-    <!-- Hardware Matrix -->
-    <section id="hardware-matrix">
-      <h2>物理硬件兼容性与验收基线</h2>
-      <p>
-        平台的兼容性声明严格以真机验收记录为准（非 Mock 或单元测试）：
-      </p>
-      <ul>
-         <li><strong>Impinj Speedway Revolution R420 (LLRP 1.0.1)</strong>：当前硬件矩阵中的主要真机基线；已覆盖连接、能力、设置、盘点及部分 Tag Access/厂商字段，剩余项目仍以验收表为准。</li>
-         <li><strong>标准 LLRP 1.0.1</strong>：已有连接、能力和部分设置链路证据；Inventory/Tag Access 按具体设备和现场条件验收。</li>
-         <li><strong>标准 LLRP 1.1 / 2.0</strong>：软件适配与自动化覆盖存在，真实设备互操作仍标记为 PendingHardware。</li>
-        <li><strong>Zebra FX9600</strong>：<strong>实验性模块</strong>。已验证连接与设备身份，高级特性待进一步标定。</li>
-      </ul>
     </section>
   </article>
 </main>
 
-<footer class="shell footer">
-  <span>LlrpReaderPlatform · 系统架构与设计</span>
-  <span><a href="releases.html">前往下载中心 →</a></span>
+<footer class="footer shell">
+  <span>LlrpReaderPlatform · 跨平台架构与生命周期规范</span>
+  <div style="display:flex;gap:16px;">
+    <a href="index.html">返回首页</a>
+    <a href="wpf-studio.html">WPF 操作手册</a>
+    <a href="releases.html">下载与发布</a>
+  </div>
 </footer>
-
-<script src="assets/app.js"></script>
+<script src="assets/app.js?v=2"></script>
 </body>
 </html>

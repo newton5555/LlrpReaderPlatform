@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="LlrpReaderManager (Windows MAUI Blazor) 客户端用户操作手册：架构特点、仪表盘、读写器管理与跨平台操作流程。">
+  <title>LlrpReaderManager · Windows MAUI 手册</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/brand.css?v=3">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><img class="project-logo" src="assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>MAUI Windows</small></span></a>
+  <button class="menu-toggle" aria-label="打开导航">☰</button>
+  <nav>
+    <a href="index.html">首页</a>
+    <div class="nav-dropdown">
+      <button class="nav-dropdown-toggle active" type="button" aria-expanded="false">用户手册 <span aria-hidden="true">⌄</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="wpf-studio.html">Windows WPF</a>
+        <a href="readermanager-windows.html" class="active">Windows MAUI</a>
+        <a href="readermanager-android.html">Android APK</a>
+        <a href="readermanager-macos.html">macOS Catalyst</a>
+        <a href="readermanager-linux.html">Linux GTK4</a>
+        <a href="virtual-device.html">虚拟读写器</a>
+      </div>
+    </div>
+    <a href="releases.html">发布下载</a>
+    <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
+  </nav>
+</header>
+
+<main class="shell docs-layout">
+  <aside class="side-nav">
+    <p class="eyebrow">WINDOWS MAUI</p>
+    <a href="#overview">1. 架构与定位</a>
+    <a href="#install">2. 安装与启动</a>
+    <a href="#dashboard">3. Dashboard 仪表盘</a>
+    <a href="#workflow">4. 核心工作流程</a>
+    <a href="#navigation">5. 导航与模块速览</a>
+    <a href="#notes">6. 注意事项</a>
+  </aside>
+
+  <article class="doc-content">
+    <p class="eyebrow">02 / MAUI BLAZOR HYBRID</p>
+    <h1>LlrpReaderManager · Windows 操作手册</h1>
+    <p class="doc-lead">
+      <strong>LlrpReaderManager</strong> 是基于 .NET MAUI Blazor Hybrid 架构构建的跨平台读写器管理客户端。
+      在 Windows 上以现代化桌面窗口运行，提供与移动端完全一致的业务逻辑与现代化 Web 交互体验。
+    </p>
+
+    <!-- 1. Overview -->
+    <section id="overview">
+      <h2>1. 架构与定位</h2>
+      <p>
+        Windows MAUI 客户端直接消费共享的 <code>LlrpReaderPlatform.Services</code> 平台服务，
+        通过 Webview2 渲染高性能的 Blazor 界面，兼具跨平台一致性与桌面大屏展示能力。
+      </p>
+      <ul>
+        <li><strong>共享服务层：</strong>具备与 WPF Studio 完全相同的设备生命周期管理、Session Gate 会话串行化与设置编译能力。</li>
+        <li><strong>响应式交互：</strong>采用现代化卡片化与自适应栅格布局，适合不同分辨率的显示器与触控平板。</li>
+      </ul>
+    </section>
+
+    <!-- 2. Install -->
+    <section id="install">
+      <h2>2. 安装与启动</h2>
+      <p>
+        从 Releases 页面下载 <code>LlrpReaderManager-v2.0.3-win-x64.zip</code>，解压后双击运行 <code>LlrpReaderManager.exe</code>。
+      </p>
+    </section>
+
+    <!-- 3. Dashboard -->
+    <section id="dashboard">
+      <h2>3. Dashboard 仪表盘与运行监控</h2>
+      <figure class="screenshot-figure">
+        <img src="assets/screenshots/windows-maui-inventory.png" alt="Windows MAUI Blazor Inventory 页面">
+        <figcaption>Windows MAUI 客户端实时寻卡与数据监控界面。</figcaption>
+      </figure>
+      <p>
+        主页面提供当前激活读写器的健康状态、实时在线状态、活动 ROSpec 状态以及常用操作快捷入口（Start Inventory、Tag Ops、GPIO 控制）。
+      </p>
+    </section>
+
+    <!-- 4. Workflow -->
+    <section id="workflow">
+      <h2>4. 核心工作流程</h2>
+      <ol>
+        <li><strong>添加与探测读写器：</strong>进入 <strong>Readers</strong> 页面，点击添加，输入 IP/端口，点击 <strong>Probe</strong> 识别型号固件，点击 <strong>Enable</strong> 启用。</li>
+        <li><strong>开始寻卡：</strong>进入 <strong>Tag Inventory</strong> 页面，点击 <strong>Start</strong>。实时监控 EPC、RSSI、Antenna 与读取频次。</li>
+        <li><strong>标签存储区操作：</strong>在 <strong>Tag Operations</strong> 页面，选择目标 EPC，指定 Memory Bank (EPC/TID/User) 与偏移量，执行单次读写。</li>
+        <li><strong>查询与配置参数：</strong>在 <strong>Reader Settings</strong> 中按 <em>Query → 编辑 → Apply</em> 标准流程修改射频功率与会话参数。</li>
+      </ol>
+    </section>
+
+    <!-- 5. Navigation -->
+    <section id="navigation">
+      <h2>5. 导航与模块速览</h2>
+      <div class="command-table">
+        <div><strong>Dashboard</strong><span>全局概览、快捷启动与当前读写器状态</span></div>
+        <div><strong>Readers</strong><span>管理读写器列表、执行 Probe 探测与连接配置</span></div>
+        <div><strong>Tag Inventory</strong><span>实时寻卡数据大屏、去重统计与快照导出</span></div>
+        <div><strong>Tag Operations</strong><span>单标签内存区读写与密码校验</span></div>
+        <div><strong>Inventory Runs</strong><span>历史盘存审计记录与详细统计分析</span></div>
+        <div><strong>Reader Settings</strong><span>射频、天线、Gen2 与扩展参数配置</span></div>
+        <div><strong>GPI / GPO</strong><span>四路 GPO 继电器控制与 GPI 输入状态监测</span></div>
+        <div><strong>TOI</strong><span>维护标签业务名称、分类与颜色高亮映射</span></div>
+      </div>
+    </section>
+
+    <!-- 6. Notes -->
+    <section id="notes">
+      <h2>6. 注意事项</h2>
+      <div class="callout warning">
+        <strong>提示：</strong>
+        Windows MAUI 客户端非常适合响应式桌面办公与跨平台交互验证；如需最高性能的硬件极限压力测试与深度工程级调试，推荐使用 <strong>LLRP Reader Studio (WPF)</strong>。
+      </div>
+    </section>
+
+    <!-- Bottom Navigation -->
+    <div style="display:flex;justify-content:space-between;margin-top:60px;padding-top:20px;border-top:1px solid var(--line);">
+      <a href="wpf-studio.html" class="button secondary">← LLRP Reader Studio</a>
+      <a href="readermanager-android.html" class="button secondary">LlrpReaderManager Android →</a>
+    </div>
+  </article>
+</main>
+
+<footer class="shell footer">
+  <span>LlrpReaderPlatform · Windows MAUI 操作手册</span>
+  <div style="display:flex;gap:16px;">
+    <a href="index.html">返回首页</a>
+    <a href="releases.html">下载发布</a>
+  </div>
+</footer>
+<script src="assets/app.js?v=2"></script>
+</body>
+</html>

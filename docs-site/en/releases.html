@@ -1,28 +1,158 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="LlrpReaderPlatform v2.0.3 downloads and installation notes.">
-  <title>Downloads and Releases · LlrpReaderPlatform</title>
-  <link rel="stylesheet" href="../assets/styles.css"><link rel="stylesheet" href="../assets/brand.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="LlrpReaderPlatform Release Downloads: Windows, Android, macOS, and Linux installation packages and assets.">
+  <title>Releases & Downloads · LlrpReaderPlatform</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="stylesheet" href="../assets/brand.css?v=3">
 </head>
 <body>
-<header class="topbar"><a class="brand" href="index.html"><img class="project-logo" src="../assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>Downloads</small></span></a><button class="menu-toggle" aria-label="Open navigation">☰</button><nav><a href="index.html">Home</a><a href="user-manual.html">User Manual</a><a href="releases.html" class="active">Downloads</a></nav><a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a></header>
-<main class="shell docs-layout"><aside class="side-nav"><p class="eyebrow">RELEASES</p><a href="#matrix">Asset matrix</a><a href="#windows-wpf">Windows WPF</a><a href="#windows-vdevice">Virtual Device Manager</a><a href="#android-apk">Android</a><a href="#macos-app">macOS</a><a href="#linux-deb">Linux</a><a href="#verify">SHA256</a></aside><article class="doc-content"><p class="eyebrow">05 / RELEASES &amp; INSTALLATION</p><h1>Downloads and multi-platform releases</h1><p class="doc-lead"><code>LlrpReaderPlatform</code> is published through GitHub Actions. Windows WPF/MAUI packages are self-contained directory archives; macOS archives are unsigned and unnotarized; the Linux Debian package is framework-dependent and needs compatible .NET, GTK4 and WebKitGTK runtimes.</p>
-<section id="matrix"><h2>Release asset matrix (v2.0.3)</h2><div class="api-table"><div class="api-row api-head"><span>Platform</span><span>Asset</span><span>Notes</span></div><div class="api-row"><code>Windows x64</code><span><code>LlrpReaderPlatform-v2.0.3-win-x64.zip</code><br>WPF / <code>LlrpReaderPlatform.exe</code></span><span>Self-contained field client.</span></div><div class="api-row"><code>Windows x64</code><span><code>LlrpVirtualDeviceManager-v2.0.3-win-x64.zip</code><br>Virtual Device Manager / <code>LlrpVirtualDeviceStudio.exe</code></span><span>Independent software TCP reader tool.</span></div><div class="api-row"><code>Windows x64</code><span><code>LlrpReaderManager-v2.0.3-win-x64.zip</code></span><span>MAUI unpackaged self-contained directory package.</span></div><div class="api-row"><code>Android</code><span><code>LlrpReaderManager-v2.0.3-android.apk</code></span><span>Sideloadable MAUI APK.</span></div><div class="api-row"><code>macOS x64 / arm64</code><span><code>LlrpReaderManager-v2.0.3-macos-x64.zip</code><br><code>LlrpReaderManager-v2.0.3-macos-arm64.zip</code></span><span>Mac Catalyst archives; unsigned and unnotarized.</span></div><div class="api-row"><code>Linux x64</code><span><code>LlrpReaderManager-v2.0.3-linux-x64.deb</code></span><span>Experimental GTK4 host; framework-dependent.</span></div></div><p><a class="text-link" href="https://github.com/newton5555/LlrpReaderPlatform/releases" target="_blank" rel="noreferrer">Open GitHub Releases ↗</a></p></section>
-<section id="windows-wpf"><h2>Windows WPF client</h2><div class="number-list"><div><b>01</b><div>Download <code>LlrpReaderPlatform-v2.0.3-win-x64.zip</code> from GitHub Releases.</div></div><div><b>02</b><div>Extract it to a local directory.</div></div><div><b>03</b><div>Run <code>LlrpReaderPlatform.exe</code>; the package carries its runtime and needs no separate .NET installation.</div></div></div></section>
-<section id="windows-vdevice"><h2>Windows Virtual Device Manager</h2><p>Extract <code>LlrpVirtualDeviceManager-v2.0.3-win-x64.zip</code> and launch <code>LlrpVirtualDeviceStudio.exe</code> to create and monitor local TCP virtual readers.</p></section>
-<section id="android-apk"><h2>Android APK</h2><p>Transfer <code>LlrpReaderManager-v2.0.3-android.apk</code> to the handheld or tablet, allow installation from the selected source and install it. Device policy may require administrator approval.</p></section>
-<section id="macos-app"><h2>macOS (Mac Catalyst)</h2><p>The release archives are currently unsigned and unnotarized. If Gatekeeper quarantines the extracted app, remove the quarantine attribute only after verifying the download source:</p><div class="code-block"><button class="copy-code">Copy</button><pre><code>xattr -cr /Applications/LlrpReaderManager.app</code></pre></div></section>
-<section id="linux-deb"><h2>Linux (Debian / Ubuntu)</h2><div class="code-block"><button class="copy-code">Copy</button><pre><code>sudo dpkg -i LlrpReaderManager-v2.0.3-linux-x64.deb
-sudo apt-get update
-sudo apt-get install -f -y
+<header class="topbar">
+  <a class="brand" href="index.html"><img class="project-logo" src="../assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>Releases</small></span></a>
+  <button class="menu-toggle" aria-label="Open Navigation">☰</button>
+  <nav>
+    <a href="index.html">Home</a>
+    <div class="nav-dropdown">
+      <button class="nav-dropdown-toggle" type="button" aria-expanded="false">User Manuals <span aria-hidden="true">⌄</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="wpf-studio.html">Windows WPF</a>
+        <a href="readermanager-windows.html">Windows MAUI</a>
+        <a href="readermanager-android.html">Android APK</a>
+        <a href="readermanager-macos.html">macOS Catalyst</a>
+        <a href="readermanager-linux.html">Linux GTK4</a>
+        <a href="virtual-device.html">Virtual Device</a>
+      </div>
+    </div>
+    <a href="releases.html" class="active">Releases</a>
+    <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
+  </nav>
+</header>
 
-# Launch LlrpReaderManager from the desktop application menu.
-# The Linux target needs compatible .NET, GTK4 and WebKitGTK runtimes.</code></pre></div></section>
-<section id="verify"><h2>SHA256 integrity</h2><p>Each binary asset has its own adjacent <code>.sha256</code> file. There is no single aggregate checksum file in the release assets.</p><div class="code-block"><button class="copy-code">Copy</button><pre><code>Get-FileHash .\LlrpReaderPlatform-v2.0.3-win-x64.zip -Algorithm SHA256</code></pre></div></section>
-</article></main>
-<footer class="shell footer"><span>LlrpReaderPlatform · Downloads</span><span><a href="index.html">Back to home →</a></span></footer>
-<script src="../assets/app.js"></script>
+<main class="shell docs-layout">
+  <aside class="side-nav">
+    <p class="eyebrow">RELEASES</p>
+    <a href="#downloads">1. Download Center</a>
+    <a href="#requirements">2. System Requirements</a>
+    <a href="#security">3. Security & Installation</a>
+    <a href="#changelog">4. Version Changelog</a>
+  </aside>
+
+  <article class="doc-content">
+    <p class="eyebrow">DOWNLOADS & RELEASES</p>
+    <h1>Software Downloads & Release Hub</h1>
+    <p class="doc-lead">
+      All LlrpReaderPlatform software release assets are hosted on GitHub Releases. Choose the appropriate self-contained package or installer for your operating system.
+    </p>
+
+    <!-- 1. Downloads -->
+    <section id="downloads">
+      <h2>1. Latest Release Assets (v2.0.3)</h2>
+      <div class="api-table">
+        <div class="api-row api-head">
+          <span>Application</span>
+          <span>Target Architecture</span>
+          <span>Asset Filename</span>
+          <span>Description</span>
+          <span>Download</span>
+        </div>
+        <div class="api-row">
+          <strong>LLRP Reader Studio (WPF)</strong>
+          <span>Windows x64</span>
+          <code>LlrpReaderPlatform-v2.0.3-win-x64.zip</code>
+          <span>Self-contained portable single file; primary qualification client</span>
+          <a class="text-link" href="https://github.com/newton5555/LlrpReaderPlatform/releases" target="_blank" rel="noreferrer">Download ↗</a>
+        </div>
+        <div class="api-row">
+          <strong>LlrpReaderManager (Win MAUI)</strong>
+          <span>Windows x64</span>
+          <code>LlrpReaderManager-v2.0.3-win-x64.zip</code>
+          <span>MAUI Blazor desktop package with responsive layout</span>
+          <a class="text-link" href="https://github.com/newton5555/LlrpReaderPlatform/releases" target="_blank" rel="noreferrer">Download ↗</a>
+        </div>
+        <div class="api-row">
+          <strong>LlrpReaderManager (Android)</strong>
+          <span>Android ARM64/x86</span>
+          <code>LlrpReaderManager-v2.0.3-android.apk</code>
+          <span>Industrial handheld PDA package (com.llrp.readermanager)</span>
+          <a class="text-link" href="https://github.com/newton5555/LlrpReaderPlatform/releases" target="_blank" rel="noreferrer">Download ↗</a>
+        </div>
+        <div class="api-row">
+          <strong>LlrpReaderManager (macOS Intel)</strong>
+          <span>macOS x64 (Intel)</span>
+          <code>LlrpReaderManager-v2.0.3-macos-x64.zip</code>
+          <span>Mac Catalyst application build for Intel Macs</span>
+          <a class="text-link" href="https://github.com/newton5555/LlrpReaderPlatform/releases" target="_blank" rel="noreferrer">Download ↗</a>
+        </div>
+        <div class="api-row">
+          <strong>LlrpReaderManager (macOS ARM)</strong>
+          <span>macOS arm64 (M1~M4)</span>
+          <code>LlrpReaderManager-v2.0.3-macos-arm64.zip</code>
+          <span>Native Apple Silicon application build</span>
+          <a class="text-link" href="https://github.com/newton5555/LlrpReaderPlatform/releases" target="_blank" rel="noreferrer">Download ↗</a>
+        </div>
+        <div class="api-row">
+          <strong>LlrpReaderManager (Linux GTK4)</strong>
+          <span>Linux x64</span>
+          <code>LlrpReaderManager-v2.0.3-linux-x64.deb</code>
+          <span>Debian / Ubuntu package with GTK4 + WebKitGTK</span>
+          <a class="text-link" href="https://github.com/newton5555/LlrpReaderPlatform/releases" target="_blank" rel="noreferrer">Download ↗</a>
+        </div>
+        <div class="api-row">
+          <strong>Virtual Device Manager</strong>
+          <span>Windows x64</span>
+          <code>LlrpVirtualDeviceManager-v2.0.3-win-x64.zip</code>
+          <span>Standalone TCP virtual reader management tool</span>
+          <a class="text-link" href="https://github.com/newton5555/LlrpReaderPlatform/releases" target="_blank" rel="noreferrer">Download ↗</a>
+        </div>
+      </div>
+      <div style="margin-top:20px;">
+        <a class="button primary" href="https://github.com/newton5555/LlrpReaderPlatform/releases" target="_blank" rel="noreferrer">Go to GitHub Releases ↗</a>
+      </div>
+    </section>
+
+    <!-- 2. Requirements -->
+    <section id="requirements">
+      <h2>2. System & Runtime Requirements</h2>
+      <ul>
+        <li><strong>Windows (WPF Studio / Virtual Device):</strong> Windows 10 (1809+) or Windows 11 x64. Self-contained package includes .NET 10 runtime.</li>
+        <li><strong>Android:</strong> Android 8.0 (API 26) or newer with Wi-Fi / Ethernet networking capability.</li>
+        <li><strong>macOS:</strong> macOS Monterey 12.0 or newer.</li>
+        <li><strong>Linux (GTK4):</strong> Ubuntu 22.04+ / Debian 12+, with <code>libgtk-4-1</code>, <code>libwebkit2gtk-4.1-0</code> (or <code>libwebkitgtk-6.0-4</code>), and <code>dotnet-runtime-10.0</code>.</li>
+      </ul>
+    </section>
+
+    <!-- 3. Security -->
+    <section id="security">
+      <h2>3. Security & Installation Guidance</h2>
+      <div class="callout warning">
+        <strong>macOS Gatekeeper Verification:</strong>
+        Because development builds are not yet notarized by Apple, upon first launch you may see a developer verification warning. Navigate to <strong>System Settings → Privacy & Security</strong> and click <strong>"Open Anyway"</strong>.
+      </div>
+    </section>
+
+    <!-- 4. Changelog -->
+    <section id="changelog">
+      <h2>4. Version Changelog Highlights</h2>
+      <div class="command-table">
+        <div><strong>v2.0.3</strong><span>Comprehensive MAUI Blazor cross-platform assets and Linux GTK4 Head; optimized Session Gate thread scheduling.</span></div>
+        <div><strong>v2.0.2</strong><span>Upgraded core LLRPCSharp SDK to v0.5.0; introduced standard LLRP 2.0 protocol layer and native Zebra extensions.</span></div>
+        <div><strong>v2.0.1</strong><span>Refactored EF Core SQLite migration gate to handle concurrent writes; integrated TOI tag projection.</span></div>
+        <div><strong>v2.0.0</strong><span>Formalized the 4-layer decoupled architecture (Contracts / Services / Infrastructure / Extensions).</span></div>
+      </div>
+    </section>
+  </article>
+</main>
+
+<footer class="footer shell">
+  <span>LlrpReaderPlatform · Releases & Binaries Hub</span>
+  <div style="display:flex;gap:16px;">
+    <a href="index.html">Home</a>
+    <a href="wpf-studio.html">WPF Manual</a>
+    <a href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
+  </div>
+</footer>
+<script src="../assets/app.js?v=2"></script>
 </body>
 </html>

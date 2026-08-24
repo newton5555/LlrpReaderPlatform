@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="LlrpReaderManager (macOS Mac Catalyst) 客户端操作手册：Intel 与 Apple Silicon 架构包部署、Gatekeeper 信任与操作指引。">
+  <title>LlrpReaderManager · macOS 手册</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/brand.css?v=3">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><img class="project-logo" src="assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>MAUI macOS</small></span></a>
+  <button class="menu-toggle" aria-label="打开导航">☰</button>
+  <nav>
+    <a href="index.html">首页</a>
+    <div class="nav-dropdown">
+      <button class="nav-dropdown-toggle active" type="button" aria-expanded="false">用户手册 <span aria-hidden="true">⌄</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="wpf-studio.html">Windows WPF</a>
+        <a href="readermanager-windows.html">Windows MAUI</a>
+        <a href="readermanager-android.html">Android APK</a>
+        <a href="readermanager-macos.html" class="active">macOS Catalyst</a>
+        <a href="readermanager-linux.html">Linux GTK4</a>
+        <a href="virtual-device.html">虚拟读写器</a>
+      </div>
+    </div>
+    <a href="releases.html">发布下载</a>
+    <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
+  </nav>
+</header>
+
+<main class="shell docs-layout">
+  <aside class="side-nav">
+    <p class="eyebrow">MAUI MACOS</p>
+    <a href="#install">1. 安装与架构选择</a>
+    <a href="#gatekeeper">2. Gatekeeper 信任</a>
+    <a href="#workflow">3. 操作工作流</a>
+    <a href="#ui-nav">4. 界面导航</a>
+    <a href="#notes">5. 注意事项</a>
+  </aside>
+
+  <article class="doc-content">
+    <p class="eyebrow">04 / MAC CATALYST CLIENT</p>
+    <h1>LlrpReaderManager · macOS 操作手册</h1>
+    <p class="doc-lead">
+      <strong>LlrpReaderManager (macOS)</strong> 采用 Mac Catalyst 框架构建，为 macOS 办公与研发测试环境提供原生视窗体验。
+      独立提供 Intel (x64) 与 Apple Silicon (arm64) 双架构发布包。
+    </p>
+
+    <!-- 1. Install -->
+    <section id="install">
+      <h2>1. 安装与架构选择</h2>
+      <p>根据您的 Mac 处理器芯片类型从 Releases 页面下载对应安装包：</p>
+      <ul>
+        <li><strong>Apple Silicon (M1 / M2 / M3 / M4 芯片)：</strong>下载 <code>LlrpReaderManager-v2.0.3-macos-arm64.zip</code>。</li>
+        <li><strong>Intel 处理器机型：</strong>下载 <code>LlrpReaderManager-v2.0.3-macos-x64.zip</code>。</li>
+      </ul>
+      <p>解压下载的 ZIP 文件，将解压出的 <code>LlrpReaderManager.app</code> 拖移至系统的 <code>Applications (应用程序)</code> 文件夹中。</p>
+    </section>
+
+    <!-- 2. Gatekeeper -->
+    <section id="gatekeeper">
+      <h2>2. Gatekeeper 安全限制与首次打开</h2>
+      <div class="callout warning">
+        <strong>首次启动提示处理：</strong>
+        由于 macOS 安装包为内部开发测试构建，尚未附带 Apple 开发者付费公证签名。首次打开若弹出“无法打开，因为无法验证开发者”警告，请按以下步骤操作：
+        <ol style="margin-top:8px;">
+          <li>打开 Mac 的<strong>“系统设置 (System Settings)”</strong>。</li>
+          <li>进入<strong>“隐私与安全性 (Privacy & Security)”</strong>。</li>
+          <li>滑动至“安全性”区域，在“已阻止使用 LlrpReaderManager”右侧点击<strong>“仍要打开 (Open Anyway)”</strong>并输入管理员密码确认。</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 3. Workflow -->
+    <section id="workflow">
+      <h2>3. 核心操作工作流</h2>
+      <ol>
+        <li><strong>添加读写器：</strong>在 <strong>Readers</strong> 页面添加目标 Reader IP 与 5084 端口，点击 <strong>Probe</strong> 确认能力模型。</li>
+        <li><strong>启动盘存：</strong>在 <strong>Tag Inventory</strong> 页面点击 <strong>Start</strong>，实时观察 EPC 流水、标签去重计数与读取速率。</li>
+        <li><strong>标签读写：</strong>在 <strong>Tag Operations</strong> 页面针对特定 EPC 标签执行 User Bank / EPC Bank 读写。</li>
+        <li><strong>参数调优：</strong>在 <strong>Reader Settings</strong> 页面查询与下发天线功率与 Gen2 过滤参数。</li>
+      </ol>
+    </section>
+
+    <!-- 4. UI Nav -->
+    <section id="ui-nav">
+      <h2>4. 界面导航与功能模块</h2>
+      <div class="command-table">
+        <div><strong>Dashboard</strong><span>概览看板、快速启动寻卡与读写器在线状态</span></div>
+        <div><strong>Readers</strong><span>读写器连接池管理、Probe 探测与版本协商</span></div>
+        <div><strong>Tag Inventory</strong><span>高分辨率实时标签列表、统计图表与快照导出</span></div>
+        <div><strong>Tag Operations</strong><span>单标签内存区读写与密码操作</span></div>
+        <div><strong>Reader Settings</strong><span>射频功率、会话参数与厂商扩展设置</span></div>
+        <div><strong>GPI / GPO</strong><span>四路继电器输出控制与传感器输入监视</span></div>
+      </div>
+    </section>
+
+    <!-- 5. Notes -->
+    <section id="notes">
+      <h2>5. 注意事项</h2>
+      <p>
+        macOS 系统会对应用发起本地网络通信进行权限弹窗提示，请务必在系统弹窗中勾选<strong>“允许访问本地网络”</strong>，以保证 TCP 5084 端口与工业读写器正常互通。
+      </p>
+    </section>
+
+    <!-- Bottom Navigation -->
+    <div style="display:flex;justify-content:space-between;margin-top:60px;padding-top:20px;border-top:1px solid var(--line);">
+      <a href="readermanager-android.html" class="button secondary">← LlrpReaderManager Android</a>
+      <a href="readermanager-linux.html" class="button secondary">LlrpReaderManager Linux →</a>
+    </div>
+  </article>
+</main>
+
+<footer class="shell footer">
+  <span>LlrpReaderPlatform · macOS Catalyst 操作手册</span>
+  <div style="display:flex;gap:16px;">
+    <a href="index.html">返回首页</a>
+    <a href="releases.html">下载发布</a>
+  </div>
+</footer>
+<script src="assets/app.js?v=2"></script>
+</body>
+</html>

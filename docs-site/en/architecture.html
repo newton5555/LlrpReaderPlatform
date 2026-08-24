@@ -1,35 +1,157 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="LlrpReaderPlatform service architecture, leases, persistence and hardware acceptance boundaries.">
-  <title>Architecture and Design · LlrpReaderPlatform</title>
-  <link rel="stylesheet" href="../assets/styles.css"><link rel="stylesheet" href="../assets/brand.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="LlrpReaderPlatform Architecture: Layered architecture, Session Gate concurrency, lifecycle leases, and settings compilation.">
+  <title>Architecture & Engineering · LlrpReaderPlatform</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="stylesheet" href="../assets/brand.css?v=3">
 </head>
 <body>
-<header class="topbar"><a class="brand" href="index.html"><img class="project-logo" src="../assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>Architecture</small></span></a><button class="menu-toggle" aria-label="Open navigation">☰</button><nav><a href="index.html">Home</a><a href="user-manual.html">User Manual</a><a href="releases.html">Downloads</a></nav><a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a></header>
-<main class="shell docs-layout"><aside class="side-nav"><p class="eyebrow">ARCHITECTURE</p><a href="#layering">Layering</a><a href="#lease-concurrency">Reader leases</a><a href="#persistence">Persistence</a><a href="#extensions">Extensions</a><a href="#error-codes">Error codes</a><a href="#hardware-matrix">Hardware matrix</a></aside><article class="doc-content"><p class="eyebrow">04 / CORE ARCHITECTURE &amp; PLATFORM SERVICES</p><h1>Platform services and application boundaries</h1><p class="doc-lead"><code>LlrpReaderPlatform</code> is an application service platform built on LLRPCSharp, not a second LLRP SDK. It coordinates reader lifecycle, session leases, settings projection, local persistence and multiple UI composition roots.</p>
-<section id="layering"><h2>Layering and dependency direction</h2><p>The repository keeps business services testable and dependencies flowing toward contracts and the SDK:</p><div class="code-block"><button class="copy-code">Copy</button><pre><code>App.Wpf / LlrpReaderManager (composition roots)
-  ├──► Services ───────────────► Contracts + LlrpSdk
-  ├──► Infrastructure ─────────► Services + Contracts
-  └──► Extensions.* ───────────► Services + Contracts + vendor SDK adapter
+<header class="topbar">
+  <a class="brand" href="index.html"><img class="project-logo" src="../assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>Architecture</small></span></a>
+  <button class="menu-toggle" aria-label="Open Navigation">☰</button>
+  <nav>
+    <a href="index.html">Home</a>
+    <div class="nav-dropdown">
+      <button class="nav-dropdown-toggle" type="button" aria-expanded="false">User Manuals <span aria-hidden="true">⌄</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="wpf-studio.html">Windows WPF</a>
+        <a href="readermanager-windows.html">Windows MAUI</a>
+        <a href="readermanager-android.html">Android APK</a>
+        <a href="readermanager-macos.html">macOS Catalyst</a>
+        <a href="readermanager-linux.html">Linux GTK4</a>
+        <a href="virtual-device.html">Virtual Device</a>
+      </div>
+    </div>
+    <a href="releases.html">Releases</a>
+    <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
+  </nav>
+</header>
 
-Contracts (DTOs / interfaces / error codes; no UI or SDK dependency)
-Services (reader lifecycle / leases / settings / inventory / Tag Access)
+<main class="shell docs-layout">
+  <aside class="side-nav">
+    <p class="eyebrow">ARCHITECTURE</p>
+    <a href="#goals">1. Design Goals</a>
+    <a href="#layers">2. Layered Architecture</a>
+    <a href="#runtime">3. Session Gate Concurrency</a>
+    <a href="#lifecycle">4. Lifecycle & Leases</a>
+    <a href="#settings">5. Settings Engine</a>
+    <a href="#persistence">6. Persistence & Logging</a>
+    <a href="#virtual">7. Virtual Devices</a>
+  </aside>
 
-LlrpVirtualDevice.App.Wpf
-  └──► LlrpDevice.Virtual.Hosting (independent TCP virtual-reader tool)</code></pre></div><div class="callout tip"><strong>Architecture tests:</strong> Contracts must not depend on WPF, generated SDK messages or vendor-specific types.</div></section>
-<section id="lease-concurrency"><h2>ReaderHandle ownership and leases</h2><p>Most readers expose one meaningful TCP/session state machine. <code>ReaderHandle</code> makes ownership explicit:</p><div class="ownership-grid"><div><span class="tag desired">SHORT LEASE</span><h3>Short operation</h3><p>Probe, settings application, Tag Access and supported GPIO operations take a short lease and release it after completion.</p></div><div><span class="tag restored">LONG LEASE</span><h3>Inventory ownership</h3><p>Inventory owns the session from start to stop and receives the report stream through that channel.</p></div><div><span class="tag observed">DETERMINISTIC</span><h3>Busy is explicit</h3><p>Lease contention returns <code>ReaderBusy</code> rather than issuing conflicting commands or silently restarting a reader.</p></div></div></section>
-<section id="persistence"><h2>EF Core SQLite persistence</h2><p><code>LlrpReaderPlatform.Infrastructure</code> uses EF Core and SQLite for local structured data.</p><div class="code-block"><button class="copy-code">Copy</button><pre><code>ReaderProfileEntity       : reader address, name and capability cache
-SettingsPresetEntity      : antenna / RF-mode / power presets
-TargetOfInterestEntity    : EPC, category and highlight metadata
-InventoryRunEntity        : run history and explicit stop reason
-AppSettingsEntity         : local UI and application preferences</code></pre></div></section>
-<section id="extensions"><h2>Vendor extension modules</h2><p>After a reader is connected, the platform can project vendor data using the enterprise number and registered adapter.</p><ul><li><strong>Impinj (IANA 25882):</strong> primary extension path for Search Mode, Low Duty Cycle, Serialized TID and RF phase semantics.</li><li><strong>Zebra (IANA 161):</strong> experimental module; advanced fields and settings require model/firmware validation.</li><li><strong>Standard readers:</strong> use the common LLRP path when no vendor extension is matched.</li></ul></section>
-<section id="error-codes"><h2>Platform error codes</h2><ul><li><code>ReaderNotFound</code>: the reader handle is missing or removed.</li><li><code>ReaderBusy</code>: an exclusive lease is already held.</li><li><code>ConnectionFailed</code>: TCP connection or network setup failed.</li><li><code>ProtocolError</code>: an unexpected LLRP error response was returned.</li><li><code>CapabilityMismatch</code>: requested settings exceed the device capability model.</li></ul></section>
-<section id="hardware-matrix"><h2>Physical hardware acceptance baseline</h2><p>Compatibility claims are based on recorded true-device evidence, not only mocks or unit tests.</p><ul><li><strong>Impinj Speedway Revolution R420 (LLRP 1.0.1):</strong> primary true-device baseline with connection, capabilities, settings, inventory and some Tag Access/vendor-field evidence; remaining items are tracked in the acceptance table.</li><li><strong>Standard LLRP 1.0.1:</strong> connection, capability and some settings evidence exists; inventory and Tag Access depend on the target device and site conditions.</li><li><strong>Standard LLRP 1.1 / 2.0:</strong> software and automation coverage exists; true-device interoperability remains pending.</li><li><strong>Zebra FX9600:</strong> experimental extension; identity/connection evidence exists, while advanced behavior remains to be calibrated.</li></ul></section>
-</article></main>
-<footer class="shell footer"><span>LlrpReaderPlatform · Architecture</span><span><a href="releases.html">Open the downloads page →</a></span></footer>
-<script src="../assets/app.js"></script>
+  <article class="doc-content">
+    <p class="eyebrow">SYSTEM ARCHITECTURE & DESIGN</p>
+    <h1>Architecture Overview & Engineering Design</h1>
+    <p class="doc-lead">
+      LlrpReaderPlatform centralizes LLRP protocol orchestration, hardware lifecycle, device capability modeling, semantic parameter compilation, and vendor extensions in a shared services layer, keeping UI consumers completely decoupled and lightweight.
+    </p>
+
+    <!-- 1. Goals -->
+    <section id="goals">
+      <h2>1. Core Engineering Goals</h2>
+      <ul>
+        <li><strong>UI Decoupling:</strong> ViewModels and Razor components never hold direct TCP sockets or orchestrate raw LLRP messages; they only consume platform services and immutable DTOs.</li>
+        <li><strong>Deterministic Concurrency:</strong> An LLRP reader TCP socket is an exclusive resource. All commands pass through an internal <code>Session Gate</code> to serialize execution and prevent race conditions.</li>
+        <li><strong>Two-Stage Capability Discovery:</strong> Standard LLRP probing discovers baseline identity first, followed by dynamic Impinj/Zebra extension attachment during capability synchronization.</li>
+        <li><strong>Closed-Loop Parameter Verification:</strong> Applying settings strictly follows <em>Query → Edit → Validate → Apply → Query Readback</em>, never mistaking local memory cache for actual reader hardware state.</li>
+      </ul>
+    </section>
+
+    <!-- 2. Layers -->
+    <section id="layers">
+      <h2>2. Layered Architecture & Dependency Model</h2>
+      <div class="code-block">
+        <pre><code>[ UI Consumers: WPF / MAUI Blazor / Linux GTK4 ] (Composition Root)
+                      │
+                      ▼
+         [ LlrpReaderPlatform.Services ] ───► [ LlrpReaderPlatform.Contracts ]
+          (Lifecycle / Settings / Leases)        (Immutable DTOs / Interfaces)
+                      │                                    ▲
+          ┌───────────┴───────────┐                        │
+          ▼                       ▼                        │
+[ Infrastructure ]      [ Extensions.Impinj / Zebra ] ─────┘
+ (SQLite / Discovery)     (Vendor parameter compilation)
+          │                       │
+          └───────────┬───────────┘
+                      ▼
+              [ LLRPCSharp SDK ]</code></pre>
+      </div>
+      <div class="command-table" style="margin-top:20px;">
+        <div><strong>LlrpReaderPlatform.Contracts</strong><span>Zero-dependency domain contracts, state enums, error codes, and service abstractions. Pure DTOs without UI or SDK dependencies.</span></div>
+        <div><strong>LlrpReaderPlatform.Services</strong><span>Reader lifecycle, Session Gate coordination, settings compilation, and tag report stream distribution.</span></div>
+        <div><strong>LlrpReaderPlatform.Infrastructure</strong><span>EF Core SQLite persistence, Zeroconf / mDNS discovery, and structured multi-layered logging.</span></div>
+        <div><strong>LlrpReaderPlatform.Extensions.*</strong><span>Pluggable vendor extensions (e.g. Impinj FastID / Phase / Doppler / Search Mode / 4-ch GPIO).</span></div>
+      </div>
+    </section>
+
+    <!-- 3. Runtime -->
+    <section id="runtime">
+      <h2>3. Session Gate & Concurrency Serialization</h2>
+      <p>
+        In the LLRP protocol, an active reader TCP connection is strictly single-tenant. To avoid protocol deadlocks and message interleaving, the platform enforces single-owner leasing:
+      </p>
+      <div class="callout warning">
+        <strong>Session Gate Invariant:</strong>
+        Each <code>ReaderHandle</code> manages exactly one active <code>ReaderSession</code>. All short-lived requests (Probe, Settings Query, Settings Apply, Tag Access, GPO switches) queue through the Session Gate.
+      </div>
+      <p style="margin-top:12px;">
+        When a reader is running an active Inventory session, the TCP socket is held exclusively by the ROSpec lease. Any concurrent attempt to modify settings or perform Tag Access returns an explicit <code>PlatformErrorCode.ReaderBusy</code> error without interrupting or restarting the inventory session.
+      </p>
+    </section>
+
+    <!-- 4. Lifecycle -->
+    <section id="lifecycle">
+      <h2>4. Lifecycle: Short-Lived Probing vs Long Inventory Lease</h2>
+      <ul>
+        <li><strong>Short-Lived Probing (Probe & Activate):</strong>
+          During reader discovery or activation, the platform establishes a brief TCP handshake, sends <code>GET_READER_CAPABILITIES</code>, snapshots the capabilities, and disconnects immediately. The UI reflects <em>"Capabilities Synced"</em>.
+        </li>
+        <li><strong>Long Inventory Lease:</strong>
+          When <strong>Start</strong> is triggered, an exclusive session is created, compiling and activating the ROSpec for real-time <code>RO_ACCESS_REPORT</code> streaming. Clicking <strong>Stop</strong> flushes in-flight reports, saves the run snapshot, and safely closes the connection.
+        </li>
+      </ul>
+    </section>
+
+    <!-- 5. Settings -->
+    <section id="settings">
+      <h2>5. Settings Compilation Engine</h2>
+      <p>
+        Supported via <code>ISettingsExtensionContributor</code>, settings are structured as a semantic tree (<code>SemanticId</code> / <code>GroupKey</code> / <code>InstanceKey</code>). UI controls render generic editors without hardcoding vendor branches, while Impinj/Zebra contributors inject proprietary parameters.
+      </p>
+    </section>
+
+    <!-- 6. Persistence -->
+    <section id="persistence">
+      <h2>6. Offline Persistence & Layered Logging</h2>
+      <ul>
+        <li><strong>SQLite Database:</strong> Located at <code>%LocalAppData%\LlrpReaderPlatform\llrp-reader-platform.db</code> with automatic EF Core schema migrations.</li>
+        <li><strong>Layered Logs:</strong> <code>ui-*.log</code> (user actions), <code>platform-*.log</code> (services/leases), <code>sdk-*.log</code> (raw LLRP binary wire packets).</li>
+        <li><strong>Inventory Snapshots:</strong> Supports <code>Off</code>, <code>FinalSnapshot</code>, and <code>RawReports</code> (full JSONL report stream) recording modes.</li>
+      </ul>
+    </section>
+
+    <!-- 7. Virtual -->
+    <section id="virtual">
+      <h2>7. Virtual Devices & Test Boundaries</h2>
+      <div class="command-table">
+        <div><strong>In-Process Mock</strong><span>Driven by <code>LLRP_VIRTUAL_SCENARIO</code> environment variables for unit tests and fast UI verification.</span></div>
+        <div><strong>Standalone TCP Virtual Device</strong><span>Full packet-level virtual reader via <code>LlrpVirtualDeviceStudio.exe</code> on port 5084.</span></div>
+      </div>
+    </section>
+  </article>
+</main>
+
+<footer class="footer shell">
+  <span>LlrpReaderPlatform · Architecture & Lifecycle Specifications</span>
+  <div style="display:flex;gap:16px;">
+    <a href="index.html">Home</a>
+    <a href="wpf-studio.html">WPF Manual</a>
+    <a href="releases.html">Releases</a>
+  </div>
+</footer>
+<script src="../assets/app.js?v=2"></script>
 </body>
 </html>

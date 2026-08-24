@@ -3,120 +3,143 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Virtual Device Manager (Windows WPF) - 独立的 LLRP TCP 虚拟读写器创建与管理测试工具">
-  <title>虚拟设备管理器 · LlrpReaderPlatform</title>
+  <meta name="description" content="Virtual Device Manager 官方操作手册：TCP/LLRP 报文级虚拟读写器创建、标签池 Tag Pool 模拟、报文 Inspector 与故障注入。">
+  <title>Virtual Device Manager · 虚拟设备手册</title>
   <link rel="stylesheet" href="assets/styles.css">
-  <link rel="stylesheet" href="assets/brand.css">
+  <link rel="stylesheet" href="assets/brand.css?v=3">
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="index.html">
-    <img class="project-logo" src="assets/icon.svg" alt="LlrpReaderPlatform">
-    <span>LlrpReaderPlatform<small>Virtual Studio</small></span>
-  </a>
-  <button class="menu-toggle">☰</button>
+  <a class="brand" href="index.html"><img class="project-logo" src="assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>Virtual Device</small></span></a>
+  <button class="menu-toggle" aria-label="打开导航">☰</button>
   <nav>
     <a href="index.html">首页</a>
-    <a href="user-manual.html">用户手册</a>
-
-    <a href="releases.html">下载与发布</a>
+    <div class="nav-dropdown">
+      <button class="nav-dropdown-toggle active" type="button" aria-expanded="false">用户手册 <span aria-hidden="true">⌄</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="wpf-studio.html">Windows WPF</a>
+        <a href="readermanager-windows.html">Windows MAUI</a>
+        <a href="readermanager-android.html">Android APK</a>
+        <a href="readermanager-macos.html">macOS Catalyst</a>
+        <a href="readermanager-linux.html">Linux GTK4</a>
+        <a href="virtual-device.html" class="active">虚拟读写器</a>
+      </div>
+    </div>
+    <a href="releases.html">发布下载</a>
+    <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
   </nav>
-  <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
 </header>
 
 <main class="shell docs-layout">
-  <!-- Side Nav -->
   <aside class="side-nav">
-    <p class="eyebrow">TOPICS</p>
-    <a href="wpf-studio.html">WPF 客户端</a>
-    <a href="cross-platform.html">LlrpReaderManager</a>
-    <a href="virtual-device.html" class="active">虚拟设备工具</a>
-    <p class="eyebrow" style="margin-top:20px;">ON THIS PAGE</p>
-    <a href="#overview">工具定位与用途</a>
-    <a href="#features">核心仿真功能</a>
-    <a href="#profiles">能力 Profile 切换</a>
-    <a href="#tag-pool">虚拟标签池配置</a>
-    <a href="#workflow">联调与测试工作流</a>
+    <p class="eyebrow">VIRTUAL DEVICE</p>
+    <a href="#overview">1. 工具概述与定位</a>
+    <a href="#install">2. 安装与运行</a>
+    <a href="#profiles">3. 虚拟实例与 Profile</a>
+    <a href="#tagpool">4. 标签池与射频模拟</a>
+    <a href="#inspector">5. 报文监控台 (Inspector)</a>
+    <a href="#connect">6. 客户端接入联调</a>
+    <a href="#notes">7. 注意事项</a>
   </aside>
 
-  <!-- Content Article -->
   <article class="doc-content">
-    <p class="eyebrow">03 / TESTING & SIMULATION TOOL</p>
-    <h1>虚拟设备管理器 (Virtual Device Manager)</h1>
+    <p class="eyebrow">06 / PROTOCOL EMULATION TOOL</p>
+    <h1>Virtual Device Manager 操作手册</h1>
     <p class="doc-lead">
-       <code>src/LlrpVirtualDevice.App.Wpf</code> 是一个独立的 Windows WPF 工具。它基于 <strong>LLRPCSharp Virtual Device Hosting</strong>，支持在本地启动、监控和管理标准 LLRP TCP 软件虚拟读写器实例；它不模拟真实 RF 波形。
+      <strong>Virtual Device Manager (虚拟读写器管理器)</strong> 是一个独立的 Windows WPF 工具。
+      直接使用 <code>LlrpDevice.Virtual.Hosting</code> 引擎，在单机上拉起标准的 TCP/LLRP 虚拟读写器实例，
+      提供标签池生成、报文监听与故障注入能力，供任何 LLRP 客户端进行无硬件离线联调。
     </p>
 
-    <!-- Overview -->
+    <!-- 1. Overview -->
     <section id="overview">
-      <h2>为什么需要独立的虚拟设备管理器？</h2>
+      <h2>1. 工具概述与定位</h2>
       <p>
-        在 RFID 应用开发与交付过程中，开发者和测试人员经常面临没有物理读写器、硬件被现场占用或需要模拟大批量异常场景的困扰：
+        Virtual Device Manager 模拟的是<strong>完整的 TCP/LLRP 协议网络端点</strong>，监听物理端口（默认 <code>5084</code>），
+        完整响应 <code>GET_READER_CAPABILITIES</code>、<code>ADD_ROSPEC</code>、<code>ENABLE_ROSPEC</code>、<code>START_ROSPEC</code>、<code>STOP_ROSPEC</code> 等标准报文。
       </p>
+    </section>
+
+    <!-- 2. Install -->
+    <section id="install">
+      <h2>2. 安装与运行</h2>
+      <p>
+        从 Releases 页面下载 <code>LlrpVirtualDeviceManager-v2.0.3-win-x64.zip</code>，解压后运行 <code>LlrpVirtualDeviceStudio.exe</code>。
+        该工具为 Windows x64 自包含单文件，无需依赖外部运行时。
+      </p>
+      <figure class="screenshot-figure">
+        <img src="assets/screenshots/windows-virtual-device-manager.png" alt="Windows Virtual Device Manager 界面">
+        <figcaption>Virtual Device Manager 虚拟读写器管理器与多实例控制面板。</figcaption>
+      </figure>
+    </section>
+
+    <!-- 3. Profiles -->
+    <section id="profiles">
+      <h2>3. 虚拟实例与 Profile 配置</h2>
+      <ol>
+        <li><strong>新建 Profile：</strong>点击 <strong>New Profile</strong>，输入实例名称、绑定 IP（如 <code>127.0.0.1</code> 或局域网物理 IP）与监听端口（如 <code>5084</code>、<code>5085</code>）。</li>
+        <li><strong>协议版本选择：</strong>指定虚拟读写器的协议规范版本（LLRP 1.0.1、1.1 或 2.0）以及模拟设备型号（如 Standard LLRP Reader、Impinj Speedway R420）。</li>
+        <li><strong>启动读写器：</strong>点击 <strong>Start Instance</strong>，虚拟读写器进入监听状态，等待客户端发起 TCP 连接。</li>
+      </ol>
+    </section>
+
+    <!-- 4. Tag Pool -->
+    <section id="tagpool">
+      <h2>4. 标签池 (Tag Pool) 与射频模拟</h2>
       <ul>
-         <li><strong>协议行为仿真</strong>：虚拟设备覆盖 LLRP 1.0.1、1.1 与 2.0 的软件协议选择、TCP 握手、Keepalive 和 ROSpec 生命周期路径。</li>
-        <li><strong>对主客户端透明</strong>：主客户端（WPF Studio 或 MAUI 客户端）将虚拟设备视作标准的 TCP 读写器（连接 <code>127.0.0.1:5084</code> 即可），无需在业务代码中写任何 Mock 分支。</li>
-         <li><strong>独立生命周期</strong>：虚拟设备管理器独立运行，不共享物理客户端的会话调度器，让测试进程与物理客户端解耦。</li>
+        <li><strong>自定义标签集合：</strong>支持批量生成随机 EPC、导入预设 Hex EPC 列表，并可为每个标签设定 TID 与 User 存储区数据。</li>
+        <li><strong>天线与动态运动模拟：</strong>为虚拟天线（Antenna 1~4）配置标签可见性，模拟标签进入/离开天线射频区域（In-Sight / Out-of-Sight）的动态过程。</li>
+        <li><strong>RSSI 与相位抖动：</strong>开启高斯噪声抖动，模拟真实环境中 Peak RSSI 与 RF Phase 的物理波动。</li>
       </ul>
     </section>
 
-    <!-- Features -->
-    <section id="features">
-      <h2>核心仿真功能</h2>
-      <div class="code-block">
-        <button class="copy-code">复制</button>
-        <pre><code>// 虚拟读写器核心仿真参数
-TCP 监听端口       : 自定义端口 (默认 5084，支持多实例多端口并行)
-       天线端口数量       : 由所选 capability profile 决定
-       射频信号抖动       : 可配置的确定性整数 dB RSSI 抖动
-模拟标签池         : 支持注入自定义 EPC、TID、User 区与初始天线
-客户端连接监听     : 实时显示已连接客户端 IP 与当前活跃 ROSpec ID</code></pre>
+    <!-- 5. Inspector -->
+    <section id="inspector">
+      <h2>5. 报文监控台 (Inspector) 与故障注入</h2>
+      <p>
+        内置实时的 LLRP 报文监控台 (Inspector)，清晰显示客户端与虚拟设备之间收发的所有二进制报文及解析后的 XML/JSON 结构：
+      </p>
+      <ul>
+        <li><strong>报文流水：</strong>实时抓取握手、ROSpec 下发与 <code>RO_ACCESS_REPORT</code> 报告流，支持按报文类型与时间戳过滤。</li>
+        <li><strong>异常注入：</strong>支持模拟连接超时、强制断开 TCP、丢包（Drop Reports）与返回 <code>P_ERROR_STATUS</code> 错误响应，用于检验客户端的容错能力。</li>
+      </ul>
+    </section>
+
+    <!-- 6. Connect -->
+    <section id="connect">
+      <h2>6. 客户端接入与联调步骤</h2>
+      <ol>
+        <li>在 Virtual Device Manager 中启动一个监听在 <code>127.0.0.1:5084</code> 的实例。</li>
+        <li>打开 <strong>LLRP Reader Studio (WPF)</strong> 或 <strong>LlrpReaderManager (MAUI)</strong>。</li>
+        <li>在 Data Sources 中添加地址 <code>127.0.0.1:5084</code>，点击 <strong>Probe</strong> 成功识别，点击 <strong>Activate</strong>。</li>
+        <li>进入 <strong>Inventory</strong> 点击 <strong>Start</strong>，即可实时观察到虚拟设备生成的标签流。</li>
+      </ol>
+    </section>
+
+    <!-- 7. Notes -->
+    <section id="notes">
+      <h2>7. 注意事项</h2>
+      <div class="callout warning">
+        <strong>架构说明：</strong>
+        Virtual Device Manager 是独立的网络级仿真工具；主客户端进程内的 <code>LLRP_VIRTUAL_SCENARIO</code> 是内存级单元测试模式，两者相互独立。
       </div>
     </section>
 
-    <!-- Profiles -->
-    <section id="profiles">
-      <h2>内置硬件能力 Profile</h2>
-      <p>
-        可在图形界面中选择设备能力档案；界面名称与底层 Hosting ID 分开显示：
-      </p>
-      <ul>
-         <li><strong>Standard</strong>（<code>llrp1.0.1_standard</code>）：标准 LLRP 1.0.1 软件能力 profile。</li>
-         <li><strong>Impinj-R420</strong>（<code>impinj.r420.llrp-1.0.1</code>）：Impinj R420-shaped 软件 profile，可用于扩展报文和报告字段联调。</li>
-         <li><strong>协议版本</strong>：UI 可选择 1.0.1、1.1、2.0；这表示虚拟 TCP 端点的协议配置，不代表对应真实设备已完成互操作验收。</li>
-      </ul>
-    </section>
-
-    <!-- Tag Pool -->
-    <section id="tag-pool">
-       <h2>虚拟标签池与确定性行为 (Virtual Tag Pool)</h2>
-      <p>
-        支持在 UI 界面中直观增删改查模拟标签：
-      </p>
-      <ul>
-        <li><strong>EPC 编码定制</strong>：自由填入 96-bit / 128-bit EPC 十六进制字符串。</li>
-        <li><strong>存储区初始化</strong>：预设 TID 芯片序列号与 User 存储区数据，用于验证 Tag Access 读写功能。</li>
-         <li><strong>天线分布与信号参数</strong>：设置标签所处的天线编号与峰值 RSSI（例如 <code>-52 dBm</code>）。</li>
-      </ul>
-    </section>
-
-    <!-- Workflow -->
-    <section id="workflow">
-      <h2>典型联调与测试工作流</h2>
-      <ol style="margin-left:20px;color:var(--muted);line-height:1.8;">
-        <li>打开 <strong>Virtual Device Manager</strong>，选择 <code>impinj.r420.llrp-1.0.1</code> 预设，点击 <strong>Start Virtual Reader</strong>（监听 5084 端口）。</li>
-        <li>打开 <strong>LLRP Reader Studio</strong> 或 <strong>LlrpReaderManager</strong>，添加数据源 <code>127.0.0.1:5084</code> 并激活。</li>
-        <li>在主客户端点击“开始盘存”，即可立即看到虚拟设备实时上报的标签流、天线分布与 RSSI 信号！</li>
-      </ol>
-    </section>
+    <!-- Bottom Navigation -->
+    <div style="display:flex;justify-content:space-between;margin-top:60px;padding-top:20px;border-top:1px solid var(--line);">
+      <a href="readermanager-linux.html" class="button secondary">← Linux GTK4 手册</a>
+      <a href="wpf-studio.html" class="button secondary">返回 WPF 旗舰手册 →</a>
+    </div>
   </article>
 </main>
 
 <footer class="shell footer">
-  <span>LlrpReaderPlatform · 虚拟设备仿真工具指南</span>
-  <span><a href="architecture.html">阅读平台架构与设计 →</a></span>
+  <span>LlrpReaderPlatform · 虚拟读写器管理工具手册</span>
+  <div style="display:flex;gap:16px;">
+    <a href="index.html">返回首页</a>
+    <a href="releases.html">下载发布</a>
+  </div>
 </footer>
-
-<script src="assets/app.js"></script>
+<script src="assets/app.js?v=2"></script>
 </body>
 </html>

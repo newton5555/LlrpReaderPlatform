@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="LlrpReaderManager (macOS Mac Catalyst) User Manual: Intel and Apple Silicon builds, Gatekeeper permissions, and operational instructions.">
+  <title>LlrpReaderManager · macOS Manual</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="stylesheet" href="../assets/brand.css?v=3">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><img class="project-logo" src="../assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>MAUI macOS</small></span></a>
+  <button class="menu-toggle" aria-label="Open Navigation">☰</button>
+  <nav>
+    <a href="index.html">Home</a>
+    <div class="nav-dropdown">
+      <button class="nav-dropdown-toggle active" type="button" aria-expanded="false">User Manuals <span aria-hidden="true">⌄</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="wpf-studio.html">Windows WPF</a>
+        <a href="readermanager-windows.html">Windows MAUI</a>
+        <a href="readermanager-android.html">Android APK</a>
+        <a href="readermanager-macos.html" class="active">macOS Catalyst</a>
+        <a href="readermanager-linux.html">Linux GTK4</a>
+        <a href="virtual-device.html">Virtual Device</a>
+      </div>
+    </div>
+    <a href="releases.html">Releases</a>
+    <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
+  </nav>
+</header>
+
+<main class="shell docs-layout">
+  <aside class="side-nav">
+    <p class="eyebrow">MAUI MACOS</p>
+    <a href="#install">1. Installation</a>
+    <a href="#gatekeeper">2. Gatekeeper</a>
+    <a href="#workflow">3. Operations</a>
+    <a href="#ui-nav">4. Navigation</a>
+    <a href="#notes">5. Notes</a>
+  </aside>
+
+  <article class="doc-content">
+    <p class="eyebrow">04 / MAC CATALYST CLIENT</p>
+    <h1>LlrpReaderManager · macOS Manual</h1>
+    <p class="doc-lead">
+      <strong>LlrpReaderManager (macOS)</strong> is built with Mac Catalyst to deliver a native macOS windowed experience for Apple Mac workstations, with dedicated builds for Intel and Apple Silicon chips.
+    </p>
+
+    <!-- 1. Install -->
+    <section id="install">
+      <h2>1. Architecture & Installation</h2>
+      <ul>
+        <li><strong>Apple Silicon (M1/M2/M3/M4):</strong> Download <code>LlrpReaderManager-v2.0.3-macos-arm64.zip</code>.</li>
+        <li><strong>Intel Processors:</strong> Download <code>LlrpReaderManager-v2.0.3-macos-x64.zip</code>.</li>
+      </ul>
+      <p>Extract the ZIP file and drag <code>LlrpReaderManager.app</code> to your <code>Applications</code> folder.</p>
+    </section>
+
+    <!-- 2. Gatekeeper -->
+    <section id="gatekeeper">
+      <h2>2. Gatekeeper Security Bypass</h2>
+      <div class="callout warning">
+        <strong>First Launch Verification:</strong>
+        As this is an unnotarized development build, if macOS displays "cannot be opened because the developer cannot be verified":
+        <ol style="margin-top:8px;">
+          <li>Open <strong>System Settings</strong>.</li>
+          <li>Go to <strong>Privacy & Security</strong>.</li>
+          <li>Scroll down to the Security section and click <strong>"Open Anyway"</strong>.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 3. Workflow -->
+    <section id="workflow">
+      <h2>3. Core Operations Workflow</h2>
+      <ol>
+        <li><strong>Add Reader:</strong> In <strong>Readers</strong>, enter reader IP and port (5084), click <strong>Probe</strong>, then enable the reader.</li>
+        <li><strong>Start Inventory:</strong> Open <strong>Tag Inventory</strong> and click <strong>Start</strong> to view live tag streams.</li>
+        <li><strong>Tag Access:</strong> Perform targeted memory bank reads and writes under <strong>Tag Operations</strong>.</li>
+        <li><strong>Configure:</strong> Query and update RF parameters in <strong>Reader Settings</strong>.</li>
+      </ol>
+    </section>
+
+    <!-- 4. Navigation -->
+    <section id="ui-nav">
+      <h2>4. Interface Navigation</h2>
+      <div class="command-table">
+        <div><strong>Dashboard</strong><span>System overview and active reader cards</span></div>
+        <div><strong>Readers</strong><span>Connection pool and Probe discovery</span></div>
+        <div><strong>Tag Inventory</strong><span>High-resolution tag streams and statistics</span></div>
+        <div><strong>Tag Operations</strong><span>Targeted memory bank read/write</span></div>
+        <div><strong>Reader Settings</strong><span>RF power, Gen2 sessions, and vendor parameters</span></div>
+        <div><strong>GPI / GPO</strong><span>4-ch GPO control and digital input monitoring</span></div>
+      </div>
+    </section>
+
+    <!-- 5. Notes -->
+    <section id="notes">
+      <h2>5. Notes</h2>
+      <p>Ensure you allow local network access when prompted by macOS to ensure smooth socket communication over port 5084.</p>
+    </section>
+
+    <!-- Bottom Navigation -->
+    <div style="display:flex;justify-content:space-between;margin-top:60px;padding-top:20px;border-top:1px solid var(--line);">
+      <a href="readermanager-android.html" class="button secondary">← LlrpReaderManager Android</a>
+      <a href="readermanager-linux.html" class="button secondary">LlrpReaderManager Linux →</a>
+    </div>
+  </article>
+</main>
+
+<footer class="shell footer">
+  <span>LlrpReaderPlatform · macOS Catalyst Guide</span>
+  <div style="display:flex;gap:16px;">
+    <a href="index.html">Home</a>
+    <a href="releases.html">Releases</a>
+  </div>
+</footer>
+<script src="../assets/app.js?v=2"></script>
+</body>
+</html>

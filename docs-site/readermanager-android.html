@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="LlrpReaderManager (Android APK) 移动手持客户端操作手册：PDA 部署、触控盘存、移动网络适配与现场巡检指南。">
+  <title>LlrpReaderManager · Android 手册</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/brand.css?v=3">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><img class="project-logo" src="assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>MAUI Android</small></span></a>
+  <button class="menu-toggle" aria-label="打开导航">☰</button>
+  <nav>
+    <a href="index.html">首页</a>
+    <div class="nav-dropdown">
+      <button class="nav-dropdown-toggle active" type="button" aria-expanded="false">用户手册 <span aria-hidden="true">⌄</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="wpf-studio.html">Windows WPF</a>
+        <a href="readermanager-windows.html">Windows MAUI</a>
+        <a href="readermanager-android.html" class="active">Android APK</a>
+        <a href="readermanager-macos.html">macOS Catalyst</a>
+        <a href="readermanager-linux.html">Linux GTK4</a>
+        <a href="virtual-device.html">虚拟读写器</a>
+      </div>
+    </div>
+    <a href="releases.html">发布下载</a>
+    <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
+  </nav>
+</header>
+
+<main class="shell docs-layout">
+  <aside class="side-nav">
+    <p class="eyebrow">MAUI ANDROID</p>
+    <a href="#install">1. 安装与权限</a>
+    <a href="#network">2. 网络与设备连接</a>
+    <a href="#touch-ops">3. 触控巡检与盘存</a>
+    <a href="#ui-nav">4. 底部导航与界面</a>
+    <a href="#battery">5. 低功耗与异常恢复</a>
+  </aside>
+
+  <article class="doc-content">
+    <p class="eyebrow">03 / MOBILE PDA CLIENT</p>
+    <h1>LlrpReaderManager · Android 操作手册</h1>
+    <p class="doc-lead">
+      <strong>LlrpReaderManager (Android APK)</strong> 是专为工业级手持 PDA、盘点枪与平板终端打造的移动端 RFID 客户端。
+      采用触控优先设计语言，支持 Wi-Fi 与移动网络连接现场读写器，满足仓储盘点、资产巡检与移动查验需求。
+    </p>
+
+    <!-- 1. Install -->
+    <section id="install">
+      <h2>1. 安装与权限配置</h2>
+      <ol>
+        <li>从 Releases 页面下载 <code>LlrpReaderManager-v2.0.3-android.apk</code>（应用包名：<code>com.llrp.readermanager</code>）。</li>
+        <li>将 APK 文件传输至手持 PDA 或通过移动浏览器直接下载。</li>
+        <li>点击安装。若系统弹出“禁止安装未知来源应用”，进入系统设置勾选<strong>“允许安装未知应用”</strong>后完成安装。</li>
+        <li>首次启动时，授予应用必要的<strong>网络通信权限 (INTERNET / ACCESS_NETWORK_STATE)</strong>。</li>
+      </ol>
+    </section>
+
+    <!-- 2. Network -->
+    <section id="network">
+      <h2>2. 网络与设备连接</h2>
+      <p>手持终端通过局域网连接固定式读写器（如 Impinj R420）或同网段虚拟读写器：</p>
+      <ul>
+        <li>确保 Android 设备已连接至与读写器处于同一网段的工业 Wi-Fi 或通过 USB/OTG 以太网转换器直连。</li>
+        <li>打开应用，在 <strong>Readers</strong> 页面点击 <strong>Add Reader</strong>，输入读写器的 IP 地址与端口（默认 <code>5084</code>）。</li>
+        <li>点击 <strong>Probe</strong> 按钮进行连通性检测，成功识别设备后点击 <strong>Enable</strong> 启用。</li>
+      </ul>
+    </section>
+
+    <!-- 3. Touch Ops -->
+    <section id="touch-ops">
+      <h2>3. 触控巡检与盘存操作</h2>
+      <figure class="screenshot-figure">
+        <img src="assets/screenshots/android-readermanager-dashboard.png" alt="Android 客户端 Dashboard">
+        <figcaption>Android 移动客户端 Dashboard 与大尺寸触控功能入口。</figcaption>
+      </figure>
+      <ol>
+        <li><strong>开始盘点：</strong>在底部导航栏点击 <strong>Inventory</strong>，点击屏幕中央醒目的 <strong>Start</strong> 按钮，进入高频寻卡。</li>
+        <li><strong>触控卡片展示：</strong>已识别标签以卡片形式展示，显示 EPC、最后识别时间、读取次数与信号强度 (RSSI)。</li>
+        <li><strong>单标签操作：</strong>在列表中点击任意标签卡片，直接跳转至 <strong>Tag Ops</strong> 页面，执行针对该标签的 EPC / User 存储区数据读写。</li>
+        <li><strong>停止与保存：</strong>盘点完成后点击 <strong>Stop</strong>，系统自动将本次运行记录存入本地 SQLite，并生成盘点汇总报告。</li>
+      </ol>
+    </section>
+
+    <!-- 4. UI Nav -->
+    <section id="ui-nav">
+      <h2>4. 底部导航与界面模块</h2>
+      <div class="command-table">
+        <div><strong>Home (主页)</strong><span>当前连接读写器概况、快捷开始、系统状态看板</span></div>
+        <div><strong>Inventory (寻卡)</strong><span>移动端大字号触控盘存大屏、实时去重与速率</span></div>
+        <div><strong>Tag Ops (标签操作)</strong><span>针对单标签的 Memory Bank 读写、锁定与验证</span></div>
+        <div><strong>Readers (读写器)</strong><span>管理已保存设备、网络参数配置与 Probe 探测</span></div>
+        <div><strong>Settings (设置)</strong><span>读写器射频参数调节、TOI 标签库与应用偏好</span></div>
+      </div>
+    </section>
+
+    <!-- 5. Battery & Resilience -->
+    <section id="battery">
+      <h2>5. 低功耗与异常断连恢复</h2>
+      <div class="callout tip">
+        <strong>移动环境鲁棒性保障：</strong>
+        在移动巡检过程中若手持设备 Wi-Fi 信号短暂衰减或漫游切换，底层服务会自动执行 Session 优雅断连收敛并在网络恢复后提示重连，防止由于物理丢包引发底层协议栈死锁。
+      </div>
+    </section>
+
+    <!-- Bottom Navigation -->
+    <div style="display:flex;justify-content:space-between;margin-top:60px;padding-top:20px;border-top:1px solid var(--line);">
+      <a href="readermanager-windows.html" class="button secondary">← LlrpReaderManager Windows</a>
+      <a href="readermanager-macos.html" class="button secondary">LlrpReaderManager macOS →</a>
+    </div>
+  </article>
+</main>
+
+<footer class="shell footer">
+  <span>LlrpReaderPlatform · Android APK 操作手册</span>
+  <div style="display:flex;gap:16px;">
+    <a href="index.html">返回首页</a>
+    <a href="releases.html">下载发布</a>
+  </div>
+</footer>
+<script src="assets/app.js?v=2"></script>
+</body>
+</html>

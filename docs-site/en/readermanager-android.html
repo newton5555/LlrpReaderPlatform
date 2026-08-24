@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="LlrpReaderManager (Android APK) Mobile Handheld User Manual: PDA deployment, touch inventory, networking, and mobile operations.">
+  <title>LlrpReaderManager · Android Manual</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="stylesheet" href="../assets/brand.css?v=3">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html"><img class="project-logo" src="../assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>MAUI Android</small></span></a>
+  <button class="menu-toggle" aria-label="Open Navigation">☰</button>
+  <nav>
+    <a href="index.html">Home</a>
+    <div class="nav-dropdown">
+      <button class="nav-dropdown-toggle active" type="button" aria-expanded="false">User Manuals <span aria-hidden="true">⌄</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="wpf-studio.html">Windows WPF</a>
+        <a href="readermanager-windows.html">Windows MAUI</a>
+        <a href="readermanager-android.html" class="active">Android APK</a>
+        <a href="readermanager-macos.html">macOS Catalyst</a>
+        <a href="readermanager-linux.html">Linux GTK4</a>
+        <a href="virtual-device.html">Virtual Device</a>
+      </div>
+    </div>
+    <a href="releases.html">Releases</a>
+    <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
+  </nav>
+</header>
+
+<main class="shell docs-layout">
+  <aside class="side-nav">
+    <p class="eyebrow">MAUI ANDROID</p>
+    <a href="#install">1. Installation</a>
+    <a href="#network">2. Networking</a>
+    <a href="#touch-ops">3. Touch Operations</a>
+    <a href="#ui-nav">4. Navigation</a>
+    <a href="#battery">5. Mobile Resilience</a>
+  </aside>
+
+  <article class="doc-content">
+    <p class="eyebrow">03 / MOBILE PDA CLIENT</p>
+    <h1>LlrpReaderManager · Android Manual</h1>
+    <p class="doc-lead">
+      <strong>LlrpReaderManager (Android APK)</strong> is tailored for industrial handheld PDAs, RFID scanning guns, and mobile tablets. Built with touch-first ergonomics to streamline mobile warehouse inventory and field inspections.
+    </p>
+
+    <!-- 1. Install -->
+    <section id="install">
+      <h2>1. APK Installation & Permissions</h2>
+      <ol>
+        <li>Download <code>LlrpReaderManager-v2.0.3-android.apk</code> (Package: <code>com.llrp.readermanager</code>).</li>
+        <li>Transfer to your Android device or download directly via mobile browser.</li>
+        <li>Enable <strong>"Install from unknown sources"</strong> if prompted.</li>
+        <li>Grant standard network permissions on first launch.</li>
+      </ol>
+    </section>
+
+    <!-- 2. Network -->
+    <section id="network">
+      <h2>2. Networking & Reader Setup</h2>
+      <ul>
+        <li>Ensure your Android device is on the same industrial Wi-Fi network or USB-OTG Ethernet segment as the reader.</li>
+        <li>Open <strong>Readers</strong>, enter IP and port (default <code>5084</code>), and click <strong>Probe</strong>.</li>
+        <li>Once verified, tap <strong>Enable</strong>.</li>
+      </ul>
+    </section>
+
+    <!-- 3. Touch Ops -->
+    <section id="touch-ops">
+      <h2>3. Touch-First Field Inventory</h2>
+      <figure class="screenshot-figure">
+        <img src="../assets/screenshots/android-readermanager-dashboard.png" alt="Android Handheld Dashboard">
+        <figcaption>Android mobile client dashboard with large touch targets.</figcaption>
+      </figure>
+      <ol>
+        <li>Tap <strong>Inventory</strong> on the bottom bar, then tap the prominent <strong>Start</strong> button.</li>
+        <li>Tags are rendered as touch-friendly cards displaying EPC, Last Seen time, Read Count, and Peak RSSI.</li>
+        <li>Tap any tag card to jump directly into <strong>Tag Ops</strong> for memory bank read/write.</li>
+        <li>Tap <strong>Stop</strong> to export the run summary into the local SQLite database.</li>
+      </ol>
+    </section>
+
+    <!-- 4. UI Nav -->
+    <section id="ui-nav">
+      <h2>4. Bottom Navigation Structure</h2>
+      <div class="command-table">
+        <div><strong>Home</strong><span>Active reader status, quick launch buttons, and system status</span></div>
+        <div><strong>Inventory</strong><span>Mobile tag scanning screen with real-time deduplication</span></div>
+        <div><strong>Tag Ops</strong><span>Memory bank read/write and password authentication</span></div>
+        <div><strong>Readers</strong><span>Reader connection pool and network Probe testing</span></div>
+        <div><strong>Settings</strong><span>RF power adjustment, TOI tag lists, and app preferences</span></div>
+      </div>
+    </section>
+
+    <!-- 5. Mobile Resilience -->
+    <section id="battery">
+      <h2>5. Low-Power & Reconnect Resilience</h2>
+      <div class="callout tip">
+        During Wi-Fi roaming or intermittent signal dropouts, the platform automatically converges the session state and prompts for seamless reconnect without freezing the UI.
+      </div>
+    </section>
+
+    <!-- Bottom Navigation -->
+    <div style="display:flex;justify-content:space-between;margin-top:60px;padding-top:20px;border-top:1px solid var(--line);">
+      <a href="readermanager-windows.html" class="button secondary">← LlrpReaderManager Windows</a>
+      <a href="readermanager-macos.html" class="button secondary">LlrpReaderManager macOS →</a>
+    </div>
+  </article>
+</main>
+
+<footer class="shell footer">
+  <span>LlrpReaderPlatform · Android APK Guide</span>
+  <div style="display:flex;gap:16px;">
+    <a href="index.html">Home</a>
+    <a href="releases.html">Releases</a>
+  </div>
+</footer>
+<script src="../assets/app.js?v=2"></script>
+</body>
+</html>

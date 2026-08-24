@@ -3,149 +3,187 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="LlrpReaderManager (MAUI Blazor Hybrid / Linux GTK4) - 一个跨平台移动与桌面读写器管理项目">
-  <title>LlrpReaderManager (MAUI Blazor) · LlrpReaderPlatform</title>
+  <meta name="description" content="LlrpReaderPlatform 多平台矩阵：WPF、MAUI Blazor、Linux GTK4 与虚拟工具的多端形态、交互模型与能力对比。">
+  <title>多平台矩阵与形态 · LlrpReaderPlatform</title>
   <link rel="stylesheet" href="assets/styles.css">
-  <link rel="stylesheet" href="assets/brand.css">
+  <link rel="stylesheet" href="assets/brand.css?v=3">
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="index.html">
-    <img class="project-logo" src="assets/icon.svg" alt="LlrpReaderPlatform">
-    <span>LlrpReaderPlatform<small>LlrpReaderManager</small></span>
-  </a>
-  <button class="menu-toggle">☰</button>
+  <a class="brand" href="index.html"><img class="project-logo" src="assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>Cross-Platform</small></span></a>
+  <button class="menu-toggle" aria-label="打开导航">☰</button>
   <nav>
     <a href="index.html">首页</a>
-    <a href="user-manual.html">用户手册</a>
-
-    <a href="releases.html">下载与发布</a>
+    <div class="nav-dropdown">
+      <button class="nav-dropdown-toggle" type="button" aria-expanded="false">用户手册 <span aria-hidden="true">⌄</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="wpf-studio.html">Windows WPF</a>
+        <a href="readermanager-windows.html">Windows MAUI</a>
+        <a href="readermanager-android.html">Android APK</a>
+        <a href="readermanager-macos.html">macOS Catalyst</a>
+        <a href="readermanager-linux.html">Linux GTK4</a>
+        <a href="virtual-device.html">虚拟读写器</a>
+      </div>
+    </div>
+    <a href="releases.html">发布下载</a>
+    <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
   </nav>
-  <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
 </header>
 
 <main class="shell docs-layout">
-  <!-- Side Nav -->
   <aside class="side-nav">
-    <p class="eyebrow">TOPICS</p>
-    <a href="wpf-studio.html">WPF 客户端</a>
-    <a href="cross-platform.html" class="active">LlrpReaderManager</a>
-    <a href="virtual-device.html">虚拟设备工具</a>
-    <p class="eyebrow" style="margin-top:20px;">ON THIS PAGE</p>
-    <a href="#overview">项目架构与定位</a>
-    <a href="#android">Android 手持端 (APK)</a>
-    <a href="#macos">macOS (Mac Catalyst)</a>
-    <a href="#windows-maui">Windows MAUI 轻量桌面</a>
-    <a href="#linux-gtk4">Linux GTK4 宿主目标</a>
-    <a href="#shared-core">共享服务与组件边界</a>
+    <p class="eyebrow">MATRIX</p>
+    <a href="#comparison">多端能力全景</a>
+    <a href="#wpf">Windows WPF 旗舰</a>
+    <a href="#maui-win">Windows MAUI 桌面</a>
+    <a href="#android">Android 手持终端</a>
+    <a href="#macos">macOS 办公环境</a>
+    <a href="#linux">Linux GTK4 工控</a>
+    <a href="#virtual">Virtual Device 模拟器</a>
   </aside>
 
-  <!-- Content Article -->
   <article class="doc-content">
-    <p class="eyebrow">02 / LLRPREADERMANAGER · MAUI BLAZOR</p>
-    <h1>LlrpReaderManager (MAUI Blazor)</h1>
+    <p class="eyebrow">MULTI-PLATFORM ECOSYSTEM</p>
+    <h1>多平台客户端矩阵与技术形态</h1>
     <p class="doc-lead">
-      <code>LlrpReaderManager</code> 是一个采用 <strong>.NET MAUI Blazor Hybrid</strong> 的跨平台读写器管理项目。Android、macOS 和 Windows 使用 MAUI 目标；Linux 目标通过 GTK4 宿主复用同一套 Razor 组件、资源、读写器服务与 SQLite 数据层。
+      LlrpReaderPlatform 构建了覆盖工业现场、桌面办公、移动巡检与离线测试的全方位客户端矩阵。
+      所有客户端均基于相同的 <code>LlrpReaderPlatform.Services</code> 共享平台核心，保证设备控制语义与数据模型的高度一致。
     </p>
 
-    <!-- Overview -->
-    <section id="overview">
-      <h2>跨平台设计哲学：一次编写，多端一致</h2>
-      <p>
-        与为不同操作系统重复实现协议栈的方案不同，<code>LlrpReaderManager</code> 在一个项目体系内复用了 <code>LlrpReaderPlatform.Services</code>、<code>Contracts</code>、Infrastructure、Razor 组件和已注册的厂商扩展；平台差异主要位于组合根和 UI 宿主。
-      </p>
-      <ul>
-        <li><strong>同一产品，多种宿主</strong>：Android 呈现触摸卡片列表，桌面呈现宽屏网格，Linux 使用 GTK4 宿主承载相同 Blazor 页面，底层读写器 Session 调度统一。</li>
-        <li><strong>本地独立数据库</strong>：在 Android、macOS、Linux 上均内置 EF Core SQLite，独立存储设备清单与盘点 Runs。</li>
-        <li><strong>本地 WebView 混合渲染</strong>：Blazor 视图运行在本地 .NET 进程中，不依赖远程 Web 服务器。</li>
-      </ul>
+    <!-- 1. Comparison Table -->
+    <section id="comparison">
+      <h2>1. 多端功能与交付形态全景对比</h2>
+      <div class="api-table">
+        <div class="api-row api-head">
+          <span>客户端与形态</span>
+          <span>目标平台与架构</span>
+          <span>交互模型</span>
+          <span>交付格式</span>
+          <span>适用核心场景</span>
+        </div>
+        <div class="api-row">
+          <strong>LLRP Reader Studio</strong>
+          <span>Windows x64 (.NET 10)</span>
+          <span>桌面鼠标 / 双屏多窗口</span>
+          <code>自包含单文件 ZIP</code>
+          <span>生产现场验收、真机深调、高频巡检</span>
+        </div>
+        <div class="api-row">
+          <strong>LlrpReaderManager (Win)</strong>
+          <span>Windows 10/11 x64</span>
+          <span>响应式桌面 / 触摸互通</span>
+          <code>MAUI Blazor 目录包</code>
+          <span>轻量化桌面监控、统一体验办公</span>
+        </div>
+        <div class="api-row">
+          <strong>LlrpReaderManager (Android)</strong>
+          <span>Android 8.0+ (ARM64 / x86)</span>
+          <span>大触控卡片 / 底部导航</span>
+          <code>独立 Release APK</code>
+          <span>工业手持 PDA、盘点枪、移动查验</span>
+        </div>
+        <div class="api-row">
+          <strong>LlrpReaderManager (macOS)</strong>
+          <span>macOS 12.0+ (x64 / arm64)</span>
+          <span>Mac Catalyst 原生桌面</span>
+          <code>.app ZIP (未公证)</code>
+          <span>macOS 研发测试、远程读写器监控</span>
+        </div>
+        <div class="api-row">
+          <strong>LlrpReaderManager (Linux)</strong>
+          <span>Linux x64 (GTK4 + WebKit)</span>
+          <span>GTK4 独立窗口 / X11</span>
+          <code>Debian .deb 安装包</code>
+          <span>工控机、边缘网关、嵌入式监控站</span>
+        </div>
+        <div class="api-row">
+          <strong>Virtual Device Manager</strong>
+          <span>Windows x64 (.NET 10)</span>
+          <span>WPF 独立工具</span>
+          <code>自包含单文件 ZIP</code>
+          <span>无硬件离线开发、协议报文分析</span>
+        </div>
+      </div>
     </section>
 
-    <!-- Android -->
+    <!-- 2. WPF Studio -->
+    <section id="wpf">
+      <h2>2. LLRP Reader Studio (Windows WPF)</h2>
+      <p>
+        Windows WPF 客户端是本平台的<strong>官方主验收入口与现场旗舰工具</strong>。基于纯原生 WPF 与 DirectX 硬件加速渲染，
+        能够承载数万级并发标签的高频刷新与实时高吞吐吞吐量。
+      </p>
+      <ul>
+        <li><strong>深度参数微调：</strong>支持 RF Mode 索引、跳频信道掩码、Gen2 Session / Target、Tag Population 预估值以及完整 Impinj 扩展参数配置。</li>
+        <li><strong>四路 GPIO 诊断：</strong>提供独立的电平读写控制面板，支持硬件传感器触发盘存与外部声光报警联动。</li>
+        <li><strong>标签分类与 TOI 投影：</strong>实时将业务自定义的 EPC 别名、颜色标签与型号分类高亮映射在寻卡列表中。</li>
+      </ul>
+      <a class="button secondary" href="wpf-studio.html">查看 WPF Studio 完整操作手册 →</a>
+    </section>
+
+    <!-- 3. MAUI Windows -->
+    <section id="maui-win">
+      <h2>3. LlrpReaderManager (Windows MAUI Blazor)</h2>
+      <p>
+        基于 MAUI Blazor Hybrid 架构构建的现代化 Windows 客户端。
+        采用现代 Web 响应式设计语言，支持自适应窗口缩放，与移动端具有完全相同的界面逻辑与操作流。
+      </p>
+      <a class="button secondary" href="readermanager-windows.html">查看 Windows MAUI 操作手册 →</a>
+    </section>
+
+    <!-- 4. Android Handheld -->
     <section id="android">
-      <h2>Android 手持机与 PDA 支持 (Android APK)</h2>
+      <h2>4. LlrpReaderManager (Android APK)</h2>
       <p>
-        专为仓储盘点员设计，适配主流工业 Android 手持机（PDA）、平板与手机：
+        专为工业手持终端（如 Zebra TC 系列、Honeywell、新大陆等手持 PDA）量身打造。
       </p>
       <ul>
-        <li><strong>大触控热区</strong>：寻卡与停止按钮醒目，手套操作友好。</li>
-        <li><strong>移动端设备发现</strong>：利用移动端 Wi-Fi 快速扫描仓库局域网内的固定式读写器。</li>
-        <li><strong>离线历史 Runs</strong>：现场巡检完成后，可在手机端查看已持久化的运行记录和标签明细。</li>
+        <li><strong>触控优化设计：</strong>大尺寸触控按键、底部常用功能栏（Home / Inventory / Tag Ops / Readers / Settings）。</li>
+        <li><strong>移动网络适应性：</strong>支持 Wi-Fi 与 OTG 移动网络，内置连接心跳保持与自动重连收敛逻辑。</li>
       </ul>
-      <div class="callout tip">
-        <strong>交付形式：</strong> GitHub Release 提供预编译的 <code>.apk</code> 安装包，可直接侧载 (Sideload) 安装至工业手持终端；应用能力仍以设备和平台验收为准。
-      </div>
+      <a class="button secondary" href="readermanager-android.html">查看 Android APK 操作手册 →</a>
     </section>
 
-    <!-- macOS -->
+    <!-- 5. macOS Catalyst -->
     <section id="macos">
-      <h2>macOS 桌面支持 (Mac Catalyst)</h2>
+      <h2>5. LlrpReaderManager (macOS)</h2>
       <p>
-        支持在 Apple Mac 电脑上运行与调试 LLRP 读写器；当前 Release 包未签名、未公证，首次启动可能需要按 Gatekeeper 提示允许：
+        采用 Mac Catalyst 技术将 MAUI Blazor 应用编译为原生 macOS 桌面应用程序。
+        提供 <code>macos-x64.zip</code> (Intel) 与 <code>macos-arm64.zip</code> (Apple Silicon M1/M2/M3/M4) 双版本。
       </p>
-      <ul>
-        <li><strong>架构双向支持</strong>：CI 自动构建适用于 Apple Silicon (M1/M2/M3/M4) 与 Intel 处理器的原生二进制。</li>
-        <li><strong>标准 macOS 窗口</strong>：支持深色模式切换、原生菜单栏集成与窗口自由缩放。</li>
-      </ul>
+      <a class="button secondary" href="readermanager-macos.html">查看 macOS 操作手册 →</a>
     </section>
 
-    <!-- Windows MAUI -->
-    <section id="windows-maui">
-      <h2>Windows MAUI 轻量桌面版</h2>
+    <!-- 6. Linux GTK4 -->
+    <section id="linux">
+      <h2>6. LlrpReaderManager (Linux GTK4 Head)</h2>
       <p>
-        除了面向工控的 WPF 客户端外，<code>LlrpReaderManager</code> 同一项目还提供基于 MAUI 的 Windows unpackaged 自包含目录包。体积较轻，适合日常快速巡检与网络探测。
+        通过独立开发的 GTK4 + WebKitGTK 前端载体，让 Linux 环境能够原生运行 Blazor 交互界面。
+        以标准 Debian <code>.deb</code> 软件包形式分发，可无缝部署在 Ubuntu / Debian 工控系统与边缘网关中。
       </p>
+      <a class="button secondary" href="readermanager-linux.html">查看 Linux GTK4 操作手册 →</a>
     </section>
 
-    <!-- Linux GTK4 -->
-    <section id="linux-gtk4">
-      <h2>Linux 目标宿主 (LlrpReaderManager.Linux)</h2>
+    <!-- 7. Virtual Device -->
+    <section id="virtual">
+      <h2>7. Virtual Device Manager (虚拟读写器管理器)</h2>
       <p>
-        针对工业边缘网关与 Ubuntu/Debian 工控盒子，项目提供 GTK4 原生宿主工程 <code>src/LlrpReaderManager.Linux</code>。它复用 <code>LlrpReaderManager</code> 的 MAUI/Blazor 页面、资源和共享服务，是同一管理端的 Linux 发布目标：
+        独立的协议级虚拟化测试工具。可在单台 PC 上快速拉起数十个虚拟 TCP/LLRP 读写器，每个读写器可独立配置天线参数、Tag Pool 标签池与报文丢失率，
+        为分布式 RFID 系统联调提供完备的虚拟化测试底座。
       </p>
-      <div class="code-block">
-        <button class="copy-code">复制</button>
-        <pre><code># Linux Debian/Ubuntu 安装示例
-sudo dpkg -i LlrpReaderManager-v2.0.3-linux-x64.deb
-sudo apt-get install -f # 自动补齐 libgtk-4-1 与 libwebkitgtk-6.0-4 依赖
-
-# 之后从桌面应用菜单启动 LLRP Reader Manager；Linux GTK4 宿主需要兼容的 .NET Runtime、GTK4 和 WebKitGTK。</code></pre>
-      </div>
-      <ul>
-        <li>利用 GTK4 + WebKitGTK 渲染 Razor 界面，共享平台的核心服务与主要操作流程。</li>
-        <li>Linux GTK4 宿主当前属于实验性发布目标，发布包是 framework-dependent，并依赖目标机的 .NET Runtime、GTK4 和 WebKitGTK。</li>
-      </ul>
-    </section>
-
-    <!-- Shared Core -->
-    <section id="shared-core">
-      <h2>共享服务与组件边界 (UI Layering)</h2>
-      <div class="architecture-stack">
-        <div>
-          <span>03</span>
-          <strong>UI Presentation</strong>
-          <p>WPF ViewModels / LlrpReaderManager Razor Components / Linux GTK4 Host 表现层。</p>
-        </div>
-        <div>
-          <span>02</span>
-          <strong>Platform Services</strong>
-          <p><code>LlrpReaderPlatform.Services</code> 租约调度门禁、生命周期管理与标签聚合。</p>
-        </div>
-        <div>
-          <span>01</span>
-          <strong>Engine & Data</strong>
-          <p><code>LLRPCSharp SDK</code> 协议驱动与 <code>Infrastructure</code> EF Core SQLite 持久化。</p>
-        </div>
-      </div>
+      <a class="button secondary" href="virtual-device.html">查看 Virtual Device Manager 操作手册 →</a>
     </section>
   </article>
 </main>
 
-<footer class="shell footer">
-  <span>LlrpReaderPlatform · LlrpReaderManager 项目指南</span>
-  <span><a href="virtual-device.html">了解虚拟设备管理器 →</a></span>
+<footer class="footer shell">
+  <span>LlrpReaderPlatform · 多平台矩阵与分发策略</span>
+  <div style="display:flex;gap:16px;">
+    <a href="index.html">返回首页</a>
+    <a href="wpf-studio.html">WPF 操作手册</a>
+    <a href="releases.html">下载与发布</a>
+  </div>
 </footer>
-
-<script src="assets/app.js"></script>
+<script src="assets/app.js?v=2"></script>
 </body>
 </html>

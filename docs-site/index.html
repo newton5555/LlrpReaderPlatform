@@ -3,116 +3,183 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="LlrpReaderPlatform - 面向工业级 RFID 读写器的现代化多端操作应用平台与可复用服务体系 (WPF / LlrpReaderManager MAUI Blazor)">
-  <title>LlrpReaderPlatform · 工业级 RFID 读写器多端应用平台</title>
+  <meta name="description" content="LlrpReaderPlatform - 现代化跨平台 RFID 读写器应用平台，支持 LLRP 1.0.1 / 1.1 / 2.0 及 Impinj / Zebra 扩展。">
+  <title>LlrpReaderPlatform · 跨平台 RFID 读写器应用平台</title>
   <link rel="stylesheet" href="assets/styles.css">
-  <link rel="stylesheet" href="assets/brand.css">
-  <link rel="stylesheet" href="assets/home.css">
+  <link rel="stylesheet" href="assets/brand.css?v=5">
+  <link rel="stylesheet" href="assets/home.css?v=2">
 </head>
 <body>
 <header class="topbar">
   <a class="brand" href="index.html">
     <img class="project-logo" src="assets/icon.svg" alt="LlrpReaderPlatform">
-    <span>LlrpReaderPlatform<small>v2.0.3</small></span>
+    <span>LlrpReaderPlatform</span>
   </a>
-  <button class="menu-toggle">☰</button>
+  <button class="menu-toggle" aria-label="打开导航">☰</button>
   <nav>
     <a href="index.html" class="active">首页</a>
-    <a href="user-manual.html">用户手册</a>
-    <a href="releases.html">下载与发布</a>
+    <div class="nav-dropdown">
+      <button class="nav-dropdown-toggle" type="button" aria-expanded="false">用户手册 <span>▼</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="wpf-studio.html">Windows WPF</a>
+        <a href="readermanager-windows.html">Windows MAUI</a>
+        <a href="readermanager-android.html">Android APK</a>
+        <a href="readermanager-macos.html">macOS Catalyst</a>
+        <a href="readermanager-linux.html">Linux GTK4</a>
+        <a href="virtual-device.html">虚拟读写器</a>
+      </div>
+    </div>
+    <a href="releases.html">发布下载</a>
+    <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
   </nav>
-  <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
 </header>
 
-<main class="shell docs-home">
+<main class="simple-home">
   <!-- Hero Section -->
-  <section class="docs-home-head">
-    <p class="eyebrow">LLRP READER PLATFORM / APPLICATION ECOSYSTEM</p>
-    <h1>工业级 RFID 读写器<br>全场景多端操作应用平台</h1>
-    <p class="doc-lead">
-      基于 <strong>LLRPCSharp</strong> 协议底座打造的现代化 RFID 读写器客户端应用生态。提供现场工控桌面端、跨平台移动管理端、独立虚拟设备模拟器以及完全解耦的读写器租约服务与 SQLite 本地持久化体系。
+  <section class="hero-clean">
+    <span class="eyebrow">LLRP READER PLATFORM</span>
+    <h1>现代化跨平台 RFID 读写器应用平台</h1>
+    <p class="lead">
+      基于 <strong>LLRPCSharp</strong> SDK 构建的企业级读写器控制套件。提供 Windows WPF 桌面主客户端、MAUI 跨平台终端与 TCP 虚拟读写器管理工具，全面支持 LLRP 1.0.1 / 1.1 / 2.0 及 Impinj / Zebra 厂商扩展。
     </p>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;">
-      <a class="button primary" href="releases.html">立即下载客户端 (v2.0.3)</a>
-      <a class="button secondary" href="user-manual.html">查阅用户操作手册</a>
-    </div>
-    <div class="docs-home-badges">
-      <div class="badge-item"><span class="status-dot"></span>Windows 10/11 (WPF x64)</div>
-      <div class="badge-item"><span class="status-dot blue"></span>LlrpReaderManager (MAUI Blazor · Android / Windows / macOS / Linux)</div>
-      <div class="badge-item"><span class="status-dot"></span>.NET 10 / C# 14</div>
+    <div class="hero-actions">
+      <a class="button primary" href="releases.html">下载最新发布 (v2.0.3)</a>
+      <a class="button secondary" href="wpf-studio.html">查看用户手册 (WPF) →</a>
     </div>
   </section>
 
-  <!-- 3 Core Applications -->
-  <section class="pillar-section">
-    <p class="eyebrow">ECOSYSTEM MATRIX</p>
-    <h2>三大核心应用矩阵</h2>
-    <p class="pillar-section-lead">针对工业现场巡检、大屏中控、跨平台移动操作与离线协议仿真提供完整解决方案：</p>
-    
-    <div class="pillar-grid">
-      <!-- Pillar 1: WPF Studio -->
-      <a class="pillar-card featured" href="wpf-studio.html">
-        <div class="pillar-header">
-          <div class="pillar-icon">🖥️</div>
-          <span class="pillar-tag">Primary Desktop</span>
+  <!-- 1. Multi-Platform Clients -->
+  <section class="home-section">
+    <div class="home-section-head">
+      <span class="section-tag">APPLICATIONS</span>
+      <h2>客户端软件矩阵</h2>
+    </div>
+    <div class="clients-grid">
+      <div class="client-card featured">
+        <span class="platform-badge">Windows · WPF 旗舰</span>
+        <h3>LLRP Reader Studio</h3>
+        <p>Windows x64 桌面主客户端。支持高频寻卡、天线功率精调、4路GPIO控制与Tag Memory读写。</p>
+        <div class="card-action">
+          <span>解压即用 (x64)</span>
+          <a href="wpf-studio.html">查看手册 →</a>
         </div>
-        <h3>LLRP Reader Studio (WPF)</h3>
-        <p>面向现场工控与工程调试的 Windows 桌面级大屏客户端。用于真机验收与日常操控，具体操作由设备能力驱动。</p>
-        <ul class="pillar-features">
-          <li>多天线高速盘点与实时 RSSI 仪表</li>
-          <li>C1G2 标签内存读/写/锁/灭</li>
-          <li>TOI 重点资产打标与全局投影</li>
-          <li>GPI 触发器与 GPO 继电器控制</li>
-          <li>Impinj FastID / Phase 厂商扩展</li>
-        </ul>
-        <span class="pillar-action">查看 WPF 客户端详情 →</span>
-      </a>
-
-      <!-- Pillar 2: MAUI Blazor -->
-      <a class="pillar-card" href="cross-platform.html">
-        <div class="pillar-header">
-          <div class="pillar-icon">📱</div>
-          <span class="pillar-tag" style="background:#eaf0fb;color:var(--blue);">Cross-Platform</span>
+      </div>
+      <div class="client-card">
+        <span class="platform-badge">Windows · MAUI</span>
+        <h3>LlrpReaderManager (Win)</h3>
+        <p>MAUI Blazor Hybrid 桌面端，提供现代响应式大屏与跨平台统一的操作体验。</p>
+        <div class="card-action">
+          <span>桌面目录包</span>
+          <a href="readermanager-windows.html">查看手册 →</a>
         </div>
-        <h3>LlrpReaderManager (MAUI Blazor)</h3>
-        <p>一个基于 MAUI Blazor Hybrid 的跨平台读写器管理项目，复用同一套 Razor 页面、平台服务与 SQLite 本地数据模型；Linux 由 GTK4 宿主承载同一套应用逻辑。</p>
-        <ul class="pillar-features">
-          <li>Android 工业手持机/PDA 触控优化</li>
-          <li>macOS (Mac Catalyst) 桌面原生支持</li>
-          <li>Windows 现代响应式轻量窗口</li>
-          <li>Linux GTK4 宿主与 Debian 发布包</li>
-          <li>mDNS / Zeroconf 局域网读写器自动发现</li>
-          <li>盘点历史 Runs 查看与结构化分析</li>
-        </ul>
-        <span class="pillar-action">查看跨平台客户端 →</span>
-      </a>
-
-      <!-- Pillar 3: Virtual Device Studio -->
-      <a class="pillar-card" href="virtual-device.html">
-        <div class="pillar-header">
-          <div class="pillar-icon" style="background:#f3eafd;color:#7c3aed;">🧪</div>
-          <span class="pillar-tag" style="background:#f3eafd;color:#7c3aed;">Simulation</span>
+      </div>
+      <div class="client-card">
+        <span class="platform-badge">Android · APK</span>
+        <h3>LlrpReaderManager (Android)</h3>
+        <p>专为工业手持 PDA、盘点枪设计。具备触控优先界面、网络漫游与自动恢复能力。</p>
+        <div class="card-action">
+          <span>Release APK</span>
+          <a href="readermanager-android.html">查看手册 →</a>
         </div>
+      </div>
+      <div class="client-card">
+        <span class="platform-badge">macOS · Catalyst</span>
+        <h3>LlrpReaderManager (macOS)</h3>
+        <p>原生 Mac Catalyst 应用，提供 Apple Silicon (M1~M4) 与 Intel 双架构版本。</p>
+        <div class="card-action">
+          <span>.app ZIP</span>
+          <a href="readermanager-macos.html">查看手册 →</a>
+        </div>
+      </div>
+      <div class="client-card">
+        <span class="platform-badge">Linux · GTK4</span>
+        <h3>LlrpReaderManager (Linux)</h3>
+        <p>基于 GTK4 + WebKitGTK 独立宿主运行，适用于工控机与 Linux 边缘网关。</p>
+        <div class="card-action">
+          <span>Debian .deb</span>
+          <a href="readermanager-linux.html">查看手册 →</a>
+        </div>
+      </div>
+      <div class="client-card">
+        <span class="platform-badge">Windows · 工具</span>
         <h3>Virtual Device Manager</h3>
-        <p>独立的虚拟读写器管理工具，基于 LLRPCSharp 确定性软件虚拟读写器内核，在本地创建与管理 TCP 虚拟读写器实例。</p>
-        <ul class="pillar-features">
-          <li>无物理硬件时验证完整业务流程</li>
-          <li>模拟 Impinj R420 或标准 LLRP 读写器</li>
-          <li>可配置天线数、RSSI 抖动与标签池</li>
-          <li>独立的物理报文与端口监控</li>
-        </ul>
-        <span class="pillar-action">查看虚拟读写器工具 →</span>
-      </a>
+        <p>独立 TCP/LLRP 虚拟读写器管理工具，提供离线标签池生成与报文监控台。</p>
+        <div class="card-action">
+          <span>单文件工具</span>
+          <a href="virtual-device.html">查看手册 →</a>
+        </div>
+      </div>
     </div>
   </section>
 
+  <!-- 2. Core Architecture Highlights -->
+  <section class="home-section">
+    <div class="home-section-head">
+      <span class="section-tag">ARCHITECTURE</span>
+      <h2>核心架构优势</h2>
+    </div>
+    <div class="arch-grid">
+      <div class="arch-card">
+        <span class="arch-tag">Session Gate 门禁</span>
+        <h3>单连接会话门禁</h3>
+        <p>每个物理 Reader 仅持有一个 TCP 连接，所有命令经由 Session Gate 串行排队执行，杜绝并发冲突；寻卡中返回 <code>ReaderBusy</code>，保证通信绝对可靠。</p>
+      </div>
+      <div class="arch-card">
+        <span class="arch-tag">两阶段能力感知</span>
+        <h3>短连接探测与扩展挂载</h3>
+        <p>短连接 Probe 探测基础硬件身份，自动匹配 Impinj / Zebra 扩展并断开；仅在用户启动寻卡时维持长期 ROSpec 租约，避免无谓占用端口。</p>
+      </div>
+      <div class="arch-card">
+        <span class="arch-tag">设置编译引擎</span>
+        <h3>语义化配置与回读校验</h3>
+        <p>基于 <code>ISettingsExtensionContributor</code> 扩展编译，严格遵循 <em>Query → 编辑 → Apply → 回读校验</em> 闭环，杜绝以本地缓存冒充硬件真实值。</p>
+      </div>
+      <div class="arch-card">
+        <span class="arch-tag">离线持久化</span>
+        <h3>SQLite 与分层审计快照</h3>
+        <p>内置轻量级 SQLite 管理设备 Profile 与 TOI 标签库，支持停止时输出统计快照 (FinalSnapshot) 与原始 JSONL 报告流水 (RawReports)。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Quick Start & Compatibility -->
+  <section class="home-section">
+    <div class="home-section-head">
+      <span class="section-tag">QUICK START</span>
+      <h2>快速开始</h2>
+    </div>
+    <div class="steps-row">
+      <div class="step-box">
+        <span class="step-num">STEP 1</span>
+        <h4>下载即用</h4>
+        <p>从发布页下载 Windows 自包含单文件或 Android APK，无需预先配置 .NET 运行时。</p>
+      </div>
+      <div class="step-box">
+        <span class="step-num">STEP 2</span>
+        <h4>探测与激活</h4>
+        <p>在 Data Sources 输入 Reader IP:Port，点击 Probe 获取设备能力并激活。</p>
+      </div>
+      <div class="step-box">
+        <span class="step-num">STEP 3</span>
+        <h4>启动寻卡</h4>
+        <p>进入 Inventory 点击 Start 实时查看标签，点击 Stop 自动保存本次运行快照。</p>
+      </div>
+    </div>
+    <div class="compat-strip">
+      <strong>已验证硬件：</strong>
+      <span>Impinj Speedway R420 / R220 / R120、标准 LLRP 1.0.1 / 1.1 / 2.0 读写器、Zebra FX 系列及 TCP 虚拟读写器。</span>
+    </div>
+  </section>
 </main>
 
-<footer class="shell footer">
-  <span>LlrpReaderPlatform · Modern Operator Applications for LLRP RFID Readers</span>
-  <span><a href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub Repository</a></span>
+<footer class="footer shell">
+  <span>LlrpReaderPlatform · 现代化跨平台 RFID 读写器应用平台</span>
+  <div style="display:flex;gap:16px;">
+    <a href="wpf-studio.html">WPF 用户手册</a>
+    <a href="releases.html">发布下载</a>
+    <a href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
+  </div>
 </footer>
-
-<script src="assets/app.js"></script>
+<script src="assets/app.js?v=3"></script>
 </body>
 </html>

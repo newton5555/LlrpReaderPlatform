@@ -1,31 +1,178 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="LLRP Reader Studio WPF client capabilities and operator views.">
-  <title>LLRP Reader Studio (WPF) · LlrpReaderPlatform</title>
-  <link rel="stylesheet" href="../assets/styles.css"><link rel="stylesheet" href="../assets/brand.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="LLRP Reader Studio (Windows WPF) Official User Manual: Installation, Data Sources, Inventory, Advanced Settings, GPIO, and Troubleshooting.">
+  <title>LLRP Reader Studio · Windows WPF Manual</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="stylesheet" href="../assets/brand.css?v=3">
 </head>
 <body>
-<header class="topbar"><a class="brand" href="index.html"><img class="project-logo" src="../assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>WPF Client</small></span></a><button class="menu-toggle" aria-label="Open navigation">☰</button><nav><a href="index.html">Home</a><a href="user-manual.html">User Manual</a><a href="releases.html">Downloads</a></nav><a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a></header>
-<main class="shell docs-layout"><aside class="side-nav"><p class="eyebrow">WPF CLIENT</p><a href="#overview">Overview</a><a href="#view-inventory">Inventory</a><a href="#view-tagmem">Tag Memory</a><a href="#view-toi">TOI</a><a href="#view-runs">Runs</a><a href="#view-settings">Settings</a><a href="#view-datasources">Data sources</a><a href="#view-gpio">GPIO</a></aside><article class="doc-content"><p class="eyebrow">PRIMARY WINDOWS CLIENT</p><h1>LLRP Reader Studio (Windows WPF)</h1><p class="doc-lead"><code>src/LlrpReaderPlatform.App.Wpf</code> is the primary Windows desktop surface for field operations, debugging and true-device acceptance. It controls physical readers and TCP virtual readers through the platform service boundary.</p>
-<section id="overview"><h2>Positioning and runtime behavior</h2><p>The WPF client uses MVVM and shared platform services. Reader sessions are protected by <code>ReaderHandle</code> leases so concurrent UI actions do not blindly issue conflicting commands.</p><ul><li><strong>Windows package:</strong> v2.0.3 is delivered as a self-contained x64 directory archive with <code>LlrpReaderPlatform.exe</code>.</li><li><strong>Long-run resource control:</strong> bounded aggregation and controlled subscriptions reduce unbounded report backlog risk.</li><li><strong>Acceptance surface:</strong> Impinj R420 and standard LLRP evidence is tracked separately from software/virtual tests.</li></ul></section>
-<section id="view-inventory"><h2>01. Inventory view</h2><p>The view projects <code>RO_ACCESS_REPORT</code> messages into aggregated EPC, capability-driven antenna, peak RSSI, seen count, timestamp and optional TID/User fields.</p><div class="code-block"><button class="copy-code">Copy</button><pre><code>EPC                 : 96-bit / 128-bit hexadecimal EPC
-Antenna ID          : reader-declared antenna port
-Peak RSSI (dBm)     : reported peak signal strength
-Seen Count           : aggregated observations
-Last Seen (UTC)      : last report timestamp
-TID / User Memory    : attached data when enabled
-Impinj Serialized TID: vendor field when supported
-Impinj RF Phase      : vendor field when supported</code></pre></div><p>Pause, clear and antenna/RSSI filtering are local view actions. Raw tag events can be written asynchronously to a local <code>.jsonl</code> audit log; the client does not currently provide CSV export.</p></section>
-<section id="view-tagmem"><h2>02. Tag Memory Access</h2><p>Use the guided C1G2 operation flow to target a tag by EPC or TID selector and read/write Reserved, EPC, TID or User memory when supported. Lock and kill require the relevant access/kill passwords.</p><div class="callout tip"><strong>Lease:</strong> Tag Access takes a short reader-session lease and releases it after the operation, so it does not own the long-running inventory channel.</div></section>
-<section id="view-toi"><h2>03. Target of Interest</h2><p>TOI metadata is stored in SQLite and projected into live and historical views. Give an EPC a business name, category and highlight color for focused tracking.</p></section>
-<section id="view-runs"><h2>04. Inventory Runs</h2><p>Each start-to-stop interval is saved as an <code>InventoryRun</code> entity with timestamps, unique/total counts and an explicit stop reason.</p><ul><li>Review historical run metadata and tag summaries.</li><li>The current client does not export reports as CSV or Excel.</li></ul></section>
-<section id="view-settings"><h2>05. Reader Settings Editor</h2><p>The editor reads <code>TransmitPowerTable</code>, <code>ReceiveSensitivityTable</code> and <code>UHFRFModeTable</code> from the connected reader. Controls are populated from those capabilities rather than from a fixed model-independent list.</p><ul><li>Adjust supported antenna ports independently.</li><li>Apply standard RF and inventory settings through the service lease.</li><li>Expose Impinj options only when the matching extension/profile is active.</li></ul></section>
-<section id="view-datasources"><h2>06. Data sources and discovery</h2><p>Add a reader by discovery or by host/port, then probe it to populate the available identity and capability information. A virtual endpoint can be entered as <code>127.0.0.1:5084</code>.</p></section>
-<section id="view-gpio"><h2>07. GPIO triggers and relay control</h2><p>GPIO controls are shown according to the reader capability and adapter. There is no universal fixed input/output count or pulse duration; physical trigger wiring and firmware behavior require target-device acceptance.</p></section>
-</article></main>
-<footer class="shell footer"><span>LlrpReaderPlatform · WPF Client</span><span><a href="user-manual.html">Open the full user manual →</a></span></footer>
-<script src="../assets/app.js"></script>
+<header class="topbar">
+  <a class="brand" href="index.html"><img class="project-logo" src="../assets/icon.svg" alt="LlrpReaderPlatform"><span>LlrpReaderPlatform<small>Windows WPF</small></span></a>
+  <button class="menu-toggle" aria-label="Open Navigation">☰</button>
+  <nav>
+    <a href="index.html">Home</a>
+    <div class="nav-dropdown">
+      <button class="nav-dropdown-toggle active" type="button" aria-expanded="false">User Manuals <span aria-hidden="true">⌄</span></button>
+      <div class="nav-dropdown-menu">
+        <a href="wpf-studio.html" class="active">Windows WPF</a>
+        <a href="readermanager-windows.html">Windows MAUI</a>
+        <a href="readermanager-android.html">Android APK</a>
+        <a href="readermanager-macos.html">macOS Catalyst</a>
+        <a href="readermanager-linux.html">Linux GTK4</a>
+        <a href="virtual-device.html">Virtual Device</a>
+      </div>
+    </div>
+    <a href="releases.html">Releases</a>
+    <a class="github" href="https://github.com/newton5555/LlrpReaderPlatform" target="_blank" rel="noreferrer">GitHub ↗</a>
+  </nav>
+</header>
+
+<main class="shell docs-layout">
+  <aside class="side-nav">
+    <p class="eyebrow">WINDOWS WPF</p>
+    <a href="#install">1. Installation & Data</a>
+    <a href="#datasources">2. Data Sources</a>
+    <a href="#inventory">3. Inventory Streaming</a>
+    <a href="#settings">4. Reader Settings</a>
+    <a href="#gpio">5. GPIO Diagnostics</a>
+    <a href="#tagmemory">6. Tag Memory Access</a>
+    <a href="#toi">7. TOI Tag Aliases</a>
+    <a href="#runs">8. Inventory Runs</a>
+    <a href="#troubleshooting">9. Troubleshooting</a>
+  </aside>
+
+  <article class="doc-content">
+    <p class="eyebrow">01 / OFFICIAL DESKTOP CLIENT</p>
+    <h1>LLRP Reader Studio User Manual</h1>
+    <p class="doc-lead">
+      <strong>LLRP Reader Studio</strong> is the flagship Windows desktop client of LlrpReaderPlatform. Featuring hardware-accelerated rendering, industrial-grade parameter configuration, and high-throughput tag reporting pipelines for field testing and reader tuning.
+    </p>
+
+    <!-- 1. Install -->
+    <section id="install">
+      <h2>1. Installation & Data Locations</h2>
+      <p>
+        Download <code>LlrpReaderPlatform-v2.0.3-win-x64.zip</code> from Releases, extract to any directory, and run <code>LlrpReaderPlatform.exe</code>.
+      </p>
+      <div class="callout tip">
+        <strong>Self-Contained Single File:</strong>
+        Packaged as a Windows x64 self-contained single-file executable; target machines do not require .NET Desktop Runtime pre-installation.
+      </div>
+      <p style="margin-top:12px;"><strong>Default Storage Locations:</strong></p>
+      <ul>
+        <li><strong>SQLite Database:</strong> <code>%LocalAppData%\LlrpReaderPlatform\llrp-reader-platform.db</code> (Stores reader profiles, tag lists, runs).</li>
+        <li><strong>Log Files:</strong> <code>%LocalAppData%\LlrpReaderPlatform\logs\</code> (<code>ui-*.log</code>, <code>platform-*.log</code>, <code>sdk-*.log</code>).</li>
+        <li><strong>Snapshots:</strong> <code>%LocalAppData%\LlrpReaderPlatform\inventory-snapshots\</code>.</li>
+      </ul>
+    </section>
+
+    <!-- 2. Data Sources -->
+    <section id="datasources">
+      <h2>2. Data Sources Management</h2>
+      <p>Click <strong>Data Sources</strong> in the left sidebar to manage reader endpoints:</p>
+      <figure class="screenshot-figure">
+        <img src="../assets/screenshots/windows-wpf-reader-studio.png" alt="LLRP Reader Studio Desktop Interface">
+        <figcaption>LLRP Reader Studio desktop main window and Data Sources reader list.</figcaption>
+      </figure>
+      <ol>
+        <li><strong>Add Reader:</strong> Click <strong>Add Data Source</strong>, input Reader Name, Host / IP, LLRP TCP Port (default <code>5084</code>), and Protocol Version policy.</li>
+        <li><strong>Probe:</strong> Click <strong>Probe</strong>. The client performs a brief handshake to retrieve Model Name, Firmware Version, and frequency tables; Impinj extensions are automatically bound if detected.</li>
+        <li><strong>Save & Activate:</strong> Click <strong>Save</strong> to store the profile in SQLite, then click <strong>Activate</strong> to synchronize capabilities. The socket disconnects immediately, updating status to <em>"Capabilities Synced"</em>.</li>
+      </ol>
+    </section>
+
+    <!-- 3. Inventory -->
+    <section id="inventory">
+      <h2>3. Inventory Streaming</h2>
+      <figure class="screenshot-figure">
+        <img src="../assets/screenshots/windows-wpf-inventory.png" alt="Windows WPF Inventory Screen">
+        <figcaption>Real-time inventory grid with high-throughput tag reporting and read rate stats.</figcaption>
+      </figure>
+      <ol>
+        <li><strong>Start Inventory:</strong> Click <strong>Start</strong>. The platform establishes an exclusive session, compiles and activates the ROSpec, and displays live tag streams.</li>
+        <li><strong>Live Metrics:</strong> Observe <em>ELAPSED TIME</em>, <em>Unique Tags</em>, <em>Read Rate (tags/sec)</em>, and <em>Dropped reports</em>.</li>
+        <li><strong>Column Customization:</strong> Right-click on any grid header to toggle <code>EPC</code>, <code>TID</code>, <code>PC Bits</code>, <code>Peak RSSI</code>, <code>Antenna</code>, <code>Channel</code>, <code>Count</code>, <code>Timestamps</code>, and <code>Tag List (TOI Alias)</code>.</li>
+        <li><strong>Stop:</strong> Click <strong>Stop</strong> to halt the ROSpec, flush in-flight buffers, export run snapshots, and close the session.</li>
+      </ol>
+    </section>
+
+    <!-- 4. Settings -->
+    <section id="settings">
+      <h2>4. Reader Settings Configuration</h2>
+      <h3>Tab 1: Inventory & RF Configuration</h3>
+      <ul>
+        <li><strong>Antenna & RF:</strong> Global Tx Power / Rx Sensitivity, or check <em>Individual Antennas</em> for per-port tuning.</li>
+        <li><strong>Gen2 Parameters:</strong> Gen2 Session (S0~S3), Inventory Target (A/B), Tag Population estimate, and Report Every interval.</li>
+        <li><strong>Gen2 Filters:</strong> Configure Filter 1 / Filter 2 for mask-based EPC/TID filtering.</li>
+        <li><strong>Impinj Extensions:</strong> Impinj FastID (auto-attach TID), Search Mode (Dual Target / Single Target / Reset), RF Phase, and Doppler frequency shifts.</li>
+      </ul>
+      <div class="callout tip">
+        <strong>Settings Workflow:</strong>
+        Click <strong>Query</strong> → Edit parameters → Click <strong>Apply</strong> → Wait for automated query readback verification.
+      </div>
+    </section>
+
+    <!-- 5. GPIO -->
+    <section id="gpio">
+      <h2>5. GPIO Diagnostics & Control</h2>
+      <ul>
+        <li><strong>4-Channel GPO Control:</strong> Dedicated high/low switches to trigger external alarms or industrial relays via <code>SET_READER_CONFIG</code>.</li>
+        <li><strong>GPI Monitoring:</strong> Click <strong>Refresh GPI</strong> to poll current digital input levels. Configure GPI Start/Stop triggers in Tab 1 for automated inventory.</li>
+      </ul>
+    </section>
+
+    <!-- 6. Tag Memory -->
+    <section id="tagmemory">
+      <h2>6. Tag Memory Access</h2>
+      <ol>
+        <li><strong>Target Specification:</strong> Input target <code>EPC</code> or <code>TID</code>.</li>
+        <li><strong>Memory Bank:</strong> Select <code>0 - Reserved</code>, <code>1 - EPC</code>, <code>2 - TID</code>, or <code>3 - User</code>.</li>
+        <li><strong>Parameters:</strong> Set <code>Word Pointer</code> and <code>Word Count</code> (1 Word = 16-bit Hex).</li>
+        <li><strong>Execute:</strong> Provide <code>Access Password</code> if protected, then click <strong>Read</strong> or <strong>Write</strong>.</li>
+      </ol>
+    </section>
+
+    <!-- 7. TOI -->
+    <section id="toi">
+      <h2>7. TOI (Tag of Interest) Aliases & Highlighting</h2>
+      <p>Map raw Hex EPC codes to human-readable names, color highlights, and categorization groups in real-time inventory grids.</p>
+    </section>
+
+    <!-- 8. Runs -->
+    <section id="runs">
+      <h2>8. Inventory Runs History & Snapshots</h2>
+      <p>Audit historical runs, stop reasons, summary statistics, and export CSV/JSON snapshots or raw <code>RawReports</code> streams.</p>
+    </section>
+
+    <!-- 9. Troubleshooting -->
+    <section id="troubleshooting">
+      <h2>9. Troubleshooting & FAQ</h2>
+      <div class="command-table">
+        <div><strong>Probe Failed</strong><span>Verify reader IP is reachable, port 5084 is open, and no other tool holds an active TCP connection.</span></div>
+        <div><strong>ReaderBusy Error</strong><span>An inventory session is currently active. Click Stop in Inventory before changing settings or Tag Access.</span></div>
+        <div><strong>No Tags Read</strong><span>Check RF antenna connections, port enablement, and ensure Tx power is sufficient (try 30 dBm).</span></div>
+        <div><strong>Readback Failure</strong><span>The hardware rejected an invalid parameter combination. Check <code>sdk-*.log</code> for exact LLRP error codes.</span></div>
+      </div>
+    </section>
+
+    <!-- Bottom Navigation -->
+    <div style="display:flex;justify-content:space-between;margin-top:60px;padding-top:20px;border-top:1px solid var(--line);">
+      <a href="index.html" class="button secondary">← Home</a>
+      <a href="readermanager-windows.html" class="button secondary">LlrpReaderManager Windows →</a>
+    </div>
+  </article>
+</main>
+
+<footer class="shell footer">
+  <span>LlrpReaderPlatform · Windows WPF Official Guide</span>
+  <div style="display:flex;gap:16px;">
+    <a href="index.html">Home</a>
+    <a href="releases.html">Releases</a>
+  </div>
+</footer>
+<script src="../assets/app.js?v=2"></script>
 </body>
 </html>
