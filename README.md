@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  Version 2.0.3 · .NET 10 · <a href="README.zh-CN.md">中文</a>
+  Version 2.0.4 · .NET 10 · <a href="README.zh-CN.md">中文</a>
 </p>
 
 <p align="center">

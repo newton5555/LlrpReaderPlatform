@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  版本 2.0.3 · .NET 10 · <a href="README.md">English</a>
+  版本 2.0.4 · .NET 10 · <a href="README.md">English</a>
 </p>
 
 <p align="center">
