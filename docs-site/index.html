@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="LlrpReaderPlatform - 现代化跨平台 RFID 读写器应用平台，支持 LLRP 1.0.1 / 1.1 / 2.0 及 Impinj / Zebra 扩展。">
+  <meta name="description" content="LlrpReaderPlatform - 现代化跨平台 RFID 读写器应用平台，覆盖 LLRP 软件接入、WPF/MAUI 客户端与 TCP 虚拟读写器工具。">
   <title>LlrpReaderPlatform · 跨平台 RFID 读写器应用平台</title>
   <link rel="stylesheet" href="assets/styles.css">
   <link rel="stylesheet" href="assets/brand.css?v=5">
@@ -40,7 +40,7 @@
     <span class="eyebrow">LLRP READER PLATFORM</span>
     <h1>现代化跨平台 RFID 读写器应用平台</h1>
     <p class="lead">
-      基于 <strong>LLRPCSharp</strong> SDK 构建的企业级读写器控制套件。提供 Windows WPF 桌面主客户端、MAUI 跨平台终端与 TCP 虚拟读写器管理工具，全面支持 LLRP 1.0.1 / 1.1 / 2.0 及 Impinj / Zebra 厂商扩展。
+      基于 <strong>LLRPCSharp</strong> SDK 构建的读写器控制套件。提供 Windows WPF 桌面主客户端、MAUI 跨平台终端与 TCP 虚拟读写器管理工具，覆盖 LLRP 1.0.1 / 1.1 / 2.0 的软件接入路径，并集成 Impinj / Zebra 厂商扩展；真实设备验证范围以兼容性矩阵为准。
     </p>
     <div class="hero-actions">
       <a class="button primary" href="releases.html">下载最新发布 (v2.0.4)</a>
@@ -76,7 +76,7 @@
       <div class="client-card">
         <span class="platform-badge">Android · APK</span>
         <h3>LlrpReaderManager (Android)</h3>
-        <p>专为工业手持 PDA、盘点枪设计。具备触控优先界面、网络漫游与自动恢复能力。</p>
+        <p>专为工业手持 PDA、盘点枪设计。提供触控优先界面、连接状态展示与明确的恢复入口。</p>
         <div class="card-action">
           <span>Release APK</span>
           <a href="readermanager-android.html">查看手册 →</a>
@@ -166,8 +166,8 @@
       </div>
     </div>
     <div class="compat-strip">
-      <strong>已验证硬件：</strong>
-      <span>Impinj Speedway R420 / R220 / R120、标准 LLRP 1.0.1 / 1.1 / 2.0 读写器、Zebra FX 系列及 TCP 虚拟读写器。</span>
+      <strong>当前验证基线：</strong>
+      <span>Impinj Speedway R420、标准 LLRP 1.0.1 Reader 与 TCP 虚拟读写器；Zebra FX9600 已完成标准连接与身份读取，LLRP 1.1 / 2.0 真实设备仍待验收。</span>
     </div>
   </section>
 </main>

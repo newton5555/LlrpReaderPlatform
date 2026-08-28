@@ -101,8 +101,8 @@
     <section id="battery">
       <h2>5. 低功耗与异常断连恢复</h2>
       <div class="callout tip">
-        <strong>移动环境鲁棒性保障：</strong>
-        在移动巡检过程中若手持设备 Wi-Fi 信号短暂衰减或漫游切换，底层服务会自动执行 Session 优雅断连收敛并在网络恢复后提示重连，防止由于物理丢包引发底层协议栈死锁。
+        <strong>移动环境恢复方式：</strong>
+        在移动巡检过程中若 Wi-Fi 信号衰减、发生漫游切换或读写器断开，请先等待网络恢复，再回到 <strong>Readers</strong> 页面重新连接或启用设备，然后返回 <strong>Inventory</strong> 继续操作。平台会收敛失效会话，但不会在后台静默重放未完成的 ROSpec 或配置。
       </div>
     </section>
 
