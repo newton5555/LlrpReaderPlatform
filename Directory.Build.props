@@ -6,10 +6,10 @@
   <PropertyGroup>
     <TargetFramework Condition="'$(UseDefaultTargetFramework)' != 'false'">net10.0</TargetFramework>
     <!-- Unified version for all LlrpReaderPlatform assemblies and future packages. -->
-    <Version>2.0.4</Version>
-    <AssemblyVersion>2.0.4.0</AssemblyVersion>
-    <FileVersion>2.0.4.0</FileVersion>
-    <InformationalVersion>2.0.4</InformationalVersion>
+    <Version>2.0.5</Version>
+    <AssemblyVersion>2.0.5.0</AssemblyVersion>
+    <FileVersion>2.0.5.0</FileVersion>
+    <InformationalVersion>2.0.5</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
