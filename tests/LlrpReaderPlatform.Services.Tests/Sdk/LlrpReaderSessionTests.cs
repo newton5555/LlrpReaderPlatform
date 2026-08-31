@@ -1,11 +1,35 @@
+using LlrpReaderPlatform.Contracts.Readers;
 using LlrpReaderPlatform.Services.Sdk;
 using LlrpSdk;
+using Microsoft.Extensions.Logging.Abstractions;
+using System.Reflection;
 using Xunit;
 
 namespace LlrpReaderPlatform.Services.Tests.Sdk;
 
 public sealed class LlrpReaderSessionTests
 {
+    [Fact]
+    public async Task SessionFactory_configures_thirty_second_request_timeout()
+    {
+        var factory = new LlrpReaderSessionFactory(NullLoggerFactory.Instance);
+        var profile = new ReaderProfile
+        {
+            Id = Guid.NewGuid(),
+            Host = "127.0.0.1",
+        };
+
+        await using IReaderSession session = factory.Create(profile);
+
+        FieldInfo readerField = session.GetType().GetField(
+            "reader",
+            BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new InvalidOperationException(
+                "The SDK reader field was not found.");
+        var reader = (LlrpReader)readerField.GetValue(session)!;
+
+        Assert.Equal(TimeSpan.FromSeconds(30), reader.Options.RequestTimeout);
+    }
+
     [Fact]
     public void InventorySettingsResolver_projects_reader_antenna_configuration_without_inventory()
     {

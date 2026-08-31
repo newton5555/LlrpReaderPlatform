@@ -43,12 +43,6 @@ internal sealed class LlrpReaderSession : IReaderSession
     public async Task ConnectAsync(CancellationToken cancellationToken)
     {
         await reader.ConnectAsync(cancellationToken).ConfigureAwait(false);
-        // 若因之前的原始协议访问导致 SDK 托管状态未知，先重新同步，避免后续托管调用抛
-        // "SDK-managed reader state is unknown after raw protocol access"。
-        if (!reader.IsManagedStateSynchronized)
-        {
-            await reader.SynchronizeStateAsync(cancellationToken).ConfigureAwait(false);
-        }
     }
 
     public async Task DisconnectAsync(CancellationToken cancellationToken)
@@ -66,7 +60,9 @@ internal sealed class LlrpReaderSession : IReaderSession
 
     public async Task<ReaderSettingsSnapshot> QuerySettingsAsync(CancellationToken cancellationToken)
     {
-        await SynchronizeIfNeededAsync(cancellationToken).ConfigureAwait(false);
+        // SDK QuerySettingsAsync performs one authoritative configuration/resource query.
+        // Do not synchronize first: an active reader inventory must be taken over explicitly
+        // by the inventory start path before its resources are queried.
         return await reader.QuerySettingsAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -100,7 +96,7 @@ internal sealed class LlrpReaderSession : IReaderSession
             throw new InvalidOperationException("Inventory is already running for this reader.");
         }
 
-        await SynchronizeIfNeededAsync(cancellationToken).ConfigureAwait(false);
+        await PrepareInventoryLeaseAsync(cancellationToken).ConfigureAwait(false);
         ReaderSettingsSnapshot current = await reader.QuerySettingsAsync(cancellationToken).ConfigureAwait(false);
         InventorySettings settings = InventorySettingsResolver.Resolve(current);
         settings = ApplyInventorySpec(settings, spec);
@@ -119,6 +115,7 @@ internal sealed class LlrpReaderSession : IReaderSession
             throw new InvalidOperationException("Inventory is already running for this reader.");
         }
 
+        await PrepareInventoryLeaseAsync(cancellationToken).ConfigureAwait(false);
         await SynchronizeIfNeededAsync(cancellationToken).ConfigureAwait(false);
         InventorySession session = await reader.StartInventoryAsync(
             settings,
@@ -271,6 +268,9 @@ internal sealed class LlrpReaderSession : IReaderSession
             await reader.SynchronizeStateAsync(cancellationToken).ConfigureAwait(false);
         }
     }
+
+    private Task PrepareInventoryLeaseAsync(CancellationToken cancellationToken) =>
+        reader.PrepareInventoryTakeoverAsync(ResourceTakeoverPolicy.ReplaceAll, cancellationToken);
 
     /// <summary>
     /// TagAccess is implemented by the SDK through a temporary managed inventory lease. A
@@ -535,6 +535,8 @@ public sealed class LlrpReaderSessionFactory : IReaderSessionFactory
         // 方括号的 Host；传输构造器需要裸 IPv6 地址，统一在服务边界处理。
         var builder = new LlrpReaderBuilder(ReaderEndpoint.NormalizeHost(profile.Host))
             .WithPort(profile.Port)
+            // Reader resource queries and takeover cleanup can take longer while an ROSpec is active.
+            .WithRequestTimeout(TimeSpan.FromSeconds(30))
             .WithProtocolVersionPolicy(profile.LlrpVersion switch
             {
                 LlrpProtocolVersionOption.Force101 => LlrpProtocolVersionPolicy.Force101,
